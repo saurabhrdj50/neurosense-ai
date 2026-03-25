@@ -1,10 +1,13 @@
+import logging
 from flask import Blueprint, request, jsonify
 
 from app.api.schemas import LoginSchema, RegisterSchema
 from app.repositories.user_repository import UserRepository
 from app.core.security import login_user, logout_user, get_current_user
 
-auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
+logger = logging.getLogger(__name__)
+
+auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
 
 @auth_bp.route('/login', methods=['POST'])
@@ -16,9 +19,12 @@ def login():
             'password': request.form.get('password'),
         }
     
+    logger.debug("Login attempt for: %s", data.get('username'))
+    
     try:
         validated = LoginSchema.validate(data)
     except ValueError as e:
+        logger.warning("Login validation failed: %s", e)
         return jsonify({'success': False, 'message': str(e)}), 400
     
     user_repo = UserRepository()
@@ -26,6 +32,7 @@ def login():
     
     if user:
         login_user(user, remember=True)
+        logger.info("User '%s' logged in successfully", user.username)
         return jsonify({'success': True, 'user': user.to_dict()})
     
     return jsonify({'success': False, 'message': 'Invalid username or password'}), 401
@@ -36,6 +43,8 @@ def register():
     data = request.get_json() if request.is_json else None
     if not data:
         data = {k: request.form.get(k) for k in ('username', 'email', 'password', 'role', 'full_name')}
+    
+    logger.debug("Registration attempt for: %s", data.get('username'))
     
     try:
         validated = RegisterSchema.validate(data)
@@ -62,7 +71,7 @@ def logout():
 
 
 @auth_bp.route('/current-user', methods=['GET'])
-def current_user():
+def current_user_route():
     user = get_current_user()
     if user:
         return jsonify({'authenticated': True, 'user': user.to_dict()})

@@ -1,7 +1,10 @@
+import logging
 from flask import Flask, jsonify, session
 
 from app.core.config import Config
 from app.core.database import Database
+
+logger = logging.getLogger(__name__)
 
 try:
     from flask_cors import CORS
@@ -60,16 +63,35 @@ def get_modules():
     return _modules_cache
 
 
+def _init_database(db_path):
+    """Initialize the database, schema, and seed default data."""
+    db = Database.get_instance(str(db_path))
+    db.init_schema()
+    
+    # Ensure default users exist via UserRepository (triggers seed if empty)
+    from app.repositories.user_repository import UserRepository
+    UserRepository()
+    
+    logger.info("Database initialized at %s", db_path)
+    return db
+
+
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
     
+    # Configure CORS with credentials support for frontend integration
     if HAS_CORS and CORS is not None:
-        CORS(app)
+        CORS(app, supports_credentials=True, origins=[
+            'http://localhost:3000',
+            'http://127.0.0.1:3000',
+            'http://localhost:5000',
+            'http://127.0.0.1:5000',
+            'http://localhost:5173',
+        ], expose_headers=['Content-Length', 'Content-Type'])
     
     if HAS_FLASK_LOGIN and login_manager is not None:
         login_manager.init_app(app)
-        login_manager.login_view = 'auth.login'
         
         @login_manager.user_loader
         def load_user(user_id):
@@ -77,10 +99,12 @@ def create_app():
             repo = UserRepository()
             return repo.get_by_id(int(user_id))
     
+    # Initialize database with schema and seed data
     db_path = Config.DB_PATH if hasattr(Config, 'DB_PATH') else None
     if db_path:
-        Database.get_instance(db_path)
+        _init_database(db_path)
     
+    # Register blueprints
     from app.api.routes import auth, analysis, patients, utilities
     
     app.register_blueprint(auth.auth_bp)
@@ -113,4 +137,5 @@ def create_app():
     def server_error(e):
         return jsonify({'error': 'Internal server error.'}), 500
     
+    logger.info("NeuroSense app created successfully")
     return app

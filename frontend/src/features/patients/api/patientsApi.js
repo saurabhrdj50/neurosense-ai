@@ -1,14 +1,22 @@
 const API_BASE = ''
 
+async function handleResponse(res) {
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Request failed' }))
+    throw new Error(err.error || err.message || `HTTP ${res.status}`)
+  }
+  return res.json()
+}
+
 export const patientsApi = {
   getAll: async () => {
     const res = await fetch(`${API_BASE}/api/patients`, { credentials: 'include' })
-    return res.json()
+    return handleResponse(res)
   },
 
   getById: async (patientId) => {
     const res = await fetch(`${API_BASE}/api/patients/${patientId}`, { credentials: 'include' })
-    return res.json()
+    return handleResponse(res)
   },
 
   create: async (data) => {
@@ -18,7 +26,7 @@ export const patientsApi = {
       credentials: 'include',
       body: JSON.stringify(data),
     })
-    return res.json()
+    return handleResponse(res)
   },
 
   update: async (patientId, data) => {
@@ -28,7 +36,7 @@ export const patientsApi = {
       credentials: 'include',
       body: JSON.stringify(data),
     })
-    return res.json()
+    return handleResponse(res)
   },
 
   delete: async (patientId) => {
@@ -36,7 +44,7 @@ export const patientsApi = {
       method: 'DELETE',
       credentials: 'include',
     })
-    return res.json()
+    return handleResponse(res)
   },
 
   export: (patientId) => {

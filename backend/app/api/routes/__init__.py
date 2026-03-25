@@ -1,5 +1,2 @@
-from flask import Blueprint
-
-auth_bp = Blueprint('auth', __name__)
-
-from app.api.routes import auth  # noqa: E402, F401
+# Routes package - individual route modules define their own blueprints
+# Submodules are imported where needed (e.g., in create_app)

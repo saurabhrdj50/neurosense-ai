@@ -1,5 +1,13 @@
 const API_BASE = ''
 
+async function handleResponse(res) {
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: 'Request failed' }))
+    throw new Error(err.message || 'Request failed')
+  }
+  return res.json()
+}
+
 export const authApi = {
   login: async (username, password) => {
     const res = await fetch(`${API_BASE}/api/auth/login`, {
@@ -8,7 +16,7 @@ export const authApi = {
       credentials: 'include',
       body: JSON.stringify({ username, password }),
     })
-    return res.json()
+    return handleResponse(res)
   },
 
   register: async (payload) => {
@@ -18,19 +26,24 @@ export const authApi = {
       credentials: 'include',
       body: JSON.stringify(payload),
     })
-    return res.json()
+    return handleResponse(res)
   },
 
   logout: async () => {
-    const res = await fetch(`${API_BASE}/api/auth/logout`, { 
+    const res = await fetch(`${API_BASE}/api/auth/logout`, {
       method: 'POST',
-      credentials: 'include' 
+      credentials: 'include'
     })
     return res.json()
   },
 
   getCurrentUser: async () => {
-    const res = await fetch(`${API_BASE}/api/auth/current-user`, { credentials: 'include' })
-    return res.json()
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/current-user`, { credentials: 'include' })
+      if (!res.ok) return { authenticated: false }
+      return res.json()
+    } catch {
+      return { authenticated: false }
+    }
   },
 }

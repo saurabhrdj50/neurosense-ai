@@ -1,5 +1,13 @@
 const API_BASE = ''
 
+async function handleResponse(res) {
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Request failed' }))
+    throw new Error(err.error || `HTTP ${res.status}`)
+  }
+  return res.json()
+}
+
 export const analysisApi = {
   runFullAnalysis: async (formData) => {
     const res = await fetch(`${API_BASE}/api/analysis/analyze`, {
@@ -7,7 +15,7 @@ export const analysisApi = {
       credentials: 'include',
       body: formData,
     })
-    return res.json()
+    return handleResponse(res)
   },
 
   analyzeMRI: async (file, gradcam = true) => {
@@ -20,7 +28,7 @@ export const analysisApi = {
       credentials: 'include',
       body: formData,
     })
-    return res.json()
+    return handleResponse(res)
   },
 
   analyzeSentiment: async (text) => {
@@ -30,7 +38,7 @@ export const analysisApi = {
       credentials: 'include',
       body: JSON.stringify({ text }),
     })
-    return res.json()
+    return handleResponse(res)
   },
 
   evaluateCognitive: async (answers) => {
@@ -40,7 +48,7 @@ export const analysisApi = {
       credentials: 'include',
       body: JSON.stringify(answers),
     })
-    return res.json()
+    return handleResponse(res)
   },
 
   assessRisk: async (factors) => {
@@ -50,7 +58,7 @@ export const analysisApi = {
       credentials: 'include',
       body: JSON.stringify(factors),
     })
-    return res.json()
+    return handleResponse(res)
   },
 
   analyzeHandwriting: async (file = null, canvasData = null) => {
@@ -63,7 +71,7 @@ export const analysisApi = {
       credentials: 'include',
       body: formData,
     })
-    return res.json()
+    return handleResponse(res)
   },
 
   analyzeGenomics: async (text) => {
@@ -73,7 +81,7 @@ export const analysisApi = {
       credentials: 'include',
       body: JSON.stringify({ dna_text: text }),
     })
-    return res.json()
+    return handleResponse(res)
   },
 
   transcribeAudio: async (file) => {
@@ -85,6 +93,6 @@ export const analysisApi = {
       credentials: 'include',
       body: formData,
     })
-    return res.json()
+    return handleResponse(res)
   },
 }

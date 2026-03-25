@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 ROLES = {
     'admin': {'label': 'Admin', 'level': 5, 'color': '#f472b6'},
     'doctor': {'label': 'Doctor', 'level': 2, 'color': '#6c8cff'},
+    'researcher': {'label': 'Researcher', 'level': 2, 'color': '#34d399'},
 }
 
 SAMPLE_USERS = [
@@ -27,7 +28,8 @@ class User:
         password_hash: str,
         role: str,
         full_name: str,
-        created_at: Optional[str] = None
+        created_at: Optional[str] = None,
+        **kwargs  # Absorb any extra columns gracefully
     ):
         self.id = id
         self.username = username
@@ -36,6 +38,18 @@ class User:
         self.role = role
         self.full_name = full_name
         self.created_at = created_at
+        self.is_active = True
+
+    @property
+    def is_authenticated(self) -> bool:
+        return True
+
+    @property
+    def is_anonymous(self) -> bool:
+        return False
+
+    def get_id(self) -> str:
+        return str(self.id)
 
     def check_password(self, password: str) -> bool:
         return verify_password(password, self.password_hash)
@@ -82,6 +96,7 @@ class UserRepository(BaseRepository):
             count = conn.execute('SELECT COUNT(*) FROM users').fetchone()[0]
             if count == 0:
                 self._seed_data(conn)
+                logger.info("Seeded %d default users", len(SAMPLE_USERS))
 
     def _seed_data(self, conn) -> None:
         now = datetime.now().isoformat()
@@ -90,31 +105,37 @@ class UserRepository(BaseRepository):
                 'INSERT INTO users (username, email, password_hash, role, full_name, created_at) VALUES (?,?,?,?,?,?)',
                 (u['username'], u['email'], hash_password(u['password']), u['role'], u['full_name'], now)
             )
-        logger.info("Seeded %d users", len(SAMPLE_USERS))
+
+    def _row_to_user(self, row) -> Optional['User']:
+        """Convert a database row (dict) to a User object."""
+        if row is None:
+            return None
+        data = dict(row) if not isinstance(row, dict) else row
+        return User(**data)
 
     def get_by_id(self, user_id: int) -> Optional[User]:
         row = self.db.fetch_one('SELECT * FROM users WHERE id=?', (user_id,))
-        if row:
-            return User(**dict(row))
-        return None
+        return self._row_to_user(row)
 
     def get_by_username(self, username: str) -> Optional[User]:
         row = self.db.fetch_one('SELECT * FROM users WHERE username=?', (username,))
-        if row:
-            return User(**dict(row))
-        return None
+        return self._row_to_user(row)
 
     def get_by_email(self, email: str) -> Optional[User]:
         row = self.db.fetch_one('SELECT * FROM users WHERE email=?', (email,))
-        if row:
-            return User(**dict(row))
-        return None
+        return self._row_to_user(row)
 
     def authenticate(self, username: str, password: str) -> Optional[User]:
+        logger.debug("Authenticating user: %s", username)
         user = self.get_by_username(username)
-        if user and user.check_password(password):
-            return user
-        return None
+        if user is None:
+            logger.warning("Login failed: user '%s' not found", username)
+            return None
+        if not user.check_password(password):
+            logger.warning("Login failed: invalid password for '%s'", username)
+            return None
+        logger.info("Login successful for user '%s'", username)
+        return user
 
     def create(
         self,
@@ -131,11 +152,12 @@ class UserRepository(BaseRepository):
                     'INSERT INTO users (username, email, password_hash, role, full_name, created_at) VALUES (?,?,?,?,?,?)',
                     (username, email, hash_password(password), role, full_name, now)
                 )
+            logger.info("Created user '%s' with role '%s'", username, role)
             return {'success': True, 'user_id': cursor.lastrowid}
         except Exception as e:
-            logger.error("Failed to create user: %s", e)
+            logger.error("Failed to create user '%s': %s", username, e)
             return {'success': False, 'message': 'Username or email already exists'}
 
     def get_all(self) -> List[User]:
         rows = self.db.fetch_all('SELECT * FROM users ORDER BY username')
-        return [User(**dict(row)) for row in rows]
+        return [self._row_to_user(row) for row in rows if row]

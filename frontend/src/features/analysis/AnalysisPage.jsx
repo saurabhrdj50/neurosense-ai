@@ -13,6 +13,7 @@ import { CognitiveStep } from './components/CognitiveStep'
 import { HandwritingStep } from './components/HandwritingStep'
 import { SpeechStep } from './components/SpeechStep'
 import { RiskStep } from './components/RiskStep'
+import { analysisApi } from './api/analysisApi'
 
 const STEPS = [
   { id: 'patient',      label: 'Patient Info',    icon: User          },
@@ -65,8 +66,7 @@ export default function AnalysisPage() {
       if (Object.keys(risk).length) fd.append('risk_factors', JSON.stringify(risk))
       if (dnaFile) fd.append('dna_file', dnaFile)
 
-      const res = await fetch('/api/analysis/analyze', { method: 'POST', credentials: 'include', body: fd })
-      const data = await res.json()
+      const data = await analysisApi.runFullAnalysis(fd)
       setAnalysisResults(data)
       toast.dismiss(tid)
       toast.success('Analysis complete!')

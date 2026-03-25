@@ -135,10 +135,10 @@ class SentimentAnalyzer:
                 honores_h = 0.0
 
         filler_words = ['um', 'uh', 'er', 'ah', 'like', 'you know', 'sort of', 'kind of', 'i mean', 'well']
-        filler_count = sum(lower_text.count(fw) for fw in filler_words if fw in text.lower())
+        lower_text = text.lower()
+        filler_count = sum(lower_text.count(fw) for fw in filler_words if fw in lower_text)
 
         clause_markers = [',', ' and ', ' but ', ' or ', ' because ', ' although ', ' while ', ' when ', ' if ', ' that ']
-        lower_text = text.lower()
         clause_count = max(len(sentences), 1)
         for marker in clause_markers:
             clause_count += lower_text.count(marker)

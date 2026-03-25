@@ -46,7 +46,7 @@ class RegisterSchema:
         elif len(password) < 6:
             errors['password'] = 'Password must be at least 6 characters'
         
-        if role not in ('admin', 'doctor'):
+        if role not in ('admin', 'doctor', 'researcher'):
             errors['role'] = 'Role must be admin or doctor'
         
         if errors:

@@ -60,7 +60,7 @@ class SentimentAnalyzer:
         polarity = 0.0
         if self._nlp_available and self._TextBlob is not None:
             blob = self._TextBlob(text)
-            polarity = float(blob.sentiment.polarity)
+            polarity = float(blob.sentiment.polarity)  # type: ignore
         else:
             polarity = self._rule_sentiment(text)
 

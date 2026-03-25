@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Clock, Brain, Download } from 'lucide-react'
+import { ArrowLeft, Clock, Brain, Download, TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import toast from 'react-hot-toast'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Legend,
+  ResponsiveContainer, Legend, Area, AreaChart,
 } from 'recharts'
 import GlassCard from '../../components/ui/GlassCard'
 import Button from '../../components/ui/Button'
@@ -17,6 +17,14 @@ const STAGE_COLOR = {
   'Very Mild Demented': '#6366f1',
   'Mild Demented':      '#f59e0b',
   'Moderate Demented':  '#ef4444',
+}
+
+const STAGE_SCORE = {
+  'Non Demented': 15,
+  'Very Mild Demented': 35,
+  'Mild Demented': 60,
+  'Moderate Demented': 85,
+  'Unknown': 50,
 }
 
 function Metric({ label, value, color }) {
@@ -45,12 +53,35 @@ export default function HistoryPage() {
   const history = data?.history || []
   const trends  = data?.trends  || {}
 
-  const chartData = history.map(s => ({
-    date: new Date(s.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    mriConf: s.results?.mri?.confidence || 0,
-    cogScore: (s.results?.cognitive?.composite_score || 0) * 10,
-    riskScore: (1 - (s.results?.risk_profile?.overall_risk_score || 0)) * 100,
-  })).reverse()
+  const chartData = history.map((s, idx) => {
+    const stage = s.results?.final_stage?.stage || s.results?.mri?.stage || 'Unknown'
+    const stageScore = STAGE_SCORE[stage] || 50
+    return {
+      date: new Date(s.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      session: idx + 1,
+      stageScore: stageScore,
+      mriConf: s.results?.mri?.confidence || 0,
+      cogScore: (s.results?.cognitive?.composite_score || 0) * 10,
+      riskScore: (1 - (s.results?.risk_profile?.overall_risk_score || 0)) * 100,
+      stage: stage,
+    }
+  }).reverse()
+
+  const getTrend = () => {
+    if (chartData.length < 2) return 'stable'
+    const first = chartData[0]?.stageScore || 50
+    const last = chartData[chartData.length - 1]?.stageScore || 50
+    if (last > first + 5) return 'worsening'
+    if (last < first - 5) return 'improving'
+    return 'stable'
+  }
+
+  const trend = getTrend()
+  const latestStage = chartData[chartData.length - 1]?.stage || 'Unknown'
+  const earliestStage = chartData[0]?.stage || 'Unknown'
+  const avgConfidence = chartData.length > 0 
+    ? chartData.reduce((a, b) => a + (b.mriConf || 0), 0) / chartData.length 
+    : 0
 
   return (
     <div className="max-w-4xl mx-auto space-y-5">
@@ -79,21 +110,75 @@ export default function HistoryPage() {
       ) : (
         <>
           {chartData.length > 1 && (
-            <GlassCard className="p-6">
-              <h3 style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 16, color: '#f1f5f9', marginBottom: 16 }}>Progression Over Time</h3>
-              <ResponsiveContainer width="100%" height={200}>
-                <LineChart data={chartData} margin={{ left: -20, right: 10 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                  <XAxis dataKey="date" tick={{ fill: '#475569', fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis domain={[0, 100]} tick={{ fill: '#475569', fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10 }} />
-                  <Legend wrapperStyle={{ fontSize: 12, color: '#64748b' }} />
-                  <Line type="monotone" dataKey="mriConf" stroke="#6366f1" strokeWidth={2} dot={false} name="MRI Confidence" />
-                  <Line type="monotone" dataKey="cogScore" stroke="#06b6d4" strokeWidth={2} dot={false} name="Cognitive Score" />
-                  <Line type="monotone" dataKey="riskScore" stroke="#22c55e" strokeWidth={2} dot={false} name="Health Index" />
-                </LineChart>
-              </ResponsiveContainer>
-            </GlassCard>
+            <>
+              <GlassCard className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 16, color: '#f1f5f9' }}>Patient Progress Tracking</h3>
+                  <div className="flex items-center gap-2">
+                    {trend === 'worsening' && <TrendingDown size={16} style={{ color: '#ef4444' }} />}
+                    {trend === 'improving' && <TrendingUp size={16} style={{ color: '#22c55e' }} />}
+                    {trend === 'stable' && <Minus size={16} style={{ color: '#64748b' }} />}
+                    <span className="text-xs font-medium px-2 py-1 rounded-full" 
+                          style={{ 
+                            background: trend === 'worsening' ? 'rgba(239,68,68,0.15)' : trend === 'improving' ? 'rgba(34,197,94,0.15)' : 'rgba(100,116,139,0.15)',
+                            color: trend === 'worsening' ? '#ef4444' : trend === 'improving' ? '#22c55e' : '#64748b'
+                          }}>
+                      {trend === 'worsening' ? 'Worsening' : trend === 'improving' ? 'Improving' : 'Stable'}
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                  <div className="p-3 rounded-xl" style={{ background: 'rgba(99,102,241,0.1)' }}>
+                    <p style={{ fontSize: 11, color: '#64748b' }}>First Stage</p>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: STAGE_COLOR[earliestStage] || '#6366f1' }}>{earliestStage}</p>
+                  </div>
+                  <div className="p-3 rounded-xl" style={{ background: 'rgba(99,102,241,0.1)' }}>
+                    <p style={{ fontSize: 11, color: '#64748b' }}>Current Stage</p>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: STAGE_COLOR[latestStage] || '#6366f1' }}>{latestStage}</p>
+                  </div>
+                  <div className="p-3 rounded-xl" style={{ background: 'rgba(99,102,241,0.1)' }}>
+                    <p style={{ fontSize: 11, color: '#64748b' }}>Avg. Confidence</p>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: '#6366f1' }}>{avgConfidence.toFixed(1)}%</p>
+                  </div>
+                </div>
+
+                <ResponsiveContainer width="100%" height={180}>
+                  <AreaChart data={chartData} margin={{ left: -20, right: 10 }}>
+                    <defs>
+                      <linearGradient id="stageGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+                    <XAxis dataKey="date" tick={{ fill: '#475569', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis domain={[0, 100]} tick={{ fill: '#475569', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <Tooltip 
+                      contentStyle={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10 }}
+                      formatter={(value, name) => [value.toFixed(1), name === 'stageScore' ? 'Stage Score' : name]}
+                    />
+                    <Area type="monotone" dataKey="stageScore" stroke="#6366f1" fill="url(#stageGradient)" strokeWidth={2} name="Stage Score" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </GlassCard>
+
+              <GlassCard className="p-6">
+                <h3 style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 16, color: '#f1f5f9', marginBottom: 16 }}>Detailed Metrics Over Time</h3>
+                <ResponsiveContainer width="100%" height={200}>
+                  <LineChart data={chartData} margin={{ left: -20, right: 10 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+                    <XAxis dataKey="date" tick={{ fill: '#475569', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis domain={[0, 100]} tick={{ fill: '#475569', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <Tooltip contentStyle={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10 }} />
+                    <Legend wrapperStyle={{ fontSize: 12, color: '#64748b' }} />
+                    <Line type="monotone" dataKey="mriConf" stroke="#6366f1" strokeWidth={2} dot={{fill: '#6366f1', r: 4}} name="MRI Confidence" />
+                    <Line type="monotone" dataKey="cogScore" stroke="#06b6d4" strokeWidth={2} dot={{fill: '#06b6d4', r: 4}} name="Cognitive Score" />
+                    <Line type="monotone" dataKey="riskScore" stroke="#22c55e" strokeWidth={2} dot={{fill: '#22c55e', r: 4}} name="Health Index" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </GlassCard>
+            </>
           )}
 
           <div className="space-y-3">

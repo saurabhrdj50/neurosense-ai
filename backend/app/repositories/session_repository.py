@@ -72,9 +72,20 @@ class SessionRepository(BaseRepository):
                       cognitive_score, sentiment_risk, risk_score,
                       final_stage, final_confidence
                FROM sessions
-               WHERE patient_id = ?
-               ORDER BY timestamp DESC LIMIT ?''',
+                WHERE patient_id = ?
+                ORDER BY timestamp DESC LIMIT ?''',
             (patient_id, limit),
+        )
+        return rows
+
+    def get_all(self) -> List[Dict[str, Any]]:
+        rows = self.db.fetch_all(
+            '''SELECT id, patient_id, patient_name, timestamp,
+                      mri_stage, mri_confidence,
+                      cognitive_score, sentiment_risk, risk_score,
+                      final_stage, final_confidence
+               FROM sessions
+               ORDER BY timestamp DESC'''
         )
         return rows
 

@@ -1,0 +1,63 @@
+# ==========================================
+# Production Docker Compose Override
+# ==========================================
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+version: '3.8'
+
+services:
+  backend:
+    environment:
+      - FLASK_ENV=production
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FORMAT=json
+      - RATELIMIT_STORAGE=redis://redis:6379
+      - CORS_ORIGINS=${CORS_ORIGINS:-}
+    volumes:
+      - ../../backend/models:/app/models:ro
+      - backend-uploads:/app/uploads
+      - backend-logs:/app/logs
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 1G
+
+  frontend:
+    environment:
+      - NODE_ENV=production
+      - REACT_APP_API_URL=https://api.neurosense.example.com
+    volumes:
+      - ../../frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  redis:
+    image: redis:7-alpine
+    container_name: neurosense-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    command: redis-server /usr/local/etc/redis/redis.conf
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+
+volumes:
+  backend-uploads:
+  backend-logs:
+  redis-data:

@@ -5,13 +5,17 @@ import { authApi } from './api/authApi'
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
-  const [user, setUser]     = useState(null)
+  const [user, setUser] = useState(null)
+  const [role, setRole] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     authApi.getCurrentUser()
       .then(data => {
-        if (data.authenticated) setUser(data.user)
+        if (data.authenticated) {
+          setUser(data.user)
+          setRole(data.role || data.user?.role)
+        }
       })
       .catch(() => {})
       .finally(() => setLoading(false))
@@ -21,15 +25,17 @@ export function AuthProvider({ children }) {
     const data = await authApi.login(username, password)
     if (data.success) {
       setUser(data.user)
+      setRole(data.role || data.user?.role)
       toast.success(`Welcome back, ${data.user?.full_name || username}!`)
-      return true
+      return { success: true, role: data.role || data.user?.role }
     }
     toast.error(data.message || 'Invalid credentials')
-    return false
+    return { success: false }
   }
 
   const register = async (payload) => {
-    const data = await authApi.register(payload)
+    // Force role to be doctor
+    const data = await authApi.register({ ...payload, role: 'doctor' })
     if (data.success) toast.success('Account created! Please log in.')
     else toast.error(data.message || 'Registration failed')
     return data.success
@@ -38,11 +44,12 @@ export function AuthProvider({ children }) {
   const logout = async () => {
     await authApi.logout()
     setUser(null)
+    setRole(null)
     toast.success('Logged out successfully')
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, role, loading, login, register, logout, isAdmin: role === 'admin', isDoctor: role === 'doctor' }}>
       {children}
     </AuthContext.Provider>
   )

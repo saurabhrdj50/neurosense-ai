@@ -3,21 +3,27 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   LayoutDashboard, Brain, Users, ChartBar, LogOut,
-  ChevronLeft, Activity, Sparkles,
+  ChevronLeft, Activity, Sparkles, Stethoscope, Shield,
 } from 'lucide-react'
-import { useAuth } from '../../context/AuthContext'
+import { useAuth } from '../../features/auth/AuthProvider'
 
 /* ── Nav items ────────────────────────────────────────────────────────────── */
 const NAV_ITEMS = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', color: '#6366f1' },
   { to: '/analysis',  icon: Brain,           label: 'Analysis',  color: '#06b6d4' },
+  { to: '/clinical',  icon: Stethoscope,     label: 'Clinical',  color: '#22c55e' },
   { to: '/patients',  icon: Users,           label: 'Patients',  color: '#a855f7' },
   { to: '/results',   icon: ChartBar,        label: 'Results',   color: '#f59e0b' },
 ]
 
+const ADMIN_NAV_ITEMS = [
+  { to: '/admin/dashboard', icon: Shield, label: 'Admin Panel', color: '#ef4444' },
+]
+
 export default function Sidebar({ open, onToggle }) {
-  const { logout, user } = useAuth()
+  const { logout, user, isAdmin } = useAuth()
   const navigate = useNavigate()
+  const navItems = isAdmin ? [...ADMIN_NAV_ITEMS, ...NAV_ITEMS] : NAV_ITEMS
 
   const handleLogout = async () => {
     await logout()
@@ -33,9 +39,8 @@ export default function Sidebar({ open, onToggle }) {
         fixed lg:relative z-50
       `}
       style={{
-        background: 'rgba(10,14,26,0.85)',
-        backdropFilter: 'blur(30px)',
-        borderRight: '1px solid rgba(255,255,255,0.05)',
+        background: '#0B0F1A',
+        borderRight: '1px solid #1E293B',
       }}
     >
       {/* ── Accent gradient top edge ────────────────────────────────────── */}
@@ -84,19 +89,18 @@ export default function Sidebar({ open, onToggle }) {
       {/* ── Collapse toggle ─────────────────────────────────────────────── */}
       <motion.button
         onClick={onToggle}
-        whileHover={{ scale: 1.15 }}
+        whileHover={{ scale: 1.15, boxShadow: '0 0 20px rgba(99,102,241,0.4)' }}
         whileTap={{ scale: 0.9 }}
-        className="absolute top-6 -right-3.5 w-7 h-7 rounded-full hidden lg:flex items-center justify-center cursor-pointer"
+        className="absolute top-[88px] -right-4 w-8 h-8 rounded-full hidden lg:flex items-center justify-center cursor-pointer z-50"
         style={{
-          background: 'linear-gradient(135deg, #1e293b, #0f172a)',
-          border: '1px solid rgba(255,255,255,0.1)',
-          color: '#94a3b8',
-          zIndex: 51,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+          background: 'linear-gradient(135deg, #1e293b, #111827)',
+          border: '1px solid rgba(99,102,241,0.3)',
+          color: '#a5b4fc',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.5), 0 0 8px rgba(99,102,241,0.2)',
         }}
       >
         <motion.span animate={{ rotate: open ? 0 : 180 }} transition={{ duration: 0.3 }}>
-          <ChevronLeft size={13} />
+          <ChevronLeft size={14} />
         </motion.span>
       </motion.button>
 
@@ -141,7 +145,7 @@ export default function Sidebar({ open, onToggle }) {
 
       {/* ── Nav items ───────────────────────────────────────────────────── */}
       <nav className="flex-1 px-3 space-y-1">
-        {NAV_ITEMS.map(({ to, icon: Icon, label, color }) => (
+        {navItems.map(({ to, icon: Icon, label, color }) => (
           <NavLink key={to} to={to}>
             {({ isActive }) => (
               <motion.div

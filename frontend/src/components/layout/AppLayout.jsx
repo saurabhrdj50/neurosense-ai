@@ -1,14 +1,17 @@
 import React, { useState } from 'react'
-import { Outlet } from 'react-router-dom'
+import { Outlet, useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { Plus, X } from 'lucide-react'
 import Sidebar from './Sidebar'
 import TopBar from './TopBar'
 
 /**
  * AppLayout — Main dashboard shell wrapping all protected pages.
- * Sidebar + TopBar + scrollable content area.
+ * Sidebar + TopBar + scrollable content area + FAB
  */
 export default function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const navigate = useNavigate()
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ position: 'relative', zIndex: 1 }}>
@@ -33,6 +36,22 @@ export default function AppLayout() {
           <Outlet />
         </main>
       </div>
+
+      {/* Floating Action Button for mobile */}
+      <motion.button
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
+        onClick={() => navigate('/analysis')}
+        className="fixed bottom-6 right-6 z-50 lg:hidden w-14 h-14 rounded-full flex items-center justify-center shadow-lg"
+        style={{
+          background: 'linear-gradient(135deg, #6366f1, #a855f7)',
+          boxShadow: '0 4px 20px rgba(99,102,241,0.4)',
+        }}
+      >
+        <Plus size={24} color="white" />
+      </motion.button>
     </div>
   )
 }

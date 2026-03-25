@@ -205,3 +205,42 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# ==========================================
+# NeuroSense Specific
+# ==========================================
+
+# Database files
+patient_data.db
+patient_data.db-journal
+*.sqlite3
+
+# Model files (keep only in production)
+models/
+!models/.gitkeep
+
+# Uploaded files
+uploads/
+!uploads/.gitkeep
+
+# Logs
+logs/
+*.log
+
+# Environment specific
+.env.local
+.env.production
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+frontend/dist/
+frontend/build/

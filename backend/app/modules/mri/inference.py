@@ -52,7 +52,7 @@ class MRIClassifier:
             return self._error_result()
 
         image = Image.open(image_path).convert('RGB')
-        tensor = VALID_TRANSFORMS(image).unsqueeze(0).to(self.device)
+        tensor = VALID_TRANSFORMS(image).unsqueeze(0).to(self.device)  # type: ignore
 
         logits = self.model(tensor)
         probs = torch.softmax(logits, dim=1).squeeze()

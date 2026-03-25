@@ -20,7 +20,7 @@ FER = None
 HAS_FER = False
 
 try:
-    from fer import FER as FER_module
+    from fer import FER as FER_module  # type: ignore
     FER = FER_module
     HAS_FER = True
 except ImportError:

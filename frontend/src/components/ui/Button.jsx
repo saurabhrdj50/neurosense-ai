@@ -19,9 +19,9 @@ const VARIANTS = {
     boxShadow: 'none',
   },
   ghost: {
-    background: 'rgba(255,255,255,0.03)',
-    color: '#94a3b8',
-    border: '1px solid rgba(255,255,255,0.07)',
+    background: '#1F2937',
+    color: '#E5E7EB',
+    border: '1px solid #374151',
     boxShadow: 'none',
   },
   danger: {
@@ -49,8 +49,8 @@ export default function Button({
   return (
     <motion.button
       type={type}
-      whileHover={!disabled && !loading ? { scale: 1.04, y: -1 } : undefined}
-      whileTap={!disabled && !loading ? { scale: 0.96 } : undefined}
+      whileHover={!disabled && !loading ? { scale: 1.03, filter: 'brightness(1.1)' } : undefined}
+      whileTap={!disabled && !loading ? { scale: 0.97 } : undefined}
       disabled={disabled || loading}
       className={`relative flex items-center justify-center gap-2 rounded-xl font-semibold overflow-hidden ${className}`}
       style={{
@@ -61,7 +61,8 @@ export default function Button({
         cursor: disabled || loading ? 'not-allowed' : 'pointer',
         fontFamily: 'Inter, sans-serif',
         letterSpacing: '-0.01em',
-        transition: 'box-shadow 0.3s',
+        transition: 'box-shadow 0.3s, filter 0.2s',
+        boxShadow: variant === 'primary' ? '0 4px 20px rgba(99,102,241,0.35)' : varStyle.boxShadow,
       }}
       {...props}
     >

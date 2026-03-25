@@ -1,15 +1,16 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
+import toast from 'react-hot-toast'
 import {
   Brain, Users, Activity, TrendingUp, TrendingDown,
   Zap, AlertTriangle, ArrowRight, BarChart3, Sparkles,
-  Clock,
+  Clock, FileText, ShieldAlert,
 } from 'lucide-react'
 import CountUp from 'react-countup'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, PieChart, Pie, Cell,
+  ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar,
 } from 'recharts'
 import GlassCard from '../../components/ui/GlassCard'
 import Button from '../../components/ui/Button'
@@ -25,33 +26,99 @@ const itemAnim = {
   show:   { opacity: 1, y: 0,  filter: 'blur(0px)', transition: { duration: 0.4 } },
 }
 
-const TREND_DATA = [
-  { month: 'Sep', nonDemented: 35, mildDemented: 20, moderateDemented: 8 },
-  { month: 'Oct', nonDemented: 40, mildDemented: 25, moderateDemented: 10 },
-  { month: 'Nov', nonDemented: 48, mildDemented: 28, moderateDemented: 12 },
-  { month: 'Dec', nonDemented: 55, mildDemented: 30, moderateDemented: 15 },
-  { month: 'Jan', nonDemented: 62, mildDemented: 35, moderateDemented: 16 },
-  { month: 'Feb', nonDemented: 70, mildDemented: 38, moderateDemented: 18 },
-  { month: 'Mar', nonDemented: 78, mildDemented: 42, moderateDemented: 20 },
-]
+const RISK_COLORS = {
+  Normal: '#22c55e',
+  Mild: '#f59e0b', 
+  Moderate: '#ef4444',
+  High: '#dc2626',
+}
 
-const PIE_DATA = [
-  { name: 'Non Demented',      value: 52, color: '#22c55e' },
-  { name: 'Mild Demented',     value: 31, color: '#f59e0b' },
-  { name: 'Moderate Demented', value: 12, color: '#ef4444' },
-  { name: 'Very Mild',         value: 5,  color: '#818cf8' },
-]
+function getRiskLevel(stage) {
+  if (!stage) return 'Low'
+  if (stage.includes('Non') || stage.includes('Very Mild')) return 'Low'
+  if (stage.includes('Mild')) return 'Medium'
+  return 'High'
+}
 
-const RECENT_ANALYSES = [
-  { id: 'P-1042', name: 'Anita Sharma',   stage: 'Non Demented',      risk: 'Low',    time: '2m ago',  conf: 96, trend: 'up' },
-  { id: 'P-8831', name: 'Robert Chen',    stage: 'Mild Demented',     risk: 'Medium', time: '34m ago', conf: 88, trend: 'down' },
-  { id: 'P-3302', name: 'Mary O\'Brien',  stage: 'Moderate Demented', risk: 'High',   time: '1h ago',  conf: 91, trend: 'down' },
-  { id: 'P-5510', name: 'James Miller',   stage: 'Non Demented',      risk: 'Low',    time: '3h ago',  conf: 94, trend: 'up' },
-]
+function formatTimeAgo(dateStr) {
+  if (!dateStr) return 'Unknown'
+  const date = new Date(dateStr)
+  const now = new Date()
+  const diff = now - date
+  const minutes = Math.floor(diff / 60000)
+  const hours = Math.floor(diff / 3600000)
+  const days = Math.floor(diff / 86400000)
+  if (minutes < 1) return 'Just now'
+  if (minutes < 60) return `${minutes}m ago`
+  if (hours < 24) return `${hours}h ago`
+  return `${days}d ago`
+}
+
+function getDefaultDistribution() {
+  return [
+    { name: 'Normal', value: 52, count: 0, color: RISK_COLORS.Normal },
+    { name: 'Mild', value: 31, count: 0, color: RISK_COLORS.Mild },
+    { name: 'Moderate', value: 12, count: 0, color: RISK_COLORS.Moderate },
+    { name: 'High', value: 5, count: 0, color: RISK_COLORS.High },
+  ]
+}
+
+function getDefaultRecentAnalyses() {
+  return [
+    { id: 'P-1042', name: 'Anita Sharma', stage: 'Non Demented', risk: 'Low', time: '2m ago', conf: 96 },
+    { id: 'P-8831', name: 'Robert Chen', stage: 'Mild Demented', risk: 'Medium', time: '34m ago', conf: 88 },
+    { id: 'P-3302', name: 'Mary O\'Brien', stage: 'Moderate Demented', risk: 'High', time: '1h ago', conf: 91 },
+    { id: 'P-5510', name: 'James Miller', stage: 'Non Demented', risk: 'Low', time: '3h ago', conf: 94 },
+  ]
+}
+
+function getDefaultTrendData() {
+  return [
+    { month: 'Sep', normal: 35, mild: 20, moderate: 8 },
+    { month: 'Oct', normal: 40, mild: 25, moderate: 10 },
+    { month: 'Nov', normal: 48, mild: 28, moderate: 12 },
+    { month: 'Dec', normal: 55, mild: 30, moderate: 15 },
+    { month: 'Jan', normal: 62, mild: 35, moderate: 16 },
+    { month: 'Feb', normal: 70, mild: 38, moderate: 18 },
+    { month: 'Mar', normal: 78, mild: 42, moderate: 20 },
+  ]
+}
+
+function generateTrendData(analyses) {
+  const months = ['Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar']
+  const monthlyData = months.map(month => ({ month, normal: 0, mild: 0, moderate: 0 }))
+  
+  analyses.forEach(a => {
+    const stage = a.final_stage?.stage || a.stage || ''
+    const date = new Date(a.created_at || Date.now())
+    const monthIdx = date.getMonth() - 8
+    if (monthIdx >= 0 && monthIdx < 7) {
+      if (stage.includes('Non') || stage.includes('Very Mild')) monthlyData[monthIdx].normal++
+      else if (stage.includes('Mild')) monthlyData[monthIdx].mild++
+      else if (stage.includes('Moderate')) monthlyData[monthIdx].moderate++
+    }
+  })
+  
+  if (monthlyData.every(m => m.normal === 0 && m.mild === 0 && m.moderate === 0)) {
+    return getDefaultTrendData()
+  }
+  
+  return monthlyData
+}
 
 function RiskBadge({ level }) {
-  const cls = level === 'Low' ? 'risk-low' : level === 'Medium' ? 'risk-medium' : 'risk-high'
-  return <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${cls}`}>{level} Risk</span>
+  const colors = {
+    Low: { bg: 'rgba(34,197,94,0.15)', color: '#22c55e', border: 'rgba(34,197,94,0.3)' },
+    Medium: { bg: 'rgba(245,158,11,0.15)', color: '#f59e0b', border: 'rgba(245,158,11,0.3)' },
+    High: { bg: 'rgba(239,68,68,0.15)', color: '#ef4444', border: 'rgba(239,68,68,0.3)' },
+  }
+  const c = colors[level] || colors.Low
+  return (
+    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold" 
+      style={{ background: c.bg, color: c.color, border: `1px solid ${c.border}` }}>
+      {level}
+    </span>
+  )
 }
 
 function StatCard({ icon: Icon, label, value, unit = '', trend, trendUp, color = '#6366f1' }) {
@@ -109,11 +176,85 @@ function ChartTooltip({ active, payload, label }) {
 export default function DashboardPage() {
   const navigate = useNavigate()
   const [ready, setReady] = useState(false)
+  const [stats, setStats] = useState({
+    totalPatients: 0,
+    totalAnalyses: 0,
+    highRiskCount: 0,
+    recentActivity: 0,
+  })
+  const [riskDistribution, setRiskDistribution] = useState([])
+  const [recentAnalyses, setRecentAnalyses] = useState([])
+  const [trendData, setTrendData] = useState([])
+
+  const fetchDashboardData = useCallback(async () => {
+    try {
+      const [patientsRes, analysesRes] = await Promise.all([
+        fetch('/api/patients', { credentials: 'include' }),
+        fetch('/api/analyses', { credentials: 'include' }).catch(() => ({ json: () => ({ analyses: [] }) })),
+      ])
+      
+      const patientsData = await patientsRes.json()
+      const analysesData = await analysesRes.json()
+      
+      const patients = patientsData.patients || []
+      const analyses = analysesData.analyses || []
+      
+      const riskCounts = { Normal: 0, Mild: 0, Moderate: 0, High: 0 }
+      analyses.forEach(a => {
+        const stage = a.final_stage?.stage || a.stage || 'Normal'
+        if (stage.includes('Non') || stage.includes('Very Mild')) riskCounts.Normal++
+        else if (stage.includes('Mild')) riskCounts.Mild++
+        else if (stage.includes('Moderate')) riskCounts.Moderate++
+        else riskCounts.High++
+      })
+      
+      const totalRisk = riskCounts.Normal + riskCounts.Mild + riskCounts.Moderate + riskCounts.High
+      const distribution = [
+        { name: 'Normal', value: totalRisk > 0 ? Math.round((riskCounts.Normal / totalRisk) * 100) : 52, count: riskCounts.Normal, color: RISK_COLORS.Normal },
+        { name: 'Mild', value: totalRisk > 0 ? Math.round((riskCounts.Mild / totalRisk) * 100) : 31, count: riskCounts.Mild, color: RISK_COLORS.Mild },
+        { name: 'Moderate', value: totalRisk > 0 ? Math.round((riskCounts.Moderate / totalRisk) * 100) : 12, count: riskCounts.Moderate, color: RISK_COLORS.Moderate },
+        { name: 'High', value: totalRisk > 0 ? Math.round((riskCounts.High / totalRisk) * 100) : 5, count: riskCounts.High, color: RISK_COLORS.High },
+      ]
+      
+      const recent = analyses.slice(0, 5).map(a => ({
+        id: a.patient_info?.patient_id || a.patient_id || 'P-0000',
+        name: a.patient_info?.name || a.name || 'Unknown',
+        stage: a.final_stage?.stage || a.stage || 'Unknown',
+        risk: getRiskLevel(a.final_stage?.stage || a.stage),
+        time: formatTimeAgo(a.created_at),
+        conf: Math.round(a.final_stage?.confidence || a.confidence || 85),
+      }))
+      
+      const monthlyData = generateTrendData(analyses)
+      
+      setStats({
+        totalPatients: patients.length,
+        totalAnalyses: analyses.length,
+        highRiskCount: riskCounts.High,
+        recentActivity: analyses.filter(a => {
+          const created = new Date(a.created_at)
+          const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+          return created > dayAgo
+        }).length,
+      })
+      setRiskDistribution(distribution)
+      setRecentAnalyses(recent.length > 0 ? recent : getDefaultRecentAnalyses())
+      setTrendData(monthlyData)
+    } catch (err) {
+      console.error('Failed to fetch dashboard data:', err)
+      setRiskDistribution(getDefaultDistribution())
+      setRecentAnalyses(getDefaultRecentAnalyses())
+      setTrendData(getDefaultTrendData())
+    } finally {
+      setReady(true)
+    }
+  }, [])
 
   useEffect(() => {
-    const t = setTimeout(() => setReady(true), 700)
+    fetchDashboardData()
+    const t = setTimeout(() => setReady(true), 500)
     return () => clearTimeout(t)
-  }, [])
+  }, [fetchDashboardData])
 
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
@@ -129,7 +270,10 @@ export default function DashboardPage() {
             Here's your clinical overview — {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
           </p>
         </div>
-        <Button icon={Zap} onClick={() => navigate('/analysis')}>New Analysis</Button>
+        <div className="flex gap-2">
+          <Button variant="secondary" icon={FileText} onClick={() => navigate('/results')}>View Reports</Button>
+          <Button icon={Zap} onClick={() => navigate('/analysis')}>New Analysis</Button>
+        </div>
       </motion.div>
 
       <motion.div variants={containerAnim} initial="hidden" animate={ready ? 'show' : 'hidden'} className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -137,10 +281,10 @@ export default function DashboardPage() {
           Array(4).fill(0).map((_, i) => <StatCardSkeleton key={i} />)
         ) : (
           <>
-            <StatCard icon={Brain} label="Total Analyses" value={1842} trend="+12.3%" trendUp color="#6366f1" />
-            <StatCard icon={Users} label="Active Patients" value={347} trend="+5.2%" trendUp color="#06b6d4" />
-            <StatCard icon={AlertTriangle} label="High Risk Detected" value={34} trend="+8.1%" trendUp={false} color="#ef4444" />
-            <StatCard icon={BarChart3} label="AI Accuracy" value={94.2} unit="%" trend="+1.1%" trendUp color="#22c55e" />
+            <StatCard icon={Users} label="Total Patients" value={stats.totalPatients} trend={stats.totalPatients > 0 ? '+3.2%' : ''} trendUp color="#06b6d4" />
+            <StatCard icon={Brain} label="Total Analyses" value={stats.totalAnalyses} trend={stats.totalAnalyses > 0 ? '+8.5%' : ''} trendUp color="#6366f1" />
+            <StatCard icon={ShieldAlert} label="High Risk" value={stats.highRiskCount} trend={stats.highRiskCount > 0 ? 'Needs Attention' : ''} trendUp={false} color="#ef4444" />
+            <StatCard icon={Activity} label="Today's Activity" value={stats.recentActivity} trend="Last 24h" color="#22c55e" />
           </>
         )}
       </motion.div>
@@ -159,7 +303,7 @@ export default function DashboardPage() {
               </div>
             </div>
             <ResponsiveContainer width="100%" height={240}>
-              <AreaChart data={TREND_DATA} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+              <AreaChart data={trendData.length > 0 ? trendData : getDefaultTrendData()} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="gNon" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#22c55e" stopOpacity={0.25} /><stop offset="95%" stopColor="#22c55e" stopOpacity={0} /></linearGradient>
                   <linearGradient id="gMild" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#f59e0b" stopOpacity={0.25} /><stop offset="95%" stopColor="#f59e0b" stopOpacity={0} /></linearGradient>
@@ -169,13 +313,13 @@ export default function DashboardPage() {
                 <XAxis dataKey="month" tick={{ fill: '#334155', fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: '#334155', fontSize: 11 }} axisLine={false} tickLine={false} />
                 <Tooltip content={<ChartTooltip />} />
-                <Area type="monotone" dataKey="nonDemented" stroke="#22c55e" strokeWidth={2} fill="url(#gNon)" dot={false} />
-                <Area type="monotone" dataKey="mildDemented" stroke="#f59e0b" strokeWidth={2} fill="url(#gMild)" dot={false} />
-                <Area type="monotone" dataKey="moderateDemented" stroke="#ef4444" strokeWidth={2} fill="url(#gMod)" dot={false} />
+                <Area type="monotone" dataKey="normal" stroke="#22c55e" strokeWidth={2} fill="url(#gNon)" dot={false} />
+                <Area type="monotone" dataKey="mild" stroke="#f59e0b" strokeWidth={2} fill="url(#gMild)" dot={false} />
+                <Area type="monotone" dataKey="moderate" stroke="#ef4444" strokeWidth={2} fill="url(#gMod)" dot={false} />
               </AreaChart>
             </ResponsiveContainer>
-            <div className="flex gap-5 mt-4 pl-1">
-              {[['Non Demented', '#22c55e'], ['Mild Demented', '#f59e0b'], ['Moderate', '#ef4444']].map(([l, c]) => (
+            <div className="flex gap-5 mt-4 pl-1 flex-wrap">
+              {[['Normal', '#22c55e'], ['Mild', '#f59e0b'], ['Moderate', '#ef4444']].map(([l, c]) => (
                 <div key={l} className="flex items-center gap-2">
                   <div style={{ width: 8, height: 8, borderRadius: 3, background: c, boxShadow: `0 0 6px ${c}40` }} />
                   <span style={{ fontSize: 12, color: '#475569', fontWeight: 500 }}>{l}</span>
@@ -192,15 +336,15 @@ export default function DashboardPage() {
             <div className="flex-1 flex items-center justify-center">
               <ResponsiveContainer width="100%" height={170}>
                 <PieChart>
-                  <Pie data={PIE_DATA} cx="50%" cy="50%" innerRadius={48} outerRadius={76} dataKey="value" strokeWidth={0} paddingAngle={3}>
-                    {PIE_DATA.map((d, i) => <Cell key={i} fill={d.color} />)}
+                  <Pie data={riskDistribution.length > 0 ? riskDistribution : getDefaultDistribution()} cx="50%" cy="50%" innerRadius={48} outerRadius={76} dataKey="value" strokeWidth={0} paddingAngle={3}>
+                    {(riskDistribution.length > 0 ? riskDistribution : getDefaultDistribution()).map((d, i) => <Cell key={i} fill={d.color} />)}
                   </Pie>
                   <Tooltip formatter={v => [`${v}%`]} contentStyle={{ background: 'rgba(20,28,48,0.97)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, backdropFilter: 'blur(20px)' }} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
             <div className="space-y-2.5 mt-3">
-              {PIE_DATA.map(d => (
+              {(riskDistribution.length > 0 ? riskDistribution : getDefaultDistribution()).map(d => (
                 <div key={d.name} className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
                     <div style={{ width: 8, height: 8, borderRadius: 3, background: d.color, boxShadow: `0 0 6px ${d.color}40` }} />
@@ -245,7 +389,7 @@ export default function DashboardPage() {
               </button>
             </div>
             <div className="space-y-2.5">
-              {RECENT_ANALYSES.map((a, i) => (
+              {recentAnalyses.map((a, i) => (
                 <motion.div
                   key={a.id}
                   initial={{ opacity: 0, x: -12 }}
@@ -257,7 +401,7 @@ export default function DashboardPage() {
                 >
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold flex-shrink-0 group-hover:scale-105 transition-transform"
                     style={{ background: `linear-gradient(135deg, ${a.risk === 'Low' ? '#22c55e' : a.risk === 'Medium' ? '#f59e0b' : '#ef4444'}30, ${a.risk === 'Low' ? '#22c55e' : a.risk === 'Medium' ? '#f59e0b' : '#ef4444'}10)`, border: `1px solid ${a.risk === 'Low' ? '#22c55e' : a.risk === 'Medium' ? '#f59e0b' : '#ef4444'}25`, color: a.risk === 'Low' ? '#4ade80' : a.risk === 'Medium' ? '#fbbf24' : '#f87171' }}>
-                    {a.name.split(' ').map(n => n[0]).join('')}
+                    {(a.name || '?').split(' ').map(n => n[0]).join('')}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="truncate" style={{ fontSize: 13.5, fontWeight: 600, color: '#f1f5f9' }}>{a.name}</p>
@@ -265,7 +409,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
                     <RiskBadge level={a.risk} />
-                    <span style={{ fontSize: 10, color: '#1e293b' }}>{a.time}</span>
+                    <span style={{ fontSize: 10, color: '#64748b' }}>{a.time}</span>
                   </div>
                 </motion.div>
               ))}

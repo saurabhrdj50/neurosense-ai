@@ -1,8 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Menu, Bell, Search, X, Brain, Command, Clock } from 'lucide-react'
+import { Menu, Bell, Search, X, Brain, Command, Clock, AlertTriangle, CheckCircle, Info } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { useAuth } from '../../context/AuthContext'
+import { useAuth } from '../../features/auth/AuthProvider'
 
 /* ── Page title map ───────────────────────────────────────────────────────── */
 const PAGE_TITLES = {
@@ -13,13 +13,19 @@ const PAGE_TITLES = {
   '/history':   { title: 'Patient History',       subtitle: 'Timeline & progression' },
 }
 
-/* ── Mock notifications (replace with real API) ───────────────────────────── */
-const NOTIFICATIONS = [
-  { id: 1, text: 'MRI analysis completed for P-1042',      time: '2 min ago',  type: 'success' },
-  { id: 2, text: 'High risk detected — Patient P-8831',    time: '18 min ago', type: 'danger' },
-  { id: 3, text: 'Cognitive assessment ready for review',   time: '1h ago',     type: 'info' },
-  { id: 4, text: 'New patient John Miller was registered',  time: '3h ago',     type: 'info' },
-]
+function formatTimeAgo(dateStr) {
+  if (!dateStr) return 'Unknown'
+  const date = new Date(dateStr)
+  const now = new Date()
+  const diff = now - date
+  const minutes = Math.floor(diff / 60000)
+  const hours = Math.floor(diff / 3600000)
+  const days = Math.floor(diff / 86400000)
+  if (minutes < 1) return 'Just now'
+  if (minutes < 60) return `${minutes} min ago`
+  if (hours < 24) return `${hours}h ago`
+  return `${days}d ago`
+}
 
 export default function TopBar({ onMenuClick }) {
   const { pathname }   = useLocation()
@@ -28,11 +34,69 @@ export default function TopBar({ onMenuClick }) {
   const [notifOpen, setNotifOpen]   = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchVal, setSearchVal]   = useState('')
+  const [notifications, setNotifications] = useState([])
+  const [notifLoading, setNotifLoading] = useState(false)
   const searchRef = useRef(null)
   const notifRef  = useRef(null)
 
   const pageKey = Object.keys(PAGE_TITLES).find(k => pathname.startsWith(k)) || '/dashboard'
   const { title, subtitle } = PAGE_TITLES[pageKey]
+
+  const fetchNotifications = useCallback(async () => {
+    setNotifLoading(true)
+    try {
+      const [analysesRes, patientsRes] = await Promise.all([
+        fetch('/api/analyses', { credentials: 'include' }).catch(() => ({ json: () => ({ analyses: [] }) })),
+        fetch('/api/patients', { credentials: 'include' }).catch(() => ({ json: () => ({ patients: [] }) })),
+      ])
+      
+      const analysesData = await analysesRes.json()
+      const patientsData = await patientsRes.json()
+      
+      const analyses = analysesData.analyses || []
+      const patients = patientsData.patients || []
+      
+      const notifs = []
+      let id = 1
+      
+      analyses.slice(0, 5).forEach(a => {
+        const stage = a.final_stage?.stage || a.stage || ''
+        const isHighRisk = stage.includes('Moderate') || stage.includes('High')
+        
+        notifs.push({
+          id: id++,
+          text: isHighRisk 
+            ? `High risk detected — Patient ${a.patient_info?.patient_id || a.patient_id || 'Unknown'}`
+            : `Analysis completed for ${a.patient_info?.name || a.patient_id || 'Patient'}`,
+          time: a.created_at,
+          type: isHighRisk ? 'danger' : 'success',
+        })
+      })
+      
+      patients.slice(0, 3).forEach(p => {
+        if (notifs.length < 8) {
+          notifs.push({
+            id: id++,
+            text: `Patient ${p.name} (${p.patient_id}) is registered`,
+            time: p.created_at || p.updated_at,
+            type: 'info',
+          })
+        }
+      })
+      
+      setNotifications(notifs.sort((a, b) => new Date(b.time) - new Date(a.time)).slice(0, 10))
+    } catch (err) {
+      console.error('Failed to fetch notifications:', err)
+    } finally {
+      setNotifLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchNotifications()
+    const interval = setInterval(fetchNotifications, 30000)
+    return () => clearInterval(interval)
+  }, [fetchNotifications])
 
   /* ── Close dropdowns on outside click ────────────────────────────────── */
   useEffect(() => {
@@ -59,9 +123,8 @@ export default function TopBar({ onMenuClick }) {
     <header
       className="flex items-center justify-between px-4 sm:px-6 lg:px-8 flex-shrink-0"
       style={{
-        background: 'rgba(10,14,26,0.65)',
-        backdropFilter: 'blur(24px)',
-        borderBottom: '1px solid rgba(255,255,255,0.04)',
+        background: '#0B0F1A',
+        borderBottom: '1px solid #1E293B',
         height: 72,
         position: 'relative',
         zIndex: 40,
@@ -75,7 +138,7 @@ export default function TopBar({ onMenuClick }) {
           whileTap={{ scale: 0.95 }}
           onClick={onMenuClick}
           className="p-2 rounded-xl lg:hidden"
-          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', color: '#94a3b8', cursor: 'pointer' }}
+          style={{ background: '#1F2937', border: '1px solid #374151', color: '#9CA3AF', cursor: 'pointer' }}
         >
           <Menu size={18} />
         </motion.button>
@@ -89,9 +152,9 @@ export default function TopBar({ onMenuClick }) {
             transition={{ duration: 0.3 }}
             style={{
               fontFamily: 'Space Grotesk, sans-serif',
-              fontSize: 18,
+              fontSize: 20,
               fontWeight: 700,
-              color: '#f1f5f9',
+              color: '#FFFFFF',
               lineHeight: 1.2,
               letterSpacing: '-0.02em',
             }}
@@ -103,7 +166,7 @@ export default function TopBar({ onMenuClick }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.1 }}
-            style={{ fontSize: 12, color: '#475569', marginTop: 1 }}
+            style={{ fontSize: 12, color: '#9CA3AF', marginTop: 1 }}
           >
             {subtitle}
           </motion.p>
@@ -125,7 +188,7 @@ export default function TopBar({ onMenuClick }) {
               className="overflow-hidden hidden sm:block"
             >
               <div className="relative">
-                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#475569' }} />
+                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#6B7280' }} />
                 <input
                   ref={searchRef}
                   autoFocus
@@ -134,13 +197,13 @@ export default function TopBar({ onMenuClick }) {
                   placeholder="Search patients…"
                   onBlur={() => { if (!searchVal) setSearchOpen(false) }}
                   className="w-full pl-9 pr-9 py-2 text-sm rounded-xl"
-                  style={{ height: 38, fontSize: 13 }}
+                  style={{ height: 38, fontSize: 13, background: '#1F2937', border: '1px solid #374151', color: '#FFFFFF' }}
                   onKeyDown={e => e.key === 'Escape' && (setSearchOpen(false), setSearchVal(''))}
                 />
                 <button
                   onClick={() => { setSearchOpen(false); setSearchVal('') }}
                   className="absolute right-3 top-1/2 -translate-y-1/2"
-                  style={{ color: '#475569', background: 'none', border: 'none', cursor: 'pointer' }}
+                  style={{ color: '#6B7280', background: 'none', border: 'none', cursor: 'pointer' }}
                 >
                   <X size={14} />
                 </button>
@@ -154,18 +217,18 @@ export default function TopBar({ onMenuClick }) {
               onClick={() => setSearchOpen(true)}
               className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl"
               style={{
-                background: 'rgba(255,255,255,0.03)',
-                border: '1px solid rgba(255,255,255,0.06)',
-                color: '#475569',
+                background: '#1F2937',
+                border: '1px solid #374151',
+                color: '#9CA3AF',
                 cursor: 'pointer',
                 fontSize: 13,
               }}
             >
               <Search size={15} />
-              <span className="hidden md:inline" style={{ color: '#334155' }}>Search…</span>
+              <span className="hidden md:inline" style={{ color: '#9CA3AF' }}>Search…</span>
               <span
                 className="hidden lg:flex items-center gap-0.5 px-1.5 py-0.5 rounded"
-                style={{ fontSize: 10, background: 'rgba(255,255,255,0.06)', color: '#475569', fontFamily: 'JetBrains Mono', fontWeight: 500 }}
+                style={{ fontSize: 10, background: '#374151', color: '#9CA3AF', fontFamily: 'JetBrains Mono', fontWeight: 500 }}
               >
                 <Command size={9} />K
               </span>
@@ -181,9 +244,9 @@ export default function TopBar({ onMenuClick }) {
             onClick={() => setNotifOpen(o => !o)}
             className="relative p-2 rounded-xl"
             style={{
-              background: 'rgba(255,255,255,0.03)',
-              border: '1px solid rgba(255,255,255,0.06)',
-              color: '#64748b',
+              background: '#1F2937',
+              border: '1px solid #374151',
+              color: '#9CA3AF',
               cursor: 'pointer',
             }}
           >
@@ -201,7 +264,7 @@ export default function TopBar({ onMenuClick }) {
                 boxShadow: '0 2px 8px rgba(239,68,68,0.4)',
               }}
             >
-              {NOTIFICATIONS.length}
+              {notifications.length > 0 ? notifications.filter(n => n.type === 'danger').length || notifications.length : 0}
             </motion.span>
           </motion.button>
 
@@ -237,31 +300,41 @@ export default function TopBar({ onMenuClick }) {
                 </div>
 
                 {/* Items */}
-                {NOTIFICATIONS.map((n, i) => (
-                  <motion.div
-                    key={n.id}
-                    initial={{ opacity: 0, x: -12 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.05 }}
-                    className="flex items-start gap-3 px-5 py-3.5 cursor-pointer hover:bg-white/[0.02] transition-colors"
-                    style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}
-                  >
-                    <div
-                      className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0"
-                      style={{
-                        background: n.type === 'success' ? '#22c55e' : n.type === 'danger' ? '#ef4444' : '#6366f1',
-                        boxShadow: `0 0 6px ${n.type === 'success' ? '#22c55e' : n.type === 'danger' ? '#ef4444' : '#6366f1'}50`,
-                      }}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p style={{ fontSize: 13, color: '#e2e8f0', lineHeight: 1.4 }}>{n.text}</p>
-                      <div className="flex items-center gap-1 mt-1">
-                        <Clock size={10} style={{ color: '#334155' }} />
-                        <span style={{ fontSize: 11, color: '#334155' }}>{n.time}</span>
+                {notifLoading ? (
+                  <div className="px-5 py-8 text-center">
+                    <p style={{ fontSize: 12, color: '#64748b' }}>Loading notifications...</p>
+                  </div>
+                ) : notifications.length === 0 ? (
+                  <div className="px-5 py-8 text-center">
+                    <p style={{ fontSize: 12, color: '#64748b' }}>No notifications yet</p>
+                  </div>
+                ) : (
+                  notifications.map((n, i) => (
+                    <motion.div
+                      key={n.id}
+                      initial={{ opacity: 0, x: -12 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.05 }}
+                      className="flex items-start gap-3 px-5 py-3.5 cursor-pointer hover:bg-white/[0.02] transition-colors"
+                      style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}
+                    >
+                      <div
+                        className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0"
+                        style={{
+                          background: n.type === 'success' ? '#22c55e' : n.type === 'danger' ? '#ef4444' : '#6366f1',
+                          boxShadow: `0 0 6px ${n.type === 'success' ? '#22c55e' : n.type === 'danger' ? '#ef4444' : '#6366f1'}50`,
+                        }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p style={{ fontSize: 13, color: '#e2e8f0', lineHeight: 1.4 }}>{n.text}</p>
+                        <div className="flex items-center gap-1 mt-1">
+                          <Clock size={10} style={{ color: '#334155' }} />
+                          <span style={{ fontSize: 11, color: '#334155' }}>{formatTimeAgo(n.time)}</span>
+                        </div>
                       </div>
-                    </div>
-                  </motion.div>
-                ))}
+                    </motion.div>
+                  ))
+                )}
 
                 {/* Footer */}
                 <div className="px-5 py-3 text-center" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>

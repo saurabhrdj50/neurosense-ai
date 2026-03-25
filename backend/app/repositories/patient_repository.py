@@ -32,12 +32,19 @@ class PatientRepository(BaseRepository):
                     sex TEXT,
                     education_years INTEGER,
                     stage TEXT,
+                    photo TEXT,
                     notes TEXT DEFAULT '',
                     created_by INTEGER,
                     created_at TEXT NOT NULL,
                     FOREIGN KEY (created_by) REFERENCES users(id)
                 )
             ''')
+            
+            try:
+                conn.execute('SELECT photo FROM patients LIMIT 1')
+            except:
+                conn.execute('ALTER TABLE patients ADD COLUMN photo TEXT')
+                conn.execute('ALTER TABLE patients ADD COLUMN stage TEXT')
             
             count = conn.execute('SELECT COUNT(*) FROM patients').fetchone()[0]
             if count == 0:
@@ -79,14 +86,15 @@ class PatientRepository(BaseRepository):
         sex: Optional[str] = None,
         education_years: Optional[int] = None,
         notes: str = '',
-        created_by: Optional[int] = None
+        created_by: Optional[int] = None,
+        photo: Optional[str] = None
     ) -> Dict[str, Any]:
         try:
             now = datetime.now().isoformat()
             with self.db.get_connection() as conn:
                 cursor = conn.execute(
-                    'INSERT INTO patients (patient_id, name, age, sex, education_years, notes, created_by, created_at) VALUES (?,?,?,?,?,?,?,?)',
-                    (patient_id, name, age, sex, education_years, notes, created_by, now)
+                    'INSERT INTO patients (patient_id, name, age, sex, education_years, photo, notes, created_by, created_at) VALUES (?,?,?,?,?,?,?,?,?)',
+                    (patient_id, name, age, sex, education_years, photo, notes, created_by, now)
                 )
             return {'success': True, 'id': cursor.lastrowid}
         except Exception as e:
@@ -94,7 +102,7 @@ class PatientRepository(BaseRepository):
             return {'success': False, 'message': 'Patient ID already exists'}
 
     def update(self, patient_id: str, **kwargs) -> Dict[str, Any]:
-        allowed_fields = {'name', 'age', 'sex', 'education_years', 'stage', 'notes'}
+        allowed_fields = {'name', 'age', 'sex', 'education_years', 'stage', 'notes', 'photo'}
         update_fields = {k: v for k, v in kwargs.items() if k in allowed_fields}
         
         if not update_fields:

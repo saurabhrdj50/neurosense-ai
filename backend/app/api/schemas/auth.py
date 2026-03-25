@@ -28,7 +28,6 @@ class RegisterSchema:
         username = data.get('username', '').strip()
         email = data.get('email', '').strip()
         password = data.get('password', '').strip()
-        role = data.get('role', 'doctor').strip()
         full_name = data.get('full_name', '').strip()
         
         if not username:
@@ -46,9 +45,6 @@ class RegisterSchema:
         elif len(password) < 6:
             errors['password'] = 'Password must be at least 6 characters'
         
-        if role not in ('admin', 'doctor', 'researcher'):
-            errors['role'] = 'Role must be admin or doctor'
-        
         if errors:
             raise ValueError(errors)
         
@@ -56,6 +52,6 @@ class RegisterSchema:
             'username': username,
             'email': email,
             'password': password,
-            'role': role,
+            'role': 'doctor',
             'full_name': full_name,
         }

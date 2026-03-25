@@ -34,23 +34,28 @@ export function HandwritingStep({ hwFile, setHwFile, hwCanvas, setHwCanvas, hwMo
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <SectionTitle>Handwriting Analysis</SectionTitle>
       <div className="flex gap-2 mb-4">
         {['draw', 'upload'].map(m => (
-          <button key={m} onClick={() => setHwMode(m)} className="px-4 py-2 rounded-xl text-sm capitalize"
-            style={{ background: hwMode === m ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.04)', border: hwMode === m ? '1px solid rgba(99,102,241,0.5)' : '1px solid rgba(255,255,255,0.08)', color: hwMode === m ? '#a5b4fc' : '#64748b', cursor: 'pointer' }}>
+          <button key={m} onClick={() => setHwMode(m)} className="px-5 py-2.5 rounded-xl text-sm font-medium capitalize transition-all hover:scale-105"
+            style={{ 
+              background: hwMode === m ? 'rgba(99,102,241,0.2)' : '#1F2937', 
+              border: hwMode === m ? '1px solid #6366f1' : '1px solid #374151', 
+              color: hwMode === m ? '#a5b4fc' : '#9CA3AF', 
+              cursor: 'pointer' 
+            }}>
             {m === 'draw' ? '✏️ Draw' : '📎 Upload'}
           </button>
         ))}
       </div>
       {hwMode === 'draw' ? (
         <div className="space-y-3">
-          <p style={{ fontSize: 13, color: '#475569' }}>Ask the patient to write a sentence or draw a clock in the canvas below.</p>
-          <div className="relative rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(99,102,241,0.3)', background: 'rgba(15,23,42,0.6)' }}>
+          <p style={{ fontSize: 13, color: '#9CA3AF' }}>Ask the patient to write a sentence or draw a clock in the canvas below.</p>
+          <div className="relative rounded-2xl overflow-hidden" style={{ border: '2px solid #6366f1', background: '#111827' }}>
             <canvas ref={canvasRef} width={600} height={220} style={{ width: '100%', height: 220, display: 'block' }}
               onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw} />
-            <button onClick={clearCanvas} style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', borderRadius: 8, padding: '4px 10px', fontSize: 12, cursor: 'pointer' }}>
+            <button onClick={clearCanvas} style={{ position: 'absolute', top: 8, right: 8, background: '#374151', border: 'none', color: '#FFFFFF', borderRadius: 8, padding: '6px 12px', fontSize: 12, cursor: 'pointer' }}>
               Clear
             </button>
           </div>

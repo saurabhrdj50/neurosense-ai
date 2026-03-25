@@ -15,6 +15,12 @@ flask>=3.0.0,<4.0.0              # Web framework - routing, request handling
 werkzeug>=3.0.0,<4.0.0           # WSGI utilities - security, file uploads
 flask-cors>=4.0.0,<5.0.0         # Cross-Origin Resource Sharing for React frontend
 flask-login>=0.6.0,<1.0.0        # User session management and authentication
+flask-limiter>=3.5.0,<4.0.0      # Rate limiting for API protection
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FILE VALIDATION & SECURITY
+# ─────────────────────────────────────────────────────────────────────────────
+python-magic>=0.4.27             # File type detection using magic bytes
 
 # ─────────────────────────────────────────────────────────────────────────────
 # HTTP & ENVIRONMENT UTILITIES
@@ -61,6 +67,24 @@ numpy>=1.24.0,<2.0.0             # Numerical operations, array processing
 reportlab>=4.0.0,<5.0.0          # PDF clinical report generation
 
 # ─────────────────────────────────────────────────────────────────────────────
+# ASYNC TASK PROCESSING (Optional - for production)
+# ─────────────────────────────────────────────────────────────────────────────
+celery>=5.3.0,<6.0.0            # Async task queue for ML inference
+redis>=5.0.0,<6.0.0              # Redis for Celery broker/backend
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OBSERVABILITY & MONITORING
+# ─────────────────────────────────────────────────────────────────────────────
+sentry-sdk>=1.40.0               # Error tracking and performance monitoring
+mlflow>=2.10.0                   # ML experiment tracking and model registry
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MODEL EXPLAINABILITY (Install separately for full features)
+# ─────────────────────────────────────────────────────────────────────────────
+shap>=0.44.0                    # SHAP values for model explanations
+lime>=0.2.0                      # LIME explanations for model interpretability
+
+# ─────────────────────────────────────────────────────────────────────────────
 # TESTING & DEVELOPMENT
 # ─────────────────────────────────────────────────────────────────────────────
 pytest>=7.0.0,<9.0.0             # Unit and integration testing framework
@@ -74,3 +98,4 @@ gunicorn>=21.0.0,<23.0.0         # Production WSGI server for deployment
 # transformers>=4.30.0           # Hugging Face models (if advanced NLP needed)
 # torchmetrics>=0.11.0             # PyTorch metric calculations (for evaluation)
 # albumentations>=1.3.0           # Advanced image augmentation (for training)
+# scikit-learn>=1.3.0            # For permutation importance and partial dependence

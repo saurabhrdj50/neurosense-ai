@@ -1,6 +1,6 @@
 import functools
-from typing import Optional, Callable, Any
-from flask import session, redirect, url_for, request
+from typing import Optional, Callable, Any, List
+from flask import session, redirect, url_for, request, jsonify
 
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -33,6 +33,44 @@ def login_required(f: Callable[..., Any]) -> Callable[..., Any]:
             return redirect(url_for('auth.login'))
         return f(*args, **kwargs)
     return decorated_function
+
+
+def role_required(*allowed_roles: str):
+    """
+    Decorator to restrict access based on user roles.
+    
+    Usage:
+        @role_required("admin")
+        @role_required("admin", "doctor")
+    """
+    def decorator(f: Callable[..., Any]) -> Callable[..., Any]:
+        @functools.wraps(f)
+        def decorated_function(*args: Any, **kwargs: Any) -> Any:
+            user = get_current_user()
+            
+            if not user:
+                if request.is_json:
+                    return jsonify({'success': False, 'message': 'Authentication required'}), 401
+                return redirect(url_for('auth.login'))
+            
+            if user.role not in allowed_roles:
+                if request.is_json:
+                    return jsonify({'success': False, 'message': 'Access denied. Insufficient permissions.'}), 403
+                return redirect(url_for('auth.login'))
+            
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+
+def admin_required(f: Callable[..., Any]) -> Callable[..., Any]:
+    """Decorator to restrict access to admin only."""
+    return role_required("admin")(f)
+
+
+def doctor_required(f: Callable[..., Any]) -> Callable[..., Any]:
+    """Decorator to restrict access to doctors and admins."""
+    return role_required("admin", "doctor")(f)
 
 
 def get_current_user() -> Optional[Any]:

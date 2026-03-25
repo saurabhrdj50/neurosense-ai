@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: neurosense-backend
+  labels:
+    app: neurosense
+    component: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: neurosense
+      component: backend
+  template:
+    metadata:
+      labels:
+        app: neurosense
+        component: backend
+    spec:
+      containers:
+        - name: backend
+          image: neurosense/backend:latest
+          ports:
+            - containerPort: 5000
+          envFrom:
+            - configMapRef:
+                name: neurosense-config
+            - secretRef:
+                name: neurosense-secrets
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 5000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 5000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          volumeMounts:
+            - name: models
+              mountPath: /app/models
+            - name: uploads
+              mountPath: /app/uploads
+      volumes:
+        - name: models
+          persistentVolumeClaim:
+            claimName: neurosense-models
+        - name: uploads
+          persistentVolumeClaim:
+            claimName: neurosense-uploads
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: neurosense-backend
+spec:
+  selector:
+    app: neurosense
+    component: backend
+  ports:
+    - port: 5000
+      targetPort: 5000
+  type: ClusterIP

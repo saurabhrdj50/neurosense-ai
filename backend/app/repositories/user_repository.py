@@ -1,13 +1,13 @@
 import logging
 from datetime import datetime
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, cast
 
 from app.repositories import BaseRepository
 from app.core.security import hash_password, verify_password
 
 logger = logging.getLogger(__name__)
 
-ROLES = {
+ROLES: Dict[str, Dict[str, Any]] = {
     'admin': {'label': 'Admin', 'level': 5, 'color': '#f472b6'},
     'doctor': {'label': 'Doctor', 'level': 2, 'color': '#6c8cff'},
     'researcher': {'label': 'Researcher', 'level': 2, 'color': '#34d399'},
@@ -56,7 +56,7 @@ class User:
 
     @property
     def role_info(self) -> Dict[str, Any]:
-        return ROLES.get(self.role, ROLES.get('doctor'))
+        return cast(Dict[str, Any], ROLES.get(self.role) or ROLES.get('doctor') or {'label': 'Doctor', 'level': 2, 'color': '#6c8cff'})  # noqa: PGH003
 
     @property
     def is_doctor(self) -> bool:
@@ -160,4 +160,9 @@ class UserRepository(BaseRepository):
 
     def get_all(self) -> List[User]:
         rows = self.db.fetch_all('SELECT * FROM users ORDER BY username')
-        return [self._row_to_user(row) for row in rows if row]
+        users: List[User] = []
+        for row in rows:
+            user = self._row_to_user(row)
+            if user is not None:
+                users.append(user)
+        return cast(List[User], users)  # noqa: PGH003

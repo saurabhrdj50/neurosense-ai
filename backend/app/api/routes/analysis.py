@@ -1,8 +1,11 @@
+import logging
 from flask import Blueprint, request, jsonify
 from werkzeug.utils import secure_filename
 
 from app.services.analysis_service import AnalysisOrchestrator
 from app.api.schemas import SentimentSchema, CognitiveTestSchema, RiskProfileSchema
+
+logger = logging.getLogger(__name__)
 
 analysis_bp = Blueprint('analysis', __name__, url_prefix='/api/analysis')
 
@@ -30,6 +33,15 @@ def analyze():
         val = request.form.get(field, '').strip()
         if val:
             patient_info[field] = int(val) if field in ('age', 'education_years') and val.isdigit() else val
+    
+    photo_data = request.form.get('photo', '').strip()
+    if photo_data and photo_data.startswith('data:image'):
+        patient_info['photo'] = photo_data
+    
+    patient_notes = request.form.get('patient_text', '').strip()
+    if patient_notes:
+        patient_info['notes'] = patient_notes
+    
     results['patient_info'] = patient_info
     
     mri_file = request.files.get('mri_image')
@@ -131,13 +143,58 @@ def analyze():
     emotion = results.get('sentiment', {}).get('dominant_emotion', 'neutral')
     results['music'] = _orchestrator.get_music_recommendation(stage, emotion)
     
+    try:
+        from app.services.explanation_service import generate_explanation
+        results['ai_explanation'] = generate_explanation(results)
+    except Exception as e:
+        results['explanation_error'] = str(e)
+    
+    try:
+        from app.services.recommendation_service import generate_recommendations
+        results['recommendations'] = generate_recommendations(results)
+    except Exception as e:
+        results['recommendations_error'] = str(e)
+    
     pid = patient_info.get('patient_id', '')
-    if pid:
+    if pid and patient_info.get('name'):
         try:
-            sid = _orchestrator.save_session(pid, results, patient_info.get('name', 'Anonymous'))
-            results['session_id'] = sid
+            from app.repositories.patient_repository import PatientRepository
+            patient_repo = PatientRepository()
+            existing = patient_repo.get_by_patient_id(pid)
+            
+            if existing:
+                patient_repo.update(
+                    patient_id=pid,
+                    name=patient_info.get('name', existing.get('name')),
+                    age=patient_info.get('age'),
+                    sex=patient_info.get('sex'),
+                    education_years=patient_info.get('education_years'),
+                    notes=patient_info.get('notes', ''),
+                    photo=patient_info.get('photo'),
+                )
+                logger.info(f"Updated patient {pid}")
+            else:
+                result = patient_repo.create(
+                    patient_id=pid,
+                    name=patient_info.get('name', 'Anonymous'),
+                    age=patient_info.get('age'),
+                    sex=patient_info.get('sex'),
+                    education_years=patient_info.get('education_years'),
+                    notes=patient_info.get('notes', ''),
+                    created_by=None,
+                    photo=patient_info.get('photo'),
+                )
+                if result.get('success'):
+                    logger.info(f"Created new patient {pid}")
         except Exception as e:
-            results['history_error'] = str(e)
+            logger.warning(f"Could not save patient: {e}")
+        
+        if pid:
+            try:
+                sid = _orchestrator.save_session(pid, results, patient_info.get('name', 'Anonymous'))
+                results['session_id'] = sid
+            except Exception as e:
+                results['history_error'] = str(e)
     
     return jsonify(results)
 
@@ -263,3 +320,30 @@ def transcribe_audio():
         return jsonify(_orchestrator.transcribe_audio(file))
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@analysis_bp.route('/report/pdf', methods=['POST', 'GET'])
+def generate_pdf_report():
+    """Generate and download a PDF report of analysis results."""
+    data = request.get_json() if request.method == 'POST' else request.args.to_dict()
+    
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+    
+    try:
+        from app.services.report_generator_service import generate_pdf_report as generate_pdf
+        
+        patient_info = data.get('patient_info')
+        pdf_content = generate_pdf(data, patient_info)
+        
+        from flask import Response
+        return Response(
+            pdf_content,
+            mimetype='application/pdf',
+            headers={
+                'Content-Disposition': f'attachment; filename=neurosense_report_{data.get("patient_info", {}).get("patient_id", "report")}.pdf'
+            }
+        )
+    except Exception as e:
+        logger.error(f"PDF generation error: {str(e)}")
+        return jsonify({'error': f'Failed to generate PDF: {str(e)}'}), 500

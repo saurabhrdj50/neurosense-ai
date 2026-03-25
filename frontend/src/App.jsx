@@ -7,12 +7,14 @@ import AnimatedBg from './components/AnimatedBg'
 import AppLayout from './components/layout/AppLayout'
 import PageLoader from './components/ui/PageLoader'
 
-const LoginPage     = lazy(() => import('./features/auth/LoginPage'))
-const DashboardPage = lazy(() => import('./features/dashboard/DashboardPage'))
-const AnalysisPage = lazy(() => import('./features/analysis/AnalysisPage'))
-const PatientsPage = lazy(() => import('./features/patients/PatientsPage'))
-const HistoryPage  = lazy(() => import('./features/history/HistoryPage'))
-const ResultsPage  = lazy(() => import('./features/results/ResultsPage'))
+const LoginPage       = lazy(() => import('./features/auth/LoginPage'))
+const DashboardPage   = lazy(() => import('./features/dashboard/DashboardPage'))
+const AnalysisPage    = lazy(() => import('./features/analysis/AnalysisPage'))
+const PatientsPage    = lazy(() => import('./features/patients/PatientsPage'))
+const HistoryPage     = lazy(() => import('./features/history/HistoryPage'))
+const ResultsPage     = lazy(() => import('./features/results/ResultsPage'))
+const ClinicalAnalysisPage = lazy(() => import('./components/ComprehensiveAnalysis'))
+const AdminDashboard = lazy(() => import('./features/admin/AdminDashboard'))
 
 function PageTransition({ children }) {
   const location = useLocation()
@@ -37,11 +39,29 @@ function ProtectedRoute({ children }) {
   return user ? children : <Navigate to="/login" replace />
 }
 
+function AdminRoute({ children }) {
+  const { user, loading, isAdmin } = useAuth()
+  if (loading) return <PageLoader />
+  if (!user) return <Navigate to="/login" replace />
+  if (!isAdmin) return <Navigate to="/dashboard" replace />
+  return children
+}
+
 function AppRoutes() {
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
         <Route path="/login" element={<PageTransition><LoginPage /></PageTransition>} />
+        <Route
+          path="/admin"
+          element={
+            <AdminRoute>
+              <AppLayout />
+            </AdminRoute>
+          }
+        >
+          <Route path="dashboard" element={<PageTransition><AdminDashboard /></PageTransition>} />
+        </Route>
         <Route
           path="/"
           element={
@@ -53,6 +73,7 @@ function AppRoutes() {
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<PageTransition><DashboardPage /></PageTransition>} />
           <Route path="analysis"  element={<PageTransition><AnalysisPage /></PageTransition>} />
+          <Route path="clinical" element={<PageTransition><ClinicalAnalysisPage /></PageTransition>} />
           <Route path="patients"  element={<PageTransition><PatientsPage /></PageTransition>} />
           <Route path="history/:patientId" element={<PageTransition><HistoryPage /></PageTransition>} />
           <Route path="results"   element={<PageTransition><ResultsPage /></PageTransition>} />

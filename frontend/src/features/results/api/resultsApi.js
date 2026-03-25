@@ -1,4 +1,4 @@
-const API_BASE = ''
+import API_URL from '../../../config/api';
 
 async function handleResponse(res) {
   if (!res.ok) {
@@ -10,7 +10,7 @@ async function handleResponse(res) {
 
 export const resultsApi = {
   generateReport: async (results, patientInfo = null) => {
-    const res = await fetch(`${API_BASE}/api/utils/report`, {
+    const res = await fetch(`${API_URL}/api/utils/report`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -24,7 +24,7 @@ export const resultsApi = {
   },
 
   getMusicRecommendation: async (stage, emotion = 'neutral') => {
-    const res = await fetch(`${API_BASE}/api/utils/music`, {
+    const res = await fetch(`${API_URL}/api/utils/music`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -34,7 +34,7 @@ export const resultsApi = {
   },
 
   chatWithAI: async (query, patientId = null, apiKey = null, provider = 'gemini') => {
-    const res = await fetch(`${API_BASE}/api/utils/chat`, {
+    const res = await fetch(`${API_URL}/api/utils/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, Bell, Search, X, Brain, Command, Clock, AlertTriangle, CheckCircle, Info } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../features/auth/AuthProvider'
+import API_URL from '../../config/api'
 
 /* ── Page title map ───────────────────────────────────────────────────────── */
 const PAGE_TITLES = {
@@ -46,8 +47,8 @@ export default function TopBar({ onMenuClick }) {
     setNotifLoading(true)
     try {
       const [analysesRes, patientsRes] = await Promise.all([
-        fetch('/api/analyses', { credentials: 'include' }).catch(() => ({ json: () => ({ analyses: [] }) })),
-        fetch('/api/patients', { credentials: 'include' }).catch(() => ({ json: () => ({ patients: [] }) })),
+        fetch(`${API_URL}/api/analyses`, { credentials: 'include' }).catch(() => ({ json: () => ({ analyses: [] }) })),
+        fetch(`${API_URL}/api/patients`, { credentials: 'include' }).catch(() => ({ json: () => ({ patients: [] }) })),
       ])
       
       const analysesData = await analysesRes.json()

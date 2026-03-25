@@ -7,6 +7,7 @@ import {
   Zap, AlertTriangle, ArrowRight, BarChart3, Sparkles,
   Clock, FileText, ShieldAlert,
 } from 'lucide-react'
+import API_URL from '../../config/api'
 import CountUp from 'react-countup'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -189,8 +190,8 @@ export default function DashboardPage() {
   const fetchDashboardData = useCallback(async () => {
     try {
       const [patientsRes, analysesRes] = await Promise.all([
-        fetch('/api/patients', { credentials: 'include' }),
-        fetch('/api/analyses', { credentials: 'include' }).catch(() => ({ json: () => ({ analyses: [] }) })),
+        fetch(`${API_URL}/api/patients`, { credentials: 'include' }),
+        fetch(`${API_URL}/api/analyses`, { credentials: 'include' }).catch(() => ({ json: () => ({ analyses: [] }) })),
       ])
       
       const patientsData = await patientsRes.json()

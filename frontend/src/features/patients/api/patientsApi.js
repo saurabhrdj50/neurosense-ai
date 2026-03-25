@@ -1,4 +1,4 @@
-const API_BASE = ''
+import API_URL from '../../../config/api';
 
 async function handleResponse(res) {
   if (!res.ok) {
@@ -10,17 +10,17 @@ async function handleResponse(res) {
 
 export const patientsApi = {
   getAll: async () => {
-    const res = await fetch(`${API_BASE}/api/patients`, { credentials: 'include' })
+    const res = await fetch(`${API_URL}/api/patients`, { credentials: 'include' })
     return handleResponse(res)
   },
 
   getById: async (patientId) => {
-    const res = await fetch(`${API_BASE}/api/patients/${patientId}`, { credentials: 'include' })
+    const res = await fetch(`${API_URL}/api/patients/${patientId}`, { credentials: 'include' })
     return handleResponse(res)
   },
 
   create: async (data) => {
-    const res = await fetch(`${API_BASE}/api/patients`, {
+    const res = await fetch(`${API_URL}/api/patients`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -30,7 +30,7 @@ export const patientsApi = {
   },
 
   update: async (patientId, data) => {
-    const res = await fetch(`${API_BASE}/api/patients/${patientId}`, {
+    const res = await fetch(`${API_URL}/api/patients/${patientId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -40,7 +40,7 @@ export const patientsApi = {
   },
 
   delete: async (patientId) => {
-    const res = await fetch(`${API_BASE}/api/patients/${patientId}`, {
+    const res = await fetch(`${API_URL}/api/patients/${patientId}`, {
       method: 'DELETE',
       credentials: 'include',
     })
@@ -48,6 +48,6 @@ export const patientsApi = {
   },
 
   export: (patientId) => {
-    window.open(`${API_BASE}/api/patients/export/${patientId}`, '_blank')
+    window.open(`${API_URL}/api/patients/export/${patientId}`, '_blank')
   },
 }

@@ -1,4 +1,4 @@
-const API_BASE = ''
+import API_URL from '../../../config/api';
 
 async function handleResponse(res) {
   if (!res.ok) {
@@ -10,7 +10,7 @@ async function handleResponse(res) {
 
 export const analysisApi = {
   runFullAnalysis: async (formData) => {
-    const res = await fetch(`${API_BASE}/api/analysis/analyze`, {
+    const res = await fetch(`${API_URL}/api/analysis/analyze`, {
       method: 'POST',
       credentials: 'include',
       body: formData,
@@ -23,7 +23,7 @@ export const analysisApi = {
     formData.append('mri_image', file)
     formData.append('gradcam', gradcam)
     
-    const res = await fetch(`${API_BASE}/api/analysis/mri`, {
+    const res = await fetch(`${API_URL}/api/analysis/mri`, {
       method: 'POST',
       credentials: 'include',
       body: formData,
@@ -32,7 +32,7 @@ export const analysisApi = {
   },
 
   analyzeSentiment: async (text) => {
-    const res = await fetch(`${API_BASE}/api/analysis/sentiment`, {
+    const res = await fetch(`${API_URL}/api/analysis/sentiment`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -42,7 +42,7 @@ export const analysisApi = {
   },
 
   evaluateCognitive: async (answers) => {
-    const res = await fetch(`${API_BASE}/api/analysis/cognitive`, {
+    const res = await fetch(`${API_URL}/api/analysis/cognitive`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -52,7 +52,7 @@ export const analysisApi = {
   },
 
   assessRisk: async (factors) => {
-    const res = await fetch(`${API_BASE}/api/analysis/risk`, {
+    const res = await fetch(`${API_URL}/api/analysis/risk`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -66,7 +66,7 @@ export const analysisApi = {
     if (file) formData.append('image', file)
     if (canvasData) formData.append('canvas_data', canvasData)
 
-    const res = await fetch(`${API_BASE}/api/analysis/handwriting`, {
+    const res = await fetch(`${API_URL}/api/analysis/handwriting`, {
       method: 'POST',
       credentials: 'include',
       body: formData,
@@ -75,7 +75,7 @@ export const analysisApi = {
   },
 
   analyzeGenomics: async (text) => {
-    const res = await fetch(`${API_BASE}/api/analysis/genomics`, {
+    const res = await fetch(`${API_URL}/api/analysis/genomics`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -88,7 +88,7 @@ export const analysisApi = {
     const formData = new FormData()
     formData.append('audio', file)
 
-    const res = await fetch(`${API_BASE}/api/analysis/transcribe`, {
+    const res = await fetch(`${API_URL}/api/analysis/transcribe`, {
       method: 'POST',
       credentials: 'include',
       body: formData,
@@ -97,7 +97,7 @@ export const analysisApi = {
   },
 
   downloadPdfReport: async (results) => {
-    const res = await fetch(`${API_BASE}/api/analysis/report/pdf`, {
+    const res = await fetch(`${API_URL}/api/analysis/report/pdf`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',

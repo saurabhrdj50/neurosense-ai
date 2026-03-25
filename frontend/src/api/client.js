@@ -1,8 +1,7 @@
 /**
  * API client with React Query integration for the NeuroSense API
  */
-import { queryClient, queryKeys } from '../providers/QueryProvider';
-import { toast } from 'react-hot-toast';
+import { queryClient } from '../providers/QueryProvider';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 

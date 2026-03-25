@@ -1,4 +1,4 @@
-const API_BASE = ''
+import API_URL from '../../../config/api';
 
 async function handleResponse(res) {
   if (!res.ok) {
@@ -10,13 +10,13 @@ async function handleResponse(res) {
 
 export const historyApi = {
   getPatientHistory: async (patientId, limit = 20) => {
-    const res = await fetch(`${API_BASE}/api/patients/history/${patientId}?limit=${limit}`, {
+    const res = await fetch(`${API_URL}/api/patients/history/${patientId}?limit=${limit}`, {
       credentials: 'include',
     })
     return handleResponse(res)
   },
 
   exportPatientHistory: (patientId) => {
-    window.open(`${API_BASE}/api/patients/export/${patientId}`, '_blank')
+    window.open(`${API_URL}/api/patients/export/${patientId}`, '_blank')
   },
 }

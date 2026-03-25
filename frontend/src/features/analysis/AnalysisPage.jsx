@@ -15,6 +15,7 @@ import { SpeechStep } from './components/SpeechStep'
 import { RiskStep } from './components/RiskStep'
 import { analysisApi } from './api/analysisApi'
 import { AnalysisLoader, useAnalysisProgress } from './components/AnalysisLoader'
+import API_URL from '../../config/api'
 
 const STEPS = [
   { id: 'patient',      label: 'Patient Info',    icon: User          },
@@ -124,7 +125,7 @@ export default function AnalysisPage() {
   const [dnaFile, setDnaFile] = useState(null)
 
   useEffect(() => {
-    fetch('/api/patients', { credentials: 'include' })
+    fetch(`${API_URL}/api/patients`, { credentials: 'include' })
       .then(r => r.json())
       .then(d => {
         setPatients(d.patients || [])

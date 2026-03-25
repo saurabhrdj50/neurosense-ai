@@ -11,6 +11,7 @@ import GlassCard from '../../components/ui/GlassCard'
 import Button from '../../components/ui/Button'
 import ProgressBar from '../../components/ui/ProgressBar'
 import { SectionSkeleton } from '../../components/ui/Skeleton'
+import API_URL from '../../config/api'
 
 const STAGE_COLOR = {
   'Non Demented':       '#22c55e',
@@ -43,7 +44,7 @@ export default function HistoryPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch(`/api/patients/history/${patientId}`, { credentials: 'include' })
+    fetch(`${API_URL}/api/patients/history/${patientId}`, { credentials: 'include' })
       .then(r => r.json())
       .then(d => setData(d))
       .catch(() => toast.error('Failed to load history'))
@@ -96,7 +97,7 @@ export default function HistoryPage() {
             <p style={{ fontSize: 13, color: '#475569', marginTop: 2 }}>ID: {patientId} · {history.length} sessions</p>
           </div>
         </div>
-        <Button variant="secondary" icon={Download} onClick={() => window.open(`/api/export/${patientId}`, '_blank')}>Export CSV</Button>
+        <Button variant="secondary" icon={Download} onClick={() => window.open(`${API_URL}/api/export/${patientId}`, '_blank')}>Export CSV</Button>
       </div>
 
       {loading ? (

@@ -7,6 +7,7 @@ import GlassCard from '../../components/ui/GlassCard'
 import Button from '../../components/ui/Button'
 import Modal from '../../components/ui/Modal'
 import { SectionSkeleton } from '../../components/ui/Skeleton'
+import API_URL from '../../config/api'
 
 function LabelInput({ label, ...props }) {
   return (
@@ -48,8 +49,8 @@ export default function PatientsPage() {
   const loadData = () => {
     setLoading(true)
     Promise.all([
-      fetch('/api/patients', { credentials: 'include' }),
-      fetch('/api/analyses', { credentials: 'include' }).catch(() => ({ json: () => ({ analyses: [] }) }))
+      fetch(`${API_URL}/api/patients`, { credentials: 'include' }),
+      fetch(`${API_URL}/api/analyses`, { credentials: 'include' }).catch(() => ({ json: () => ({ analyses: [] }) }))
     ])
       .then(([patientsRes, analysesRes]) => Promise.all([patientsRes.json(), analysesRes.json()]))
       .then(([patientsData, analysesData]) => {
@@ -117,7 +118,7 @@ export default function PatientsPage() {
   const handleAdd = async () => {
     if (!form.patient_id || !form.name) { toast.error('Patient ID and Name are required'); return }
     setSaving(true)
-    const res = await fetch('/api/patients', {
+    const res = await fetch(`${API_URL}/api/patients`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -290,7 +291,7 @@ export default function PatientsPage() {
                           className="p-2 rounded-xl" style={{ background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.2)', color: '#6366f1', cursor: 'pointer' }}>
                           <Eye size={14} />
                         </motion.button>
-                        <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => window.open(`/api/export/${p.patient_id}`, '_blank')}
+                        <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => window.open(`${API_URL}/api/export/${p.patient_id}`, '_blank')}
                           className="p-2 rounded-xl" style={{ background: 'rgba(6,182,212,0.12)', border: '1px solid rgba(6,182,212,0.2)', color: '#06b6d4', cursor: 'pointer' }}>
                           <Download size={14} />
                         </motion.button>

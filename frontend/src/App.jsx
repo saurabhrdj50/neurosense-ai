@@ -1,7 +1,7 @@
 import React, { Suspense, lazy } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence } from 'framer-motion'
 import { AuthProvider, useAuth } from './features/auth'
 import AnimatedBg from './components/AnimatedBg'
 import AppLayout from './components/layout/AppLayout'

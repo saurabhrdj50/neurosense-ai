@@ -7,11 +7,10 @@ import GlassCard from '../../components/ui/GlassCard'
 import Button from '../../components/ui/Button'
 import { useAuth } from '../auth/AuthProvider'
 import { SectionSkeleton } from '../../components/ui/Skeleton'
-
-const API_BASE = ''
+import API_URL from '../../config/api'
 
 async function adminApi(endpoint, options = {}) {
-  const res = await fetch(`${API_BASE}${endpoint}`, {
+  const res = await fetch(`${API_URL}${endpoint}`, {
     ...options,
     credentials: 'include',
   })

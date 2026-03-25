@@ -1,4 +1,4 @@
-const API_BASE = ''
+import API_URL from '../../../config/api';
 
 async function handleResponse(res) {
   if (!res.ok) {
@@ -10,7 +10,7 @@ async function handleResponse(res) {
 
 export const authApi = {
   login: async (username, password) => {
-    const res = await fetch(`${API_BASE}/api/auth/login`, {
+    const res = await fetch(`${API_URL}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -20,7 +20,7 @@ export const authApi = {
   },
 
   register: async (payload) => {
-    const res = await fetch(`${API_BASE}/api/auth/register`, {
+    const res = await fetch(`${API_URL}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -30,7 +30,7 @@ export const authApi = {
   },
 
   logout: async () => {
-    const res = await fetch(`${API_BASE}/api/auth/logout`, {
+    const res = await fetch(`${API_URL}/api/auth/logout`, {
       method: 'POST',
       credentials: 'include'
     })
@@ -39,7 +39,7 @@ export const authApi = {
 
   getCurrentUser: async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/auth/current-user`, { credentials: 'include' })
+      const res = await fetch(`${API_URL}/api/auth/current-user`, { credentials: 'include' })
       if (!res.ok) return { authenticated: false }
       return res.json()
     } catch {

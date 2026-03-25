@@ -40,7 +40,7 @@ timm>=1.0.0                      # EfficientNet and other vision model architect
 # Image Processing
 opencv-python-headless>=4.8.0,<5.0.0  # Handwriting contour detection, frame processing
                                         # Use opencv-python-headless for server environments
-Pillow>=10.0.0,<11.0.0           # Image loading and manipulation
+Pillow==10.0.1           # Image loading and manipulation
 matplotlib>=3.7.0,<4.0.0         # Grad-CAM heatmap generation and visualization
 
 # Facial & Ocular Analysis

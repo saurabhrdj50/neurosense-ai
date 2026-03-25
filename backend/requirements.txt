@@ -1,0 +1,76 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# NeuroSense AI - Backend Dependencies
+# ═══════════════════════════════════════════════════════════════════════════════
+# Complete dependency specification for the NeuroSense Alzheimer's detection system.
+# Python Version: 3.11+
+# 
+# Installation: pip install -r requirements.txt
+# GPU Support:   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CORE API & FRAMEWORK
+# ─────────────────────────────────────────────────────────────────────────────
+flask>=3.0.0,<4.0.0              # Web framework - routing, request handling
+werkzeug>=3.0.0,<4.0.0           # WSGI utilities - security, file uploads
+flask-cors>=4.0.0,<5.0.0         # Cross-Origin Resource Sharing for React frontend
+flask-login>=0.6.0,<1.0.0        # User session management and authentication
+
+# ─────────────────────────────────────────────────────────────────────────────
+# HTTP & ENVIRONMENT UTILITIES
+# ─────────────────────────────────────────────────────────────────────────────
+requests>=2.28.0,<3.0.0          # HTTP client for external API calls (Groq)
+python-dotenv>=1.0.0             # .env file loading for environment variables
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DEEP LEARNING & COMPUTER VISION
+# ─────────────────────────────────────────────────────────────────────────────
+# PyTorch (CPU default - install CUDA version separately for GPU support)
+# To enable GPU: pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
+torch>=2.0.0                     # Deep learning framework - MRI classification
+torchvision>=0.15.0               # Image transforms, pre-trained models
+timm>=1.0.0                      # EfficientNet and other vision model architectures
+
+# Image Processing
+opencv-python-headless>=4.8.0,<5.0.0  # Handwriting contour detection, frame processing
+                                        # Use opencv-python-headless for server environments
+Pillow>=10.0.0,<11.0.0           # Image loading and manipulation
+matplotlib>=3.7.0,<4.0.0         # Grad-CAM heatmap generation and visualization
+
+# Facial & Ocular Analysis
+fer>=2.2.0                       # Facial Emotion Recognition (FER) library
+mediapipe>=0.10.0                # Face Mesh for eye landmark tracking, ocular biomarkers
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NATURAL LANGUAGE PROCESSING & GENERATIVE AI
+# ─────────────────────────────────────────────────────────────────────────────
+textblob>=0.18.0                  # Lightweight sentiment analysis (fallback)
+nltk>=3.8.0,<4.0.0               # Tokenization, linguistic feature extraction
+                                    # Requires: nltk.download('punkt'), nltk.download('punkt_tab')
+SpeechRecognition>=3.10.0        # Server-side audio transcription (fallback)
+google-genai>=0.3.0              # Google Gemini API client for medical chatbot
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DATA & NUMERICAL COMPUTING
+# ─────────────────────────────────────────────────────────────────────────────
+numpy>=1.24.0,<2.0.0             # Numerical operations, array processing
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DOCUMENT GENERATION
+# ─────────────────────────────────────────────────────────────────────────────
+reportlab>=4.0.0,<5.0.0          # PDF clinical report generation
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TESTING & DEVELOPMENT
+# ─────────────────────────────────────────────────────────────────────────────
+pytest>=7.0.0,<9.0.0             # Unit and integration testing framework
+pytest-cov>=4.0.0,<6.0.0        # Code coverage reporting
+gunicorn>=21.0.0,<23.0.0         # Production WSGI server for deployment
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OPTIONAL DEPENDENCIES (Install separately if needed)
+# ─────────────────────────────────────────────────────────────────────────────
+# whisper>=1.0.0                  # Advanced speech recognition (if SpeechRecognition insufficient)
+# transformers>=4.30.0           # Hugging Face models (if advanced NLP needed)
+# torchmetrics>=0.11.0             # PyTorch metric calculations (for evaluation)
+# albumentations>=1.3.0           # Advanced image augmentation (for training)

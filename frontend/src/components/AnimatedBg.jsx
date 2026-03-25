@@ -1,4 +1,5 @@
 import React from 'react'
+import { motion } from 'framer-motion'
 
 /**
  * Animated Bg — Four floating gradient orbs + grid pattern overlay.

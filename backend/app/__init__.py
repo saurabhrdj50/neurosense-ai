@@ -137,7 +137,7 @@ def create_app():
     
     # Configure CORS with credentials support for frontend integration
     if HAS_CORS and CORS is not None:
-        allowed_origins = os.environ.get('CORS_ORIGINS', 'http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173').split(',')
+        allowed_origins = os.environ.get('CORS_ORIGINS', 'http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:4000,http://127.0.0.1:3000,http://127.0.0.1:3001,http://127.0.0.1:3002,http://127.0.0.1:4000,http://localhost:5173').split(',')
         CORS(app, supports_credentials=True, origins=allowed_origins, expose_headers=['Content-Length', 'Content-Type', 'X-Request-ID'])
         logger.info("CORS enabled for origins: %s", allowed_origins)
     

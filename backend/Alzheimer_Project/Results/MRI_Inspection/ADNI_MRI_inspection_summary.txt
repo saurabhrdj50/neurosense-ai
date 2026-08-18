@@ -1,0 +1,29 @@
+ADNI MRI INSPECTION SUMMARY
+======================================================================
+
+Inventory rows: 630
+Successfully loaded: 630
+Missing files: 0
+Loading errors: 0
+Unique subjects: 610
+
+Class distribution:
+Group
+MCI    307
+CN     174
+AD     149
+
+Image dimensions:
+Dimensions
+(192, 192, 160)    341
+(256, 256, 166)    287
+(256, 256, 146)      1
+(256, 256, 162)      1
+
+Orientation:
+Orientation
+IPL    630
+
+Data types:
+Data_Type
+>f4    630

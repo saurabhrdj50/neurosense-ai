@@ -1,0 +1,57 @@
+[
+  {
+    "model_name": "MONAI_3D_ResNet18",
+    "input_shape": [
+      2,
+      1,
+      64,
+      64,
+      64
+    ],
+    "output_shape": [
+      2,
+      3
+    ],
+    "total_parameters": 33162435,
+    "trainable_parameters": 33162435,
+    "weight_size_mb": 126.5,
+    "latency_ms_per_batch": 31.08,
+    "throughput_fps": 64.36
+  },
+  {
+    "model_name": "TorchVision_2D_ResNet18",
+    "input_shape": [
+      4,
+      3,
+      224,
+      224
+    ],
+    "output_shape": [
+      4,
+      3
+    ],
+    "total_parameters": 11178051,
+    "trainable_parameters": 11178051,
+    "weight_size_mb": 42.64,
+    "latency_ms_per_batch": 2.47,
+    "throughput_fps": 1619.44
+  },
+  {
+    "model_name": "timm_EfficientNet_B4",
+    "input_shape": [
+      4,
+      3,
+      224,
+      224
+    ],
+    "output_shape": [
+      4,
+      3
+    ],
+    "total_parameters": 17553995,
+    "trainable_parameters": 17553995,
+    "weight_size_mb": 66.96,
+    "latency_ms_per_batch": 29.16,
+    "throughput_fps": 137.18
+  }
+]

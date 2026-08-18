@@ -1,0 +1,379 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Enterprise Clinical Design Tokens (Dark Workstation Default) ──────── */
+:root, [data-theme="dark"] {
+  --background:           #0B0F17; /* Slate-950 Enterprise Deep Canvas */
+  --bg-canvas:            #0B0F17;
+  --bg-shell:             #111827; /* Slate-900 Sidebar / Header / Shell */
+  --surface:              #111827;
+  --surface-card:         #1F2937; /* Slate-800 Card Container */
+  --surface-secondary:    #1F2937;
+  --surface-elevated:     #111827;
+  --surface-hover:        #374151; /* Slate-700 Hover State */
+  --surface-active:       #4B5563; /* Slate-600 Active State */
+  
+  --foreground:           #F9FAFB; /* Gray-50 Primary Clinical Text */
+  --foreground-muted:     #D1D5DB; /* Gray-300 Secondary Text */
+  --foreground-subtle:    #9CA3AF; /* Gray-400 Muted Text */
+  --foreground-inverse:   #0F172A; /* Text on high-contrast primary elements */
+  
+  --border:               #1F2937; /* Crisp 1px Border */
+  --border-subtle:        #111827;
+  --border-strong:        #374151;
+  --border-brand:         #2563EB;
+  --border-focus:         #3B82F6;
+  
+  --primary:              #2563EB; /* Precision Clinical Blue */
+  --primary-hover:        #1D4ED8;
+  --primary-soft:         rgba(37, 99, 235, 0.15);
+  --primary-foreground:   #FFFFFF;
+  --primary-glow:         rgba(37, 99, 235, 0.12);
+  
+  --secondary:            #4B5563;
+  --accent:               #2563EB;
+  
+  --success:              #16A34A;
+  --success-foreground:   #FFFFFF;
+  --warning:              #D97706;
+  --warning-foreground:   #FFFFFF;
+  --danger:               #DC2626;
+  --danger-foreground:    #FFFFFF;
+  --info:                 #2563EB;
+
+  /* Clinical Risk States (Dark Mode) */
+  --risk-low-bg:          rgba(34, 197, 94, 0.12);
+  --risk-low-text:        #4ADE80;
+  --risk-low-border:      rgba(34, 197, 94, 0.3);
+  --risk-moderate-bg:     rgba(245, 158, 11, 0.12);
+  --risk-moderate-text:   #FBBF24;
+  --risk-moderate-border: rgba(245, 158, 11, 0.3);
+  --risk-high-bg:         rgba(239, 68, 68, 0.12);
+  --risk-high-text:       #F87171;
+  --risk-high-border:     rgba(239, 68, 68, 0.3);
+  --risk-critical-bg:     rgba(168, 85, 247, 0.15);
+  --risk-critical-text:   #C084FC;
+  --risk-critical-border: rgba(168, 85, 247, 0.35);
+  
+  --text-primary:         #F9FAFB;
+  --text-secondary:       #D1D5DB;
+  --text-muted:           #9CA3AF;
+  --text-dimmed:          #6B7280;
+  --shadow:               0 1px 3px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.15);
+  
+  --glass-bg:             #111827;
+  --glass-strong-bg:      #111827;
+  --input-bg:             #1F2937;
+  --input-border:         #374151;
+
+  --table-header-bg:      #1F2937;
+  --table-row-even:       #111827;
+  --table-row-hover:      #374151;
+}
+
+/* ─── LIGHT MODE OVERRIDES (Enterprise EHR Light) ────────────────────────── */
+[data-theme="light"], .light {
+  --background:           #F8FAFC; /* Clean Slate Light Workspace */
+  --bg-canvas:            #F8FAFC;
+  --bg-shell:             #FFFFFF; /* Pure White Shell */
+  --surface:              #FFFFFF;
+  --surface-card:         #FFFFFF; /* Pure White Panel */
+  --surface-secondary:    #F1F5F9;
+  --surface-elevated:     #FFFFFF;
+  --surface-hover:        #F1F5F9; /* Slate-100 Hover */
+  --surface-active:       #E2E8F0; /* Slate-200 Active */
+  
+  --foreground:           #0F172A; /* Slate-900 Primary Text */
+  --foreground-muted:     #334155; /* Slate-700 Secondary */
+  --foreground-subtle:    #64748B; /* Slate-500 Muted */
+  --foreground-inverse:   #FFFFFF;
+  
+  --border:               #E2E8F0; /* Slate-200 Border */
+  --border-subtle:        #F1F5F9;
+  --border-strong:        #CBD5E1;
+  --border-brand:         #2563EB;
+  --border-focus:         #2563EB;
+
+  --primary:              #1E40AF; /* Enterprise Blue */
+  --primary-hover:        #1E3A8A;
+  --primary-soft:         rgba(30, 64, 175, 0.08);
+  --primary-foreground:   #FFFFFF;
+  --primary-glow:         rgba(30, 64, 175, 0.08);
+
+  --secondary:            #64748B;
+  --accent:               #2563EB;
+
+  --success:              #15803D;
+  --success-foreground:   #FFFFFF;
+  --warning:              #B45309;
+  --warning-foreground:   #FFFFFF;
+  --danger:               #B91C1C;
+  --danger-foreground:    #FFFFFF;
+  --info:                 #1D4ED8;
+
+  /* Clinical Risk States (Light Mode) */
+  --risk-low-bg:          rgba(34, 197, 94, 0.1);
+  --risk-low-text:        #15803D;
+  --risk-low-border:      rgba(34, 197, 94, 0.25);
+  --risk-moderate-bg:     rgba(245, 158, 11, 0.1);
+  --risk-moderate-text:   #B45309;
+  --risk-moderate-border: rgba(245, 158, 11, 0.25);
+  --risk-high-bg:         rgba(239, 68, 68, 0.1);
+  --risk-high-text:       #B91C1C;
+  --risk-high-border:     rgba(239, 68, 68, 0.25);
+  --risk-critical-bg:     rgba(168, 85, 247, 0.1);
+  --risk-critical-text:   #7E22CE;
+  --risk-critical-border: rgba(168, 85, 247, 0.25);
+
+  --text-primary:         #0F172A;
+  --text-secondary:       #334155;
+  --text-muted:           #64748B;
+  --text-dimmed:          #94A3B8;
+  --shadow:               0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+
+  --glass-bg:             #FFFFFF;
+  --glass-strong-bg:      #FFFFFF;
+  --input-bg:             #FFFFFF;
+  --input-border:         #CBD5E1;
+
+  --table-header-bg:      #F1F5F9;
+  --table-row-even:       #F8FAFC;
+  --table-row-hover:      #E2E8F0;
+}
+
+/* ─── Font Size Attributes ────────────────────────────────────────────── */
+[data-fontsize="compact"] { font-size: 13px; }
+[data-fontsize="comfortable"] { font-size: 14px; }
+[data-fontsize="large"] { font-size: 15px; }
+
+/* ─── Motion Preferences ────────────────────────────────────────────────── */
+.reduce-motion *, .reduce-motion *::before, .reduce-motion *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+}
+
+/* ─── Base Reset ─────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: var(--background);
+  color: var(--text-primary);
+  overflow-x: hidden;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
+}
+
+[data-theme="dark"] body {
+  background-color: var(--background);
+}
+
+[data-theme="light"] body {
+  background-color: var(--background);
+}
+
+/* ─── Custom Scrollbar ───────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+
+/* ─── Selection ──────────────────────────────────────────────────────────── */
+::selection { background: rgba(37, 99, 235, 0.25); color: var(--text-primary); }
+
+/* ─── Surface Utility Classes ───────────────────────────────────────────── */
+.glass {
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
+.glass-strong {
+  background: var(--surface-card);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow);
+}
+
+.glow-primary, .glow-cyan, .glow-purple, .glow-success {
+  box-shadow: none !important;
+}
+
+.gradient-text-brand {
+  color: var(--text-primary) !important;
+}
+
+/* ─── Shimmer / Skeleton (use Tailwind animate-pulse instead) ───────────── */
+.shimmer {
+  background: #E2E8F0; /* slate-200 */
+  animation: shimmer 1.8s ease-in-out infinite;
+}
+[data-theme="dark"] .shimmer {
+  background: #1E293B; /* slate-800 */
+}
+
+@keyframes shimmer {
+  0%, 100% { opacity: 1; }
+  50%        { opacity: 0.5; }
+}
+
+/* ─── PageLoader bar ─────────────────────────────────────────────────────── */
+@keyframes loading-bar {
+  0%   { transform: translateX(-200%); }
+  100% { transform: translateX(400%); }
+}
+
+/* ─── Input Styles ───────────────────────────────────────────────────────── */
+input, select, textarea {
+  font-family: 'Inter', sans-serif;
+}
+
+input:not([type="range"]):not([type="checkbox"]):not([type="radio"]),
+select,
+textarea {
+  background-color: var(--input-bg) !important;
+  border: 1px solid var(--input-border) !important;
+  color: var(--text-primary) !important;
+  border-radius: 6px; /* matches rounded-md (Tailwind standard) */
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+  font-size: 13px;
+}
+
+input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):focus,
+select:focus,
+textarea:focus {
+  outline: none !important;
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 2px var(--primary-glow) !important;
+  background-color: var(--surface-card) !important;
+}
+
+input::placeholder, textarea::placeholder {
+  color: var(--text-secondary) !important;
+  font-weight: 400;
+  opacity: 0.7;
+}
+
+select option {
+  background: var(--surface-card) !important;
+  color: var(--text-primary) !important;
+}
+
+/* ─── Risk Badges ────────────────────────────────────────────────────────── */
+.risk-low    { background: rgba(34,197,94,0.12);  color: #16a34a; border: 1px solid rgba(34,197,94,0.3); font-weight: 600; }
+.risk-medium { background: rgba(245,158,11,0.12); color: #d97706; border: 1px solid rgba(245,158,11,0.3); font-weight: 600; }
+.risk-high   { background: rgba(239,68,68,0.12);  color: #dc2626; border: 1px solid rgba(239,68,68,0.3); font-weight: 600; }
+
+[data-theme="dark"] .risk-low    { color: #4ade80; }
+[data-theme="dark"] .risk-medium { color: #fbbf24; }
+[data-theme="dark"] .risk-high   { color: #f87171; }
+
+/* ─── Drop Active State ──────────────────────────────────────────────────── */
+.drop-active {
+  border-color: var(--primary) !important;
+  background: var(--primary-glow) !important;
+  box-shadow: 0 0 0 3px var(--primary-glow) !important;
+}
+
+/* ─── Grid Pattern Overlay ───────────────────────────────────────────────── */
+[data-theme="dark"] .grid-pattern {
+  background-image:
+    linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+[data-theme="light"] .grid-pattern {
+  background-image:
+    linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* ─── Range Slider ───────────────────────────────────────────────────────── */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 5px;
+  background: var(--border-strong);
+  border-radius: 10px;
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--primary);
+  cursor: pointer;
+  box-shadow: 0 0 12px var(--primary-glow);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+/* ─── Mobile Viewport & Responsive Accessibility Protection ─────────────── */
+@media (max-width: 380px) {
+  html, body {
+    font-size: 13px;
+  }
+  .px-4 {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+  .p-4 {
+    padding: 0.75rem !important;
+  }
+  .gap-4 {
+    gap: 0.5rem !important;
+  }
+  .text-2xl {
+    font-size: 1.25rem !important;
+  }
+}
+
+/* ─── Keyboard Focus Accessibility Utilities ────────────────────────────── */
+a:focus-visible,
+button:focus-visible,
+[role="button"]:focus-visible,
+[tabindex="0"]:focus-visible {
+  outline: 2px solid var(--border-focus) !important;
+  outline-offset: 2px !important;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .printable-area, .printable-area * {
+    visibility: visible;
+  }
+  .printable-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    padding: 20px !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}

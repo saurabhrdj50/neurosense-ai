@@ -1,0 +1,6 @@
+# mock_dna_normal.txt
+# This is a sample DNA file with no Alzheimer's risk variants.
+rsid   chromosome   position   genotype
+rs429358    19      45411941    TT    # APOE e3/e3 Normal (Negative for e4)
+rs7412      19      45412079    CC    # Normal pairing
+rs75932628  6       41129202    CC    # Negative for TREM2 mutation

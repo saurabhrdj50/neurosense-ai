@@ -1,0 +1,14 @@
+{
+  "python_version": "3.12.13",
+  "pytorch_version": "2.11.0+cu128",
+  "torchvision_version": "0.26.0+cu128",
+  "monai_version": "1.6.0",
+  "timm_version": "1.0.28",
+  "cuda_available": true,
+  "cudnn_version": 91900,
+  "gpu_name": "Tesla T4",
+  "gpu_vram_gb": 15.64,
+  "system_ram_gb": 12.67,
+  "cpu_count_physical": 1,
+  "cpu_count_logical": 2
+}

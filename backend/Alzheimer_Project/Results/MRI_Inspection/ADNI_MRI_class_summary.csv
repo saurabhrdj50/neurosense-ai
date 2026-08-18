@@ -1,0 +1,4 @@
+Group,MRI_Count,Unique_Subjects,Mean_Age,Mean_Intensity,Mean_STD,Mean_Zero_Percent
+AD,149,145,75.919,178.984,270.836,44.035
+CN,174,169,76.333,176.585,263.703,43.413
+MCI,307,296,74.821,174.874,259.812,43.276

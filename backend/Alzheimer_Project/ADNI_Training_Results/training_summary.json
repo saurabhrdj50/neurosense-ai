@@ -1,0 +1,14 @@
+{
+  "execution_timestamp": "2026-08-16 17:53:27",
+  "total_training_duration_min": 55.2,
+  "hardware_used": "cuda",
+  "architecture": "MONAI_3D_ResNet18",
+  "epochs_trained": 8,
+  "best_val_loss": 1.0191,
+  "best_val_accuracy": 0.5368,
+  "test_accuracy": 0.3804,
+  "test_balanced_accuracy": 0.3703,
+  "test_f1_weighted": 0.3823,
+  "test_roc_auc_macro": 0.6041,
+  "output_directory": "/content/Training_Outputs"
+}

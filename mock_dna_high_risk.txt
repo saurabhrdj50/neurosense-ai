@@ -1,0 +1,7 @@
+# mock_dna_high_risk.txt
+# This is a sample 23andMe formatted DNA file.
+# It contains the rare high-risk markers for Alzheimer's
+rsid   chromosome   position   genotype
+rs429358    19      45411941    CC    # APOE e4/e4 Homozygous (Highest risk)
+rs7412      19      45412079    CC    # Standard e3/e4 pairing locus
+rs75932628  6       41129202    AT    # TREM2 R47H Heterozygous risk variant

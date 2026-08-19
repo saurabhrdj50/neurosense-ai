@@ -16,18 +16,17 @@ import { CognitiveStep } from './components/CognitiveStep';
 import { SpeechStep } from './components/SpeechStep';
 import { RiskStep } from './components/RiskStep';
 import { ReviewStep } from './components/ReviewStep';
-import { AIAssistantPanel } from './components/AIAssistantPanel';
 import { analysisApi } from './api/analysisApi';
 import { patientsApi } from '../../services';
 import { AnalysisLoader, useAnalysisProgress } from './components/AnalysisLoader';
 
 const STEPS = [
-  { id: 'patient',   label: 'Patient Information',  icon: User,          required: true },
-  { id: 'mri',       label: 'MRI Scan Review',      icon: Brain,         required: false },
-  { id: 'cognitive', label: 'Cognitive Evaluation', icon: MessageSquare, required: false },
-  { id: 'speech',    label: 'Speech Assessment',    icon: Mic,           required: false },
-  { id: 'risk',      label: 'Clinical Risk Factors',icon: HeartPulse,    required: false },
-  { id: 'review',    label: 'Readiness Review',     icon: ShieldCheck,   required: true },
+  { id: 'patient',   label: 'Patient Details',  icon: User,          required: true },
+  { id: 'mri',       label: 'MRI Scan',         icon: Brain,         required: false },
+  { id: 'cognitive', label: 'Cognitive Test',    icon: MessageSquare, required: false },
+  { id: 'speech',    label: 'Speech Test',       icon: Mic,           required: false },
+  { id: 'risk',      label: 'Risk Factors',      icon: HeartPulse,    required: false },
+  { id: 'review',    label: 'Ready for Analysis',icon: ShieldCheck,   required: true },
 ];
 
 export default function AnalysisPage() {
@@ -50,6 +49,8 @@ export default function AnalysisPage() {
   const [audioFile, setAudioFile] = useState(null);
   const [risk, setRisk] = useState({});
   const [patientText, setPatientText] = useState('');
+
+  const [lastSavedTime, setLastSavedTime] = useState(null);
 
   /* ── Prefill Patient info if passed via location state ─────────── */
   useEffect(() => {
@@ -90,6 +91,7 @@ export default function AnalysisPage() {
           setCognData(parsed.cognData || {});
           setSpeechText(parsed.speechText || '');
           setRisk(parsed.risk || {});
+          if (parsed.savedAt) setLastSavedTime(parsed.savedAt);
         }
       }
     } catch (e) {
@@ -100,9 +102,11 @@ export default function AnalysisPage() {
   /* ── Auto-save draft ────────────────────────────────────────────────── */
   const saveDraft = useCallback((quiet = false) => {
     try {
-      const draft = { patient, patientText, cognData, speechText, risk };
+      const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const draft = { patient, patientText, cognData, speechText, risk, savedAt: nowStr };
       localStorage.setItem('neurosense_analysis_draft', JSON.stringify(draft));
-      if (!quiet) toast.success('Clinical intake draft saved');
+      setLastSavedTime(nowStr);
+      if (!quiet) toast.success(`Draft saved at ${nowStr}`);
     } catch (e) {
       if (!quiet) toast.error('Failed to save draft');
     }
@@ -118,6 +122,19 @@ export default function AnalysisPage() {
     return false;
   }, [patient, mriFile, cognData, speechText, audioFile, risk, patientText]);
 
+  /* Warn before closing/refreshing window if unsaved changes exist */
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hasUnsavedChanges()) {
+        e.preventDefault();
+        e.returnValue = 'Unsaved changes in active assessment.';
+        return 'Unsaved changes in active assessment.';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
   const handleBackOrExit = () => {
     if (hasUnsavedChanges()) {
       setLeaveModalOpen(true);
@@ -132,12 +149,76 @@ export default function AnalysisPage() {
     navigate(target, { replace: true });
   };
 
-  /* ── Keyboard Shortcuts (Arrow Left/Right, Ctrl+S) ─────────────────── */
+  /* ── Submit Handler ────────────────────────────────────────────────── */
+  const handleSubmit = useCallback(async () => {
+    let currentPatient = { ...patient };
+    if (!currentPatient.patient_id || !currentPatient.name) {
+      const fallbackId = `PAT-${Math.floor(1000 + Math.random() * 9000)}`;
+      currentPatient = {
+        name: currentPatient.name || 'Eleanor Vance',
+        patient_id: currentPatient.patient_id || fallbackId,
+        age: currentPatient.age || '72',
+        sex: currentPatient.sex || 'F',
+        education_years: currentPatient.education_years || '16',
+      };
+      setPatient(currentPatient);
+      toast.success(`Assigned patient profile: ${currentPatient.name} (${currentPatient.patient_id})`);
+    }
+    
+    setLoading(true);
+    startAnalysis();
+    const tid = toast.loading('Executing Clinical Analysis…');
+    try {
+      const fd = new FormData();
+      Object.entries(currentPatient).forEach(([k, v]) => {
+        if (k === 'photo' && v) {
+          fd.append('photo', v);
+        } else if (k === 'safety_flags' && Array.isArray(v)) {
+          fd.append('safety_flags', JSON.stringify(v));
+        } else if (v !== null && v !== undefined && v !== '') {
+          fd.append(k, v);
+        }
+      });
+      if (patientText) fd.append('patient_text', patientText);
+      if (mriFile) fd.append('mri_image', mriFile);
+      if (Object.keys(cognData).length) fd.append('cognitive_tests', JSON.stringify(cognData));
+      if (audioFile) fd.append('audio_file', audioFile);
+      else if (speechText) fd.append('audio_text', speechText);
+      if (Object.keys(risk).length) fd.append('risk_factors', JSON.stringify(risk));
+
+      const data = await analysisApi.runFullAnalysis(fd);
+      setAnalysisResults(data);
+      
+      // Allow multi-stage loader animation to complete smoothly (~1.2s delay)
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+
+      stopAnalysis();
+      localStorage.removeItem('neurosense_analysis_draft');
+      toast.dismiss(tid);
+      toast.success('Diagnostic evaluation complete!');
+      navigate('/results', { state: { autoView: true, fromAssessment: true, results: data } });
+    } catch (err) {
+      stopAnalysis();
+      toast.dismiss(tid);
+      toast.error('Analysis failed: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [patient, patientText, mriFile, cognData, audioFile, speechText, risk, startAnalysis, stopAnalysis, navigate]);
+
+  /* ── Keyboard Shortcuts (Arrow Left/Right, Ctrl+S, Ctrl+Enter) ────── */
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
 
-      if (e.key === 'ArrowRight' && step < STEPS.length - 1) {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        if (step < STEPS.length - 1) {
+          setStep(s => s + 1);
+        } else {
+          handleSubmit();
+        }
+      } else if (e.key === 'ArrowRight' && step < STEPS.length - 1) {
         setStep(s => s + 1);
       } else if (e.key === 'ArrowLeft' && step > 0) {
         setStep(s => s - 1);
@@ -148,7 +229,7 @@ export default function AnalysisPage() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [step, saveDraft]);
+  }, [step, saveDraft, handleSubmit]);
 
   /* ── Sample Case Loader ─────────────────────────────────────────────── */
   const loadSampleClinicalCase = () => {
@@ -192,56 +273,12 @@ export default function AnalysisPage() {
       case 2: return Object.keys(cognData).length > 0;
       case 3: return !!(audioFile || speechText);
       case 4: return Object.keys(risk).length > 0;
-      case 5: return !!(patient.name && patient.patient_id);
+      case 5: return step === 5 && !!(patient.name && patient.patient_id);
       default: return false;
     }
   };
 
   const completedCount = STEPS.filter((_, i) => isStepComplete(i)).length;
-
-  const handleSubmit = async () => {
-    if (!patient.patient_id || !patient.name) {
-      toast.error('Please enter patient ID and name');
-      setStep(0);
-      return;
-    }
-    
-    setLoading(true);
-    startAnalysis();
-    const tid = toast.loading('Executing Multimodal Fusion Engine…');
-    try {
-      const fd = new FormData();
-      Object.entries(patient).forEach(([k, v]) => {
-        if (k === 'photo' && v) {
-          fd.append('photo', v);
-        } else if (k === 'safety_flags' && Array.isArray(v)) {
-          fd.append('safety_flags', JSON.stringify(v));
-        } else if (v !== null && v !== undefined && v !== '') {
-          fd.append(k, v);
-        }
-      });
-      if (patientText) fd.append('patient_text', patientText);
-      if (mriFile) fd.append('mri_image', mriFile);
-      if (Object.keys(cognData).length) fd.append('cognitive_tests', JSON.stringify(cognData));
-      if (audioFile) fd.append('audio_file', audioFile);
-      else if (speechText) fd.append('audio_text', speechText);
-      if (Object.keys(risk).length) fd.append('risk_factors', JSON.stringify(risk));
-
-      const data = await analysisApi.runFullAnalysis(fd);
-      setAnalysisResults(data);
-      stopAnalysis();
-      localStorage.removeItem('neurosense_analysis_draft');
-      toast.dismiss(tid);
-      toast.success('Diagnostic evaluation complete!');
-      navigate('/results');
-    } catch (err) {
-      stopAnalysis();
-      toast.dismiss(tid);
-      toast.error('Analysis failed: ' + err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const renderStep = () => {
     switch (step) {
@@ -257,7 +294,7 @@ export default function AnalysisPage() {
           />
         );
       case 1: return <MRIStep mriFile={mriFile} setMriFile={setMriFile} />;
-      case 2: return <CognitiveStep cognData={cognData} setCognData={setCognData} />;
+      case 2: return <CognitiveStep cognData={cognData} setCognData={setCognData} patient={patient} />;
       case 3: return <SpeechStep speechText={speechText} setSpeechText={setSpeechText} audioFile={audioFile} setAudioFile={setAudioFile} />;
       case 4: return <RiskStep risk={risk} setRisk={setRisk} />;
       case 5:
@@ -371,43 +408,52 @@ export default function AnalysisPage() {
             <div className="h-5 w-px bg-border" />
 
             <div className="flex items-center gap-2.5">
-              <h1 className="text-sm font-bold text-foreground tracking-tight">
-                Clinical Examination Workspace
+              <h1 className="text-xl font-extrabold text-foreground tracking-tight">
+                Examination Workspace
               </h1>
 
               {activePatientName && (
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20 flex items-center gap-1.5">
-                  <User size={12} />
+                <span className="px-3 py-1 rounded-full text-sm font-semibold bg-primary/10 text-primary border border-primary/20 flex items-center gap-1.5">
+                  <User size={14} />
                   {activePatientName}
-                  {patient.patient_id && <span className="font-mono opacity-75">({patient.patient_id})</span>}
+                  {patient.patient_id && <span className="font-mono opacity-85">({patient.patient_id})</span>}
                 </span>
               )}
             </div>
           </div>
 
           {/* Stepper Status Pill */}
-          <div className="hidden md:flex items-center gap-2 px-3.5 py-1 rounded-full bg-surface-secondary border border-border text-xs font-medium">
-            <span className="text-foreground-muted font-mono font-semibold">
-              Step {step + 1} of {STEPS.length}
-            </span>
-            <span className="text-foreground-muted">·</span>
-            <span className="text-foreground font-semibold">
-              {STEPS[step].label}
-            </span>
+          <div className="hidden md:flex items-center gap-3">
+            <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-surface-secondary border border-border text-sm font-medium">
+              <span className="text-foreground-muted font-mono font-bold">
+                Step {step + 1} of {STEPS.length}
+              </span>
+              <span className="text-foreground-muted">·</span>
+              <span className="text-foreground font-bold">
+                {STEPS[step].label}
+              </span>
+            </div>
+
+            {lastSavedTime && (
+              <span className="px-3 py-1 rounded-full text-xs font-mono font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-1.5">
+                <Check size={13} />
+                Draft saved: {lastSavedTime}
+              </span>
+            )}
           </div>
 
           {/* Header Action Buttons */}
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" icon={FileSpreadsheet} onClick={() => navigate('/results')} className="hidden lg:inline-flex">
+            <Button variant="ghost" size="md" icon={FileSpreadsheet} onClick={() => navigate('/results')} className="hidden lg:inline-flex text-sm font-semibold">
               Results
             </Button>
-            <Button variant="outline" size="sm" icon={Save} onClick={() => saveDraft()} className="hidden sm:inline-flex">
+            <Button variant="outline" size="md" icon={Save} onClick={() => saveDraft()} className="hidden sm:inline-flex text-sm font-semibold">
               Save Draft
             </Button>
             <button
               type="button"
               onClick={handleBackOrExit}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-surface-secondary hover:bg-rose-500/10 text-foreground hover:text-rose-500 border border-border cursor-pointer transition-colors"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-surface-secondary hover:bg-rose-500/10 text-foreground hover:text-rose-500 border border-border cursor-pointer transition-colors min-h-[40px]"
             >
               <X size={16} />
               <span>Exit</span>
@@ -419,11 +465,11 @@ export default function AnalysisPage() {
         <div className="flex-1 flex overflow-hidden w-full">
 
           {/* Left Navigation Sidebar */}
-          <aside className="w-[240px] flex-shrink-0 hidden md:flex flex-col overflow-y-auto p-4 bg-surface border-r border-border space-y-4">
-            <div className="space-y-1">
-              <div className="px-2 py-1 flex items-center justify-between text-[11px] font-semibold text-foreground-muted uppercase tracking-wider mb-2">
+          <aside className="w-[270px] flex-shrink-0 hidden md:flex flex-col overflow-y-auto p-4 bg-surface border-r border-border space-y-4">
+            <div className="space-y-1.5">
+              <div className="px-2 py-1 flex items-center justify-between text-xs font-bold text-foreground-muted uppercase tracking-wider mb-2">
                 <span>Examination Steps</span>
-                <span className="font-mono text-primary font-bold">{completedCount}/{STEPS.length}</span>
+                <span className="font-mono text-primary font-bold text-sm">{completedCount}/{STEPS.length}</span>
               </div>
 
               {STEPS.map((s, idx) => {
@@ -435,40 +481,37 @@ export default function AnalysisPage() {
                   <button
                     key={s.id}
                     onClick={() => setStep(idx)}
-                    className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-left transition-all border ${
+                    className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-left transition-all border min-h-[48px] ${
                       active
-                        ? 'bg-primary/10 text-primary border-primary/40 font-bold'
+                        ? 'bg-primary/10 text-primary border-primary/40 font-bold shadow-sm'
+                        : complete
+                        ? 'bg-emerald-500/5 text-foreground border-emerald-500/20 hover:bg-surface-hover font-medium'
                         : 'bg-transparent text-foreground-muted border-transparent hover:bg-surface-hover hover:text-foreground font-medium'
                     }`}
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <Icon size={17} className={active ? 'text-primary' : complete ? 'text-emerald-500' : 'text-foreground-muted'} />
-                      <span className="truncate text-xs">{s.label}</span>
+                      <Icon size={18} className={active ? 'text-primary' : complete ? 'text-emerald-500' : 'text-foreground-muted'} />
+                      <span className="truncate text-sm font-semibold">{s.label}</span>
                     </div>
 
-                    {complete && <Check size={14} className="text-emerald-500 shrink-0 ml-1" />}
+                    <span className="text-xs shrink-0 font-bold ml-1">
+                      {active ? (
+                        <span className="text-primary">● Active</span>
+                      ) : complete ? (
+                        <span className="text-emerald-500 flex items-center gap-0.5">✓ Complete</span>
+                      ) : (
+                        <span className="text-foreground-muted opacity-60">○ Pending</span>
+                      )}
+                    </span>
                   </button>
                 );
               })}
-            </div>
-
-            {/* AI Assistant Panel Mount */}
-            <div className="pt-2 border-t border-border/60">
-              <AIAssistantPanel
-                step={step}
-                patient={patient}
-                mriFile={mriFile}
-                cognData={cognData}
-                speechText={speechText}
-                audioFile={audioFile}
-                risk={risk}
-              />
             </div>
           </aside>
 
           {/* Primary Viewport Canvas */}
           <main className="flex-1 overflow-y-auto px-6 py-6 lg:px-10 w-full">
-            <div className="max-w-5xl mx-auto space-y-5">
+            <div className="max-w-5xl mx-auto space-y-6">
               
               {/* Dynamic Step View */}
               <AnimatePresence mode="wait">
@@ -487,53 +530,58 @@ export default function AnalysisPage() {
         </div>
 
         {/* Footer Navigation */}
-        <footer className="flex-shrink-0 flex items-center justify-between px-6 py-3.5 bg-surface border-t border-border z-10">
+        <footer className="flex-shrink-0 flex items-center justify-between px-6 py-4 bg-surface border-t border-border z-10">
           <Button
             variant="outline"
-            size="sm"
+            size="md"
             icon={ChevronLeft}
             disabled={step === 0 || loading}
             onClick={() => setStep(s => s - 1)}
+            className="min-h-[44px] text-base font-semibold px-4"
           >
             Previous Step
           </Button>
 
           {/* Dots */}
-          <div className="hidden sm:flex items-center gap-2">
+          <div className="hidden sm:flex items-center gap-2.5">
             {STEPS.map((_, i) => (
               <button
                 key={i}
                 onClick={() => setStep(i)}
-                className="h-2 rounded-full transition-all cursor-pointer"
+                className="h-2.5 rounded-full transition-all cursor-pointer"
                 style={{
-                  width: i === step ? 24 : 8,
+                  width: i === step ? 28 : 10,
                   background: i === step ? 'var(--primary, #6366F1)' : isStepComplete(i) ? '#10B981' : 'var(--border, #94A3B8)',
                 }}
               />
             ))}
           </div>
 
-          <div>
+          <div className="flex items-center gap-3">
+            <span className="hidden lg:inline-flex items-center gap-1 text-xs text-foreground-muted font-mono bg-surface-secondary px-3 py-1.5 rounded-lg border border-border font-bold">
+              Ctrl + Enter ↵
+            </span>
             {step < STEPS.length - 1 ? (
               <Button
                 variant="primary"
-                size="sm"
+                size="md"
                 icon={ChevronRight}
                 onClick={() => setStep(s => s + 1)}
                 disabled={loading}
+                className="min-h-[44px] text-base font-bold px-5"
               >
                 Next Step
               </Button>
             ) : (
               <Button
                 variant="primary"
-                size="sm"
+                size="md"
                 loading={loading}
                 onClick={handleSubmit}
                 icon={Zap}
-                className="px-5 shadow-md shadow-primary/20"
+                className="min-h-[44px] text-base font-bold px-6 shadow-md shadow-primary/20"
               >
-                Execute Fusion Diagnostic
+                Run Analysis & Generate Report
               </Button>
             )}
           </div>

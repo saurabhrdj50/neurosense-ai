@@ -28,13 +28,13 @@ const VARIANT_CLASSES = {
  * @param {React.ReactNode}   props.children     Badge text.
  */
 export default function Badge({ variant = 'neutral', icon: Icon, className = '', children }) {
-  const base = 'inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold border leading-none shrink-0'
+  const base = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-semibold border leading-tight shrink-0 tracking-tight transition-colors'
   const vrClass = VARIANT_CLASSES[variant] ?? VARIANT_CLASSES.neutral
 
   return (
     <span className={`${base} ${vrClass} ${className}`}>
-      {Icon && <Icon size={12} className="shrink-0" aria-hidden="true" />}
-      {children}
+      {Icon && <Icon size={14} className="shrink-0 opacity-90" aria-hidden="true" />}
+      <span>{children}</span>
     </span>
   )
 }

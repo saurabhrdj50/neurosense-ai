@@ -146,7 +146,7 @@ class RegisterSchema:
 class ForgotPasswordSchema:
     """
     Validates Step 1 of the forgot-password flow
-    (identity verification via email + date_of_birth).
+    (identity verification via email).
     The new password is handled by ResetPasswordSchema via a token.
     """
     @staticmethod
@@ -154,22 +154,16 @@ class ForgotPasswordSchema:
         errors: Dict[str, str] = {}
 
         email = data.get('email', '').strip()
-        date_of_birth = data.get('date_of_birth', '').strip()
 
         try:
             email = _validate_email(email)
         except ValueError as e:
             errors['email'] = str(e)
 
-        try:
-            date_of_birth = _validate_dob(date_of_birth)
-        except ValueError as e:
-            errors['date_of_birth'] = str(e)
-
         if errors:
             raise ValueError(errors)
 
-        return {'email': email, 'date_of_birth': date_of_birth}
+        return {'email': email}
 
 
 class ResetPasswordSchema:

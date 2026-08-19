@@ -82,7 +82,7 @@ function AppRoutes() {
           <Route path="/patients"  element={<PageTransition><PatientsPage /></PageTransition>} />
           <Route path="/compare"   element={<PageTransition><ComparePatients /></PageTransition>} />
           <Route path="/history/:patientId" element={<PageTransition><HistoryPage /></PageTransition>} />
-          <Route path="/results"   element={<PageTransition><ResultsPage /></PageTransition>} />
+          <Route path="/results"   element={<Navigate to="/patients" replace />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

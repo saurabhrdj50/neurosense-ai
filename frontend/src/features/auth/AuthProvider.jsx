@@ -69,15 +69,14 @@ export function AuthProvider({ children }) {
   }
 
   /**
-   * Verifies a user's identity by email and date of birth as the first step
+   * Verifies a user's identity by email as the first step
    * of the forgot-password flow.
    *
-   * @param {string} email       The user's registered email address.
-   * @param {string} dateOfBirth Date string (YYYY-MM-DD).
+   * @param {string} email  The user's registered email address.
    * @returns {Promise<{success: boolean, reset_token?: string, message?: string}>}
    */
-  const verifyIdentity = async (email, dateOfBirth) => {
-    const data = await authApi.forgotPassword(email, dateOfBirth)
+  const verifyIdentity = async (email) => {
+    const data = await authApi.forgotPassword(email)
     return data
   }
 
@@ -85,26 +84,25 @@ export function AuthProvider({ children }) {
    * Resets the user's password.
    *
    * Accepts two calling conventions:
-   * 1. `resetPassword(email, dob, newPassword)` — verifies identity first,
+   * 1. `resetPassword(email, newPassword)` — verifies identity first via email,
    *    then resets using the returned token.
    * 2. `resetPassword(token, newPassword)` — resets directly with a token.
    *
-   * @param {string} tokenOrEmail
-   * @param {string} dateOfBirthOrNewPassword
-   * @param {string} [newPassword]
+   * @param {string} emailOrToken
+   * @param {string} newPassword
    * @returns {Promise<{success: boolean, message?: string}>}
    */
-  const resetPassword = async (tokenOrEmail, dateOfBirthOrNewPassword, newPassword) => {
+  const resetPassword = async (emailOrToken, newPassword) => {
     let data;
     if (newPassword !== undefined) {
-      const verifyRes = await authApi.forgotPassword(tokenOrEmail, dateOfBirthOrNewPassword)
+      const verifyRes = await authApi.forgotPassword(emailOrToken)
       if (!verifyRes.success || !verifyRes.reset_token) {
         toast.error(verifyRes.message || 'Identity verification failed')
         return verifyRes
       }
       data = await authApi.resetPassword(verifyRes.reset_token, newPassword)
     } else {
-      data = await authApi.resetPassword(tokenOrEmail, dateOfBirthOrNewPassword)
+      data = await authApi.resetPassword(emailOrToken, newPassword)
     }
     if (data.success) toast.success('Password reset successfully! You can now sign in.')
     else toast.error(data.message || 'Password reset failed')

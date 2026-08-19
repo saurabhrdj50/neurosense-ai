@@ -4,11 +4,11 @@ import { Brain, Activity, Heart, PenTool, Mic, Stethoscope, CheckCircle, Loader2
 import GlassCard from '../../../components/ui/GlassCard'
 
 const ANALYSIS_STEPS = [
-  { id: 'mri', label: 'Analyzing MRI...', icon: Brain, description: 'Extracting volumetrics & hippocampal ROI' },
-  { id: 'cognitive', label: 'Running Cognitive Model...', icon: Activity, description: 'Scoring MMSE, MoCA, and Clock Drawing' },
-  { id: 'speech', label: 'Running Speech Analysis...', icon: Mic, description: 'Transcribing & computing fluency metrics' },
-  { id: 'risk', label: 'Calculating Risk...', icon: Stethoscope, description: 'Computing Lancet modifiable risk index' },
-  { id: 'report', label: 'Generating Clinical Report...', icon: CheckCircle, description: 'Consolidating diagnostic findings' },
+  { id: 'mri', label: 'Analyzing MRI...', icon: Brain, description: 'Extracting brain structure & measurements' },
+  { id: 'cognitive', label: 'Running Cognitive Test...', icon: Activity, description: 'Scoring MMSE, MoCA, and Clock Drawing' },
+  { id: 'speech', label: 'Running Speech Test...', icon: Mic, description: 'Analyzing language & speech patterns' },
+  { id: 'risk', label: 'Checking Risk Factors...', icon: Stethoscope, description: 'Evaluating modifiable health risk factors' },
+  { id: 'report', label: 'Creating Report...', icon: CheckCircle, description: 'Building diagnostic summary & recommendations' },
 ]
 
 const STEP_COLORS = {
@@ -79,13 +79,13 @@ export function AnalysisLoader({ isLoading, currentStep = 0, patientName = 'Curr
             <div>
               <div className="flex items-center gap-2">
                 <Loader2 size={14} className="animate-spin text-indigo-400" />
-                <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-400">Diagnostic Fusion Engine</span>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-400">Analysis Engine</span>
               </div>
               <h2 className="text-xl font-bold tracking-tight text-white mt-0.5">
-                Executing Multimodal Assessment
+                Running Analysis
               </h2>
               <p className="text-xs text-slate-400">
-                Processing signals for <span className="font-semibold text-white">{patientName}</span>
+                Processing examination for <span className="font-semibold text-white">{patientName}</span>
               </p>
             </div>
           </div>

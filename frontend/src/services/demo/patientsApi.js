@@ -48,4 +48,22 @@ export const patientsApi = {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   },
+
+  exportAll: () => {
+    const patients = demoDb.getPatients();
+    const headers = 'Patient ID,Name,Age,Sex,Stage,Risk Level,Education Years,Notes\n';
+    const rows = patients.map(p =>
+      `"${p.patient_id || ''}","${p.name || ''}",${p.age || 0},"${p.sex || ''}","${p.stage || 'Unassessed'}","${p.risk || 'Normal'}",${p.education_years || 0},"${(p.notes || '').replace(/"/g, '""')}"`
+    ).join('\n');
+
+    const blob = new Blob([headers + rows], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'neurosense_patient_registry.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  },
 };

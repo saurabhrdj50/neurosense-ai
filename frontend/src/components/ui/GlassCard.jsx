@@ -8,7 +8,7 @@ import React from 'react'
 /**
  * Enterprise card panel.
  *
- * @param {'default'|'elevated'|'interactive'|'glass'|'subtle'|'highlighted'} [variant='default']
+ * @param {'primary'|'secondary'|'supporting'|'default'|'elevated'|'interactive'|'glass'|'subtle'|'highlighted'} [variant='default']
  * @param {string}          [className]  Extra Tailwind classes.
  * @param {React.CSSProperties} [style]  Inline overrides.
  * @param {boolean}         [hover]      Subtle lift on hover.
@@ -28,17 +28,27 @@ export default function GlassCard({
   ...props
 }) {
   const VARIANTS = {
+    // ── Canonical 3-Level Card Hierarchy ──
+    primary:     'bg-card border-l-4 border-l-primary border-t border-r border-b border-border shadow-xs',
+    secondary:   'bg-card border border-border shadow-2xs',
+    supporting:  'bg-surface-secondary/50 border border-border-subtle shadow-none',
+    
+    // ── Specialized Aliases ──
     default:     'bg-card border border-border shadow-2xs',
     elevated:    'bg-card border border-border-strong shadow-xs',
-    interactive: 'bg-card border border-border shadow-2xs hover:border-primary/50 hover:bg-surface-hover cursor-pointer focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none',
+    interactive: 'bg-card border border-border shadow-2xs hover:border-primary/50 hover:bg-surface-hover cursor-pointer focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-1 focus-visible:ring-offset-background focus-visible:outline-none',
     glass:       'bg-card border border-border shadow-2xs',
-    subtle:      'bg-surface-secondary/40 border border-border-subtle',
+    subtle:      'bg-surface-secondary/50 border border-border-subtle shadow-none',
     highlighted: 'bg-surface-secondary border border-primary/40 shadow-2xs',
   }
 
   const selectedVariant = VARIANTS[variant] || VARIANTS.default
-  const hoverClass = hover && variant === 'default' ? 'hover:border-primary/50 hover:bg-surface-hover' : ''
-  const cursorClass = onClick && variant !== 'interactive' ? 'cursor-pointer focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none' : ''
+  const hoverClass = hover && (variant === 'default' || variant === 'secondary' || variant === 'primary') 
+    ? 'hover:border-primary/40 hover:bg-surface-hover/80 transition-all duration-150' 
+    : ''
+  const cursorClass = onClick && variant !== 'interactive' 
+    ? 'cursor-pointer focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-1 focus-visible:ring-offset-background focus-visible:outline-none' 
+    : ''
 
   const handleKeyDown = (e) => {
     if (onKeyDown) {
@@ -55,7 +65,7 @@ export default function GlassCard({
       onKeyDown={onClick || onKeyDown ? handleKeyDown : undefined}
       tabIndex={onClick || variant === 'interactive' ? 0 : undefined}
       role={onClick || variant === 'interactive' ? 'button' : undefined}
-      className={`rounded-xl transition-colors ${selectedVariant} ${hoverClass} ${cursorClass} ${className}`}
+      className={`rounded-xl transition-all duration-150 ${selectedVariant} ${hoverClass} ${cursorClass} ${className}`}
       style={style}
       {...props}
     >
@@ -63,3 +73,4 @@ export default function GlassCard({
     </div>
   )
 }
+

@@ -3,25 +3,23 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Clock, Brain, Download, TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import toast from 'react-hot-toast'
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Legend, Area, AreaChart,
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts'
 import Button from '../../components/ui/Button'
 import Badge from '../../components/ui/Badge'
-import ProgressBar from '../../components/ui/ProgressBar'
+import Card from '../../components/ui/Card'
 import { SectionSkeleton } from '../../components/ui/Skeleton'
-import SpotlightCard from '../../components/ui/SpotlightCard'
 import { historyApi } from '../../services'
 import LongitudinalTimeline from './components/LongitudinalTimeline'
 
-// ── Stage →  config ────────────────────────────────────────────────────────
 const STAGE_BADGE = {
-  'Non-Demented':       { variant: 'success',  color: '#10B981' },
-  'Non Demented':       { variant: 'success',  color: '#10B981' },
-  'Very Mild Demented': { variant: 'purple',   color: '#7C3AED' },
-  'Mild Demented':      { variant: 'warning',  color: '#F59E0B' },
-  'Moderate Demented':  { variant: 'danger',   color: '#EF4444' },
-  'Unknown':            { variant: 'neutral',  color: '#94A3B8' },
+  'Non-Demented':       { variant: 'success', color: '#10B981', label: 'Normal' },
+  'Non Demented':       { variant: 'success', color: '#10B981', label: 'Normal' },
+  'Very Mild Demented': { variant: 'purple',  color: '#7C3AED', label: 'Very Mild' },
+  'Mild Demented':      { variant: 'warning', color: '#F59E0B', label: 'Mild MCI' },
+  'Moderate Demented':  { variant: 'danger',  color: '#EF4444', label: 'Moderate' },
+  'Severe Demented':    { variant: 'danger',  color: '#EF4444', label: 'Severe' },
+  'Unknown':            { variant: 'neutral', color: '#94A3B8', label: 'Unknown' },
 }
 
 const STAGE_SCORE = {
@@ -30,98 +28,23 @@ const STAGE_SCORE = {
   'Very Mild Demented': 35,
   'Mild Demented': 60,
   'Moderate Demented': 85,
+  'Severe Demented': 95,
   'Unknown': 50,
 }
 
-// Shared chart config
-const CHART_TOOLTIP_STYLE = {
-  contentStyle: {
-    background: 'var(--tw-bg-opacity, #fff)',
-    border: '1px solid #E2E8F0',
-    borderRadius: 8,
-    fontSize: 11,
-    color: '#1E293B',
-    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.07)',
-  },
-  labelStyle: { color: '#64748B', fontWeight: 600 },
-}
-
-// ── Metric cell ─────────────────────────────────────────────────────────────
-function Metric({ label, value }) {
+function CustomTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null
   return (
-    <div>
-      <p className="text-[11px] text-slate-500 mb-0.5">{label}</p>
-      <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">{value}</p>
+    <div className="bg-surface border border-border shadow-md text-foreground text-xs rounded-xl p-2.5 min-w-[130px] z-50">
+      <p className="font-bold text-foreground border-b border-border pb-1 mb-1">{label}</p>
+      <div className="flex justify-between items-center gap-3">
+        <span className="text-foreground-muted font-medium">Stage Level:</span>
+        <span className="font-mono font-bold text-indigo-500">{payload[0].value}%</span>
+      </div>
     </div>
   )
 }
 
-// ── Trend badge ─────────────────────────────────────────────────────────────
-function TrendBadge({ trend }) {
-  if (trend === 'worsening') return <Badge variant="danger"  icon={TrendingDown}>Worsening</Badge>
-  if (trend === 'improving') return <Badge variant="success" icon={TrendingUp}>Improving</Badge>
-  return <Badge variant="neutral" icon={Minus}>Stable</Badge>
-}
-
-// ── Session card ─────────────────────────────────────────────────────────────
-function SessionCard({ session, idx, total }) {
-  const mri   = session.results?.mri || {}
-  const stage = session.results?.final_stage?.stage || mri.stage || 'Unknown'
-  const conf  = session.results?.final_stage?.confidence || mri.confidence || 0
-  const stageConf = STAGE_BADGE[stage] ?? STAGE_BADGE['Unknown']
-  const date  = new Date(session.timestamp)
-
-  return (
-    <SpotlightCard className="p-4">
-      <div className="flex flex-wrap items-start gap-3.5">
-        {/* Timeline node */}
-        <div className="flex flex-col items-center gap-1.5 shrink-0">
-          <div className="w-8 h-8 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center">
-            <Brain size={15} className="text-slate-500 dark:text-slate-400" aria-hidden="true" />
-          </div>
-          {idx < total - 1 && (
-            <div className="w-px flex-1 min-h-4 bg-slate-200 dark:bg-slate-700" aria-hidden="true" />
-          )}
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 min-w-0 space-y-2.5">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div className="space-y-1">
-              <Badge variant={stageConf.variant}>{stage}</Badge>
-              <p className="text-[11px] text-slate-500">
-                {date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-                {' · '}
-                {date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-base font-bold text-slate-900 dark:text-slate-100">{conf.toFixed(1)}%</p>
-              <p className="text-[11px] text-slate-500">Diagnostic Confidence</p>
-            </div>
-          </div>
-
-          <ProgressBar value={conf} color={stageConf.color} showPercent={false} height={3} />
-
-          {/* Metrics row */}
-          <div className="flex flex-wrap gap-5 pt-1">
-            {session.results?.cognitive?.composite_score != null && (
-              <Metric label="Cognitive Score" value={`${session.results.cognitive.composite_score}/100`} />
-            )}
-            {session.results?.risk_profile?.risk_category && (
-              <Metric label="Risk Category"   value={session.results.risk_profile.risk_category} />
-            )}
-            {session.results?.sentiment?.dominant_emotion && (
-              <Metric label="Affect"          value={session.results.sentiment.dominant_emotion} />
-            )}
-          </div>
-        </div>
-      </div>
-    </SpotlightCard>
-  )
-}
-
-// ── Main Page ─────────────────────────────────────────────────────────────
 export default function HistoryPage() {
   const { patientId } = useParams()
   const navigate = useNavigate()
@@ -141,11 +64,7 @@ export default function HistoryPage() {
     const stage = s.results?.final_stage?.stage || s.results?.mri?.stage || 'Unknown'
     return {
       date:       new Date(s.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      session:    idx + 1,
       stageScore: STAGE_SCORE[stage] ?? 50,
-      mriConf:    s.results?.mri?.confidence || 0,
-      cogScore:   s.results?.cognitive?.composite_score || 0,
-      riskScore:  Math.max(0, 100 - (s.results?.risk_profile?.overall_risk_score || 0)),
       stage,
     }
   }).reverse()
@@ -162,126 +81,115 @@ export default function HistoryPage() {
   const trend          = getTrend()
   const latestStage    = chartData[chartData.length - 1]?.stage || 'Unknown'
   const earliestStage  = chartData[0]?.stage || 'Unknown'
-  const avgConf        = chartData.length > 0
-    ? chartData.reduce((a, b) => a + (b.mriConf || 0), 0) / chartData.length
-    : 0
 
-  const stageColor  = s => (STAGE_BADGE[s] ?? STAGE_BADGE['Unknown']).color
-  const stageBadge  = s => (STAGE_BADGE[s] ?? STAGE_BADGE['Unknown']).variant
+  const latestInfo    = STAGE_BADGE[latestStage] || STAGE_BADGE['Unknown']
+  const earliestInfo  = STAGE_BADGE[earliestStage] || STAGE_BADGE['Unknown']
 
   return (
-    <div className="max-w-4xl mx-auto space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3 pb-2 border-b border-border">
-        <div className="flex items-center gap-3">
+    <div className="max-w-5xl mx-auto space-y-6 pb-10 font-sans">
+      {/* Top Navigation & Title Bar */}
+      <div className="flex items-center justify-between flex-wrap gap-4 pb-4 border-b border-border">
+        <div className="flex items-center gap-3.5">
           <button
             onClick={() => navigate('/patients')}
             aria-label="Back to Patient Registry"
-            className="p-2 rounded-lg bg-surface border border-border text-foreground-muted hover:text-foreground transition-colors"
+            className="p-2.5 rounded-xl bg-surface border border-border text-foreground-muted hover:text-foreground transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center shadow-2xs"
           >
-            <ArrowLeft size={16} aria-hidden="true" />
+            <ArrowLeft size={20} />
           </button>
           <div>
-            <h1 className="text-lg font-bold text-foreground tracking-tight">Patient Longitudinal History</h1>
-            <p className="text-xs text-foreground-muted mt-0.5">Patient ID: <span className="font-mono">{patientId}</span> · {history.length} recorded sessions</p>
+            <h1 className="text-2xl font-extrabold text-foreground tracking-tight">Patient History & Trends</h1>
+            <p className="text-sm font-medium text-foreground-muted mt-0.5">
+              Patient ID: <span className="font-mono font-bold text-foreground">{patientId}</span> · {history.length} assessment session(s)
+            </p>
           </div>
         </div>
+
         <Button
           variant="outline"
-          size="sm"
+          size="md"
           icon={Download}
           onClick={() => historyApi.exportPatientHistory(patientId)}
-          aria-label="Export patient history as CSV"
+          className="min-h-[40px] text-sm font-bold"
         >
-          Export History CSV
+          Export CSV
         </Button>
       </div>
 
       {loading ? (
-        <div className="bg-surface border border-border rounded-xl p-6">
+        <div className="bg-surface border border-border rounded-2xl p-6">
           <SectionSkeleton rows={6} />
         </div>
       ) : history.length === 0 ? (
-        <div className="bg-surface border border-border rounded-xl py-14 px-4 flex flex-col items-center justify-center text-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-surface-secondary border border-border text-foreground-muted flex items-center justify-center">
-            <Clock size={24} aria-hidden="true" />
+        <div className="bg-card border border-border rounded-2xl py-16 px-4 flex flex-col items-center justify-center text-center gap-3 shadow-xs">
+          <div className="w-14 h-14 rounded-2xl bg-surface border border-border text-foreground-muted flex items-center justify-center">
+            <Clock size={28} />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-foreground">No Diagnostic Sessions Recorded</h3>
-            <p className="text-xs text-foreground-muted max-w-sm mt-1">
-              There are no longitudinal assessment records available for patient ID <span className="font-mono">{patientId}</span>.
+            <h3 className="text-base font-bold text-foreground">No History Recorded</h3>
+            <p className="text-sm text-foreground-muted max-w-sm mt-1 font-medium">
+              No previous assessment records found for patient ID <span className="font-mono font-bold">{patientId}</span>.
             </p>
           </div>
-          <Button size="sm" onClick={() => navigate('/analysis')}>
+          <Button size="md" onClick={() => navigate('/analysis')} className="min-h-[40px] text-sm font-semibold">
             Start New Assessment
           </Button>
         </div>
       ) : (
         <>
-          {/* Longitudinal Charts — only when ≥ 2 sessions */}
+          {/* Key Summary Cards & Health Trend Graph */}
           {chartData.length > 1 && (
-            <>
-              {/* Summary stats + trajectory chart */}
-              <SpotlightCard className="p-5 space-y-4 rounded-xl bg-surface border border-border">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">Longitudinal Diagnostic Trajectory</h3>
-                  <TrendBadge trend={trend} />
+            <Card className="p-6 space-y-5 rounded-2xl bg-card border border-border shadow-xs">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-base font-extrabold text-foreground">Health Trend Trajectory</h3>
+                  <p className="text-xs text-foreground-muted font-medium mt-0.5">Overall diagnostic stage progression over time</p>
                 </div>
+                <Badge variant={trend === 'worsening' ? 'danger' : trend === 'improving' ? 'success' : 'neutral'}>
+                  {trend === 'worsening' ? 'Worsening' : trend === 'improving' ? 'Improving' : 'Stable'}
+                </Badge>
+              </div>
 
-                {/* Key stats */}
-                <div className="grid grid-cols-3 gap-3">
-                  {[
-                    { label: 'Baseline Stage',   value: earliestStage, color: stageColor(earliestStage) },
-                    { label: 'Current Stage',     value: latestStage,   color: stageColor(latestStage) },
-                    { label: 'Avg Confidence',    value: `${avgConf.toFixed(1)}%`, color: null },
-                  ].map(({ label, value, color }) => (
-                    <div key={label} className="p-3 rounded-lg bg-background border border-border">
-                      <p className="text-[10px] uppercase font-bold text-foreground-muted mb-0.5">{label}</p>
-                      <p className="text-xs font-bold text-foreground" style={color ? { color } : {}}>{value}</p>
-                    </div>
-                  ))}
+              {/* KPI Chips */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="p-3.5 rounded-xl bg-surface border border-border space-y-1">
+                  <span className="text-[11px] font-semibold text-foreground-muted uppercase block">First Test Stage</span>
+                  <Badge variant={earliestInfo.variant}>{earliestInfo.label}</Badge>
                 </div>
+                <div className="p-3.5 rounded-xl bg-surface border border-border space-y-1">
+                  <span className="text-[11px] font-semibold text-foreground-muted uppercase block">Latest Test Stage</span>
+                  <Badge variant={latestInfo.variant}>{latestInfo.label}</Badge>
+                </div>
+                <div className="p-3.5 rounded-xl bg-surface border border-border space-y-1">
+                  <span className="text-[11px] font-semibold text-foreground-muted uppercase block">Recorded Tests</span>
+                  <span className="text-base font-extrabold text-foreground block font-mono">{history.length}</span>
+                </div>
+              </div>
 
-                {/* Stage Score area chart */}
-                <ResponsiveContainer width="100%" height={150}>
-                  <AreaChart data={chartData} margin={{ left: -20, right: 8 }}>
+              {/* Clean Single Progression Chart */}
+              <div className="pt-2">
+                <ResponsiveContainer width="100%" height={160}>
+                  <AreaChart data={chartData} margin={{ top: 5, left: -25, right: 10, bottom: 0 }}>
                     <defs>
-                      <linearGradient id="stageGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%"  stopColor="#6366F1" stopOpacity={0.2} />
+                      <linearGradient id="historyGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#6366F1" stopOpacity={0.25} />
                         <stop offset="95%" stopColor="#6366F1" stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                    <XAxis dataKey="date" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} />
-                    <YAxis domain={[0, 100]} tick={{ fill: 'var(--text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} />
-                    <Tooltip {...CHART_TOOLTIP_STYLE} formatter={v => [v.toFixed(1), 'Stage Score']} />
-                    <Area type="monotone" dataKey="stageScore" stroke="#6366F1" fill="url(#stageGrad)" strokeWidth={2} name="Stage Score" />
+                    <XAxis dataKey="date" tick={{ fill: 'var(--text-muted)', fontSize: 12, fontWeight: 500 }} axisLine={false} tickLine={false} />
+                    <YAxis domain={[0, 100]} tick={{ fill: 'var(--text-muted)', fontSize: 12, fontWeight: 500 }} axisLine={false} tickLine={false} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Area type="monotone" dataKey="stageScore" stroke="#6366F1" fill="url(#historyGrad)" strokeWidth={2.5} name="Stage Score" />
                   </AreaChart>
                 </ResponsiveContainer>
-              </SpotlightCard>
-
-              {/* Multimodal trends */}
-              <SpotlightCard className="p-5 rounded-xl bg-surface border border-border">
-                <h3 className="text-xs font-bold text-foreground uppercase tracking-wider mb-3">Multi-Modality Biomarker Trends</h3>
-                <ResponsiveContainer width="100%" height={160}>
-                  <LineChart data={chartData} margin={{ left: -20, right: 8 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                    <XAxis dataKey="date" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} />
-                    <YAxis domain={[0, 100]} tick={{ fill: 'var(--text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} />
-                    <Tooltip {...CHART_TOOLTIP_STYLE} />
-                    <Legend wrapperStyle={{ fontSize: 11 }} />
-                    <Line type="monotone" dataKey="mriConf"  stroke="#6366F1" strokeWidth={2} dot={{ r: 3 }} name="MRI Confidence" />
-                    <Line type="monotone" dataKey="cogScore"  stroke="#0EA5E9" strokeWidth={2} dot={{ r: 3 }} name="Cognitive Score" />
-                    <Line type="monotone" dataKey="riskScore" stroke="#10B981" strokeWidth={2} dot={{ r: 3 }} name="Health Index" />
-                  </LineChart>
-                </ResponsiveContainer>
-              </SpotlightCard>
-            </>
+              </div>
+            </Card>
           )}
 
-          {/* Session timeline */}
+          {/* Clean Session Timeline Stream */}
           <div className="space-y-3">
-            <h3 className="text-xs font-bold text-foreground uppercase tracking-wider mb-2">Recorded Diagnostic Sessions Stream</h3>
+            <h3 className="text-base font-extrabold text-foreground tracking-tight">Recorded Test Sessions</h3>
             <LongitudinalTimeline history={history} patientId={patientId} />
           </div>
         </>

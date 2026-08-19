@@ -9,8 +9,8 @@ export const authApi = {
     return apiClient.post('/api/auth/register', payload)
   },
 
-  forgotPassword: async (email, date_of_birth) => {
-    return apiClient.post('/api/auth/forgot-password', { email, date_of_birth })
+  forgotPassword: async (email) => {
+    return apiClient.post('/api/auth/forgot-password', { email })
   },
 
   resetPassword: async (token, new_password) => {

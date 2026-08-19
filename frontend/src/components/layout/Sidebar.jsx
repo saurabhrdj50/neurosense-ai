@@ -10,18 +10,17 @@ import { useAuth } from '../../features/auth/AuthProvider'
 /* ── Nav items ────────────────────────────────────────────────────────────── */
 const DOCTOR_NAV_ITEMS = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/analysis',  icon: Brain,           label: 'Analysis Intake' },
-  { to: '/patients',  icon: Users,           label: 'Patient Registry' },
-  { to: '/results',   icon: ChartBar,        label: 'Diagnostic Results' },
+  { to: '/patients',  icon: Users,           label: 'Patient List' },
+  { to: '/analysis',  icon: Brain,           label: 'New Assessment' },
 ]
 
 const ADMIN_NAV_ITEMS = [
-  { to: '/admin/dashboard', icon: LayoutDashboard, label: 'Admin Workstation' },
-  { to: '/admin/panel',     icon: Shield,          label: 'User Governance' },
+  { to: '/admin/dashboard', icon: LayoutDashboard, label: 'Admin Dashboard' },
+  { to: '/admin/panel',     icon: Shield,          label: 'User Management' },
 ]
 
 /**
- * Enterprise Clinical Sidebar navigation panel.
+ * Clinical Sidebar navigation panel.
  */
 export default function Sidebar({ open, onToggle, isMobile = false }) {
   const { logout, user, isAdmin } = useAuth()
@@ -57,11 +56,11 @@ export default function Sidebar({ open, onToggle, isMobile = false }) {
                 transition={{ duration: 0.1 }}
                 className="min-w-0"
               >
-                <div className="font-bold text-sm text-foreground tracking-tight leading-tight truncate">
+                <div className="font-extrabold text-base text-foreground tracking-tight leading-tight truncate">
                   NeuroSense AI
                 </div>
-                <div className="text-[10px] text-muted font-medium truncate">
-                  Clinical CDSS
+                <div className="text-xs text-foreground-muted font-semibold truncate">
+                  Clinical System
                 </div>
               </motion.div>
             )}
@@ -85,35 +84,38 @@ export default function Sidebar({ open, onToggle, isMobile = false }) {
         <div className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-surface-secondary/70 border border-border-subtle ${open ? '' : 'justify-center'}`}>
           <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0 animate-pulse" />
           {open && (
-            <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 whitespace-nowrap overflow-hidden">
-              Workstation Active
+            <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap overflow-hidden">
+              System Active
             </span>
           )}
         </div>
       </div>
 
       {/* ── Nav items ─────────────────────────────────────────────────── */}
-      <nav className="flex-1 px-2.5 space-y-1 mt-2" role="navigation" aria-label="Primary navigation">
+      <nav className="flex-1 px-2.5 space-y-1.5 mt-2" role="navigation" aria-label="Primary navigation">
         {open && (
-          <div className="px-2 pt-2 pb-1.5 text-[10px] font-mono font-semibold uppercase tracking-wider text-subtle">
-            {isAdmin ? 'System Governance' : 'Clinical Workspace'}
+          <div className="px-2.5 pt-2 pb-1.5 text-xs font-bold uppercase tracking-wider text-foreground-muted">
+            {isAdmin ? 'Admin System' : 'Navigation Menu'}
           </div>
         )}
         {navItems.map(({ to, icon: Icon, label }) => (
           <NavLink key={to} to={to} title={!open ? label : undefined}>
             {({ isActive }) => (
               <div
-                className={`flex items-center gap-3 px-2.5 py-2 rounded-lg cursor-pointer transition-all duration-150 ${
+                className={`flex items-center gap-3.5 px-3.5 py-3 rounded-xl cursor-pointer transition-all duration-150 relative min-h-[48px] ${
                   open ? '' : 'justify-center'
                 } ${
                   isActive
-                    ? 'bg-primary-soft text-primary font-semibold border-l-2 border-primary shadow-2xs'
-                    : 'text-muted hover:bg-hover hover:text-foreground border-l-2 border-transparent'
+                    ? 'bg-primary/10 text-primary font-bold shadow-2xs'
+                    : 'text-foreground-muted hover:bg-surface-hover hover:text-foreground font-medium'
                 }`}
               >
-                <Icon size={18} className={`shrink-0 ${isActive ? 'text-primary' : 'text-subtle'}`} />
+                {isActive && (
+                  <span className="absolute left-0 top-2 bottom-2 w-1.5 rounded-r-full bg-primary" />
+                )}
+                <Icon size={20} className={`shrink-0 ${isActive ? 'text-primary' : 'text-foreground-muted'}`} />
                 {open && (
-                  <span className="text-xs font-medium whitespace-nowrap truncate">{label}</span>
+                  <span className="text-base font-semibold whitespace-nowrap truncate">{label}</span>
                 )}
               </div>
             )}
@@ -122,23 +124,23 @@ export default function Sidebar({ open, onToggle, isMobile = false }) {
       </nav>
 
       {/* ── User Profile & Logout Footer ─────────────────────────────────── */}
-      <div className="p-2.5 border-t border-border bg-surface-secondary/30">
+      <div className="p-2.5 border-t border-border bg-surface-secondary/40">
         {open ? (
-          <div className="flex items-center gap-2.5 p-2 rounded-lg bg-card border border-border">
-            <div className="w-7 h-7 rounded-md bg-primary text-white flex items-center justify-center text-xs font-bold shrink-0">
+          <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-card border border-border/80 shadow-2xs">
+            <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center text-sm font-extrabold shrink-0 shadow-xs">
               {(user?.full_name || user?.username || 'U')[0].toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="truncate text-xs font-semibold text-foreground">
+              <p className="truncate text-sm font-bold text-foreground">
                 {user?.full_name || user?.username}
               </p>
-              <p className="text-[10px] text-muted capitalize truncate">
+              <p className="text-xs text-foreground-muted capitalize truncate font-medium">
                 {user?.role || 'Clinician'}
               </p>
             </div>
             <button
               onClick={handleLogout}
-              className="p-1.5 rounded-md text-muted hover:text-danger hover:bg-danger/10 transition-colors"
+              className="p-1.5 rounded-md text-foreground-subtle hover:text-danger hover:bg-danger/10 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-danger/50"
               title="Sign out"
               aria-label="Sign out"
             >
@@ -148,7 +150,7 @@ export default function Sidebar({ open, onToggle, isMobile = false }) {
         ) : (
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-center p-2 rounded-lg text-muted hover:text-danger hover:bg-danger/10 transition-colors"
+            className="w-full flex items-center justify-center p-2 rounded-lg text-foreground-subtle hover:text-danger hover:bg-danger/10 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-danger/50"
             title="Sign out"
             aria-label="Sign out"
           >

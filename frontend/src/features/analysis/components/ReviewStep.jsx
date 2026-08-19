@@ -1,10 +1,8 @@
 import React from 'react'
-import { motion } from 'framer-motion'
 import {
-  CheckCircle2, AlertCircle, Edit3, User, Brain, MessageSquare, Mic, HeartPulse,
-  Sparkles, Zap, ShieldCheck, FileText, ArrowRight
+  CheckCircle2, User, Brain, MessageSquare, Mic, HeartPulse,
+  ShieldCheck, ChevronRight
 } from 'lucide-react'
-import Button from '../../../components/ui/Button'
 
 export function ReviewStep({
   patient,
@@ -20,9 +18,9 @@ export function ReviewStep({
   /* Compute individual section completion & readiness status */
   const isPatientComplete = !!(patient.name && patient.patient_id && patient.age)
   const isMriComplete = !!mriFile
-  const isCognitiveComplete = Object.keys(cognData).length > 0 && (cognData.mmse !== undefined || cognData.moca !== undefined)
+  const isCognitiveComplete = Object.keys(cognData || {}).length > 0
   const isSpeechComplete = !!(speechText || audioFile)
-  const isRiskComplete = Object.keys(risk).length > 0
+  const isRiskComplete = Object.keys(risk || {}).length > 0
 
   /* Overall Readiness Percentage Calculation */
   const sectionWeights = [
@@ -35,242 +33,242 @@ export function ReviewStep({
 
   const totalReadiness = sectionWeights.reduce((acc, curr) => acc + (curr.complete ? curr.weight : 0), 0)
 
-  /* Compute warnings and missing info list */
-  const missingItems = []
-  const warnings = []
-
-  if (!patient.name) missingItems.push('Patient Full Name')
-  if (!patient.patient_id) missingItems.push('Patient Medical ID')
-  if (!patient.age) missingItems.push('Patient Age')
-  if (!mriFile) warnings.push('MRI Scan not attached (Fusion Engine will operate in clinical/speech mode).')
-  if (!isCognitiveComplete) warnings.push('Cognitive Battery (MMSE/MoCA) is incomplete.')
-  if (!isSpeechComplete) warnings.push('Speech audio or transcript is missing.')
-  if (!isRiskComplete) warnings.push('Lancet clinical risk factors not specified.')
+  // Count active risk flags
+  const activeRiskKeys = Object.keys(risk || {}).filter(k => risk[k] === true)
+  const riskFlagCount = activeRiskKeys.length
 
   return (
-    <div className="space-y-6">
-      {/* ── Readiness Summary Banner ──────────────────────────────────── */}
-      <div className="p-5 rounded-2xl bg-surface border border-border space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="w-5 h-5 text-emerald-500" />
-              <h2 className="text-base font-bold text-foreground tracking-tight">Clinical Assessment Readiness</h2>
-            </div>
-            <p className="text-xs text-foreground-muted">
-              Pre-execution quality check before launching the Multimodal Fusion Diagnostic Engine.
+    <div className="space-y-5">
+      {/* ── READINESS SUMMARY HEADER BANNER ───────────────────────────────── */}
+      <div className="p-5 rounded-2xl bg-surface border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-2xs">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0">
+            <ShieldCheck size={26} />
+          </div>
+          <div>
+            <h2 className="text-xl font-extrabold text-foreground tracking-tight">Ready for Assessment Report</h2>
+            <p className="text-sm text-foreground-muted font-medium mt-0.5">
+              Review all patient details and test information below before generating your report.
             </p>
           </div>
-
-          {/* Readiness Score Gauge */}
-          <div className="flex items-center gap-3">
-            <div className="text-right">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-foreground-muted block">Overall Readiness</span>
-              <span className={`text-2xl font-extrabold ${totalReadiness >= 80 ? 'text-emerald-500' : totalReadiness >= 50 ? 'text-amber-500' : 'text-rose-500'}`}>
-                {totalReadiness}%
-              </span>
-            </div>
-            <div className="w-14 h-14 rounded-2xl bg-surface-secondary border border-border flex items-center justify-center p-1">
-              <div
-                className="w-full h-full rounded-xl flex items-center justify-center text-xs font-bold text-white shadow-inner"
-                style={{
-                  background: totalReadiness >= 80 ? 'linear-gradient(135deg, #10B981, #059669)' : 'linear-gradient(135deg, #F59E0B, #D97706)'
-                }}
-              >
-                {totalReadiness >= 80 ? 'READY' : 'INCOMPLETE'}
-              </div>
-            </div>
-          </div>
         </div>
 
-        {/* Readiness Checklist Row */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-2 border-t border-border/60">
-          {[
-            { label: 'Patient Profile', ok: isPatientComplete, stepIdx: 0 },
-            { label: 'MRI Study', ok: isMriComplete, stepIdx: 1 },
-            { label: 'Cognitive Exam', ok: isCognitiveComplete, stepIdx: 2 },
-            { label: 'Speech & Tasks', ok: isSpeechComplete, stepIdx: 3 },
-            { label: 'Clinical Risk', ok: isRiskComplete, stepIdx: 4 },
-          ].map((sec) => (
-            <div
-              key={sec.label}
-              onClick={() => onGoToStep(sec.stepIdx)}
-              className={`p-2.5 rounded-xl border text-xs cursor-pointer transition-all flex items-center justify-between ${
-                sec.ok
-                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:border-emerald-500/50'
-                  : 'bg-surface-hover text-foreground-muted border-border hover:border-border/80'
-              }`}
-            >
-              <span className="font-semibold text-[11px] truncate">{sec.label}</span>
-              <CheckCircle2 className={`w-3.5 h-3.5 shrink-0 ${sec.ok ? 'text-emerald-500' : 'text-foreground-muted/40'}`} />
-            </div>
-          ))}
+        {/* Readiness Percentage & Status Badge */}
+        <div className="flex items-center gap-4 self-start sm:self-auto shrink-0">
+          <div className="text-right">
+            <span className="text-xs uppercase font-extrabold tracking-wider text-foreground-muted block">Completion Score</span>
+            <span className={`text-3xl font-extrabold font-mono leading-none ${totalReadiness >= 60 ? 'text-emerald-400' : 'text-amber-400'}`}>
+              {totalReadiness}%
+            </span>
+          </div>
+          <div className={`px-4 py-2.5 rounded-xl text-sm font-extrabold border ${
+            totalReadiness >= 60 ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+          }`}>
+            {totalReadiness >= 60 ? 'READY FOR REPORT' : 'INCOMPLETE'}
+          </div>
         </div>
       </div>
 
-      {/* ── Warnings & Missing Info Box ──────────────────────────────── */}
-      {(missingItems.length > 0 || warnings.length > 0) && (
-        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 space-y-2 text-xs">
-          <div className="flex items-center gap-2 font-bold text-amber-600 dark:text-amber-400">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>Readiness Alerts & Missing Parameters</span>
-          </div>
-          <ul className="space-y-1 pl-6 list-disc text-foreground-muted text-[11px]">
-            {missingItems.map((item, idx) => (
-              <li key={`m-${idx}`} className="text-rose-500 font-semibold">Missing Required Field: {item}</li>
-            ))}
-            {warnings.map((warn, idx) => (
-              <li key={`w-${idx}`}>{warn}</li>
-            ))}
-          </ul>
-        </div>
-      )}
+      {/* ── 5 ENHANCED SECTION CARDS (Fills Viewport Comfortably) ──────────── */}
+      <div className="space-y-4">
+        <h3 className="text-xs font-extrabold text-foreground-muted uppercase tracking-wider">
+          Assessment Summary (Click Any Box to Edit)
+        </h3>
 
-      {/* ── Section Summary Cards (Clinician Overview) ──────────────── */}
-      <div className="space-y-3">
-        <h3 className="text-xs font-semibold text-foreground-muted uppercase tracking-wider">Assessment Component Summary</h3>
-
-        {/* 1. Patient Information */}
-        <div className="p-4 rounded-2xl bg-surface border border-border flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">
-              <User size={18} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-foreground">Patient Information</span>
-                {isPatientComplete ? (
-                  <span className="text-[10px] font-semibold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">Complete</span>
-                ) : (
-                  <span className="text-[10px] font-semibold text-rose-500 bg-rose-500/10 px-2 py-0.5 rounded-full border border-rose-500/20">Incomplete</span>
-                )}
-              </div>
-              <p className="text-xs text-foreground-muted mt-0.5">
-                {patient.name || 'Unspecified'} ({patient.patient_id || 'No ID'}) · Age {patient.age || '?'}, Sex: {patient.sex || 'M'}, Edu: {patient.education_years || '?'} yrs
-              </p>
-              {patientText && <p className="text-[11px] text-foreground-muted/80 line-clamp-1 italic mt-0.5">"{patientText}"</p>}
-            </div>
-          </div>
-          <Button variant="ghost" size="sm" icon={Edit3} onClick={() => onGoToStep(0)}>
-            Edit Section
-          </Button>
-        </div>
-
-        {/* 2. MRI Scan Review */}
-        <div className="p-4 rounded-2xl bg-surface border border-border flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center font-bold text-xs">
-              <Brain size={18} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-foreground">MRI Study Review</span>
-                {isMriComplete ? (
-                  <span className="text-[10px] font-semibold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">Ready</span>
-                ) : (
-                  <span className="text-[10px] font-semibold text-foreground-muted bg-surface-secondary px-2 py-0.5 rounded-full border border-border">Optional / Not Uploaded</span>
-                )}
-              </div>
-              <p className="text-xs text-foreground-muted mt-0.5">
-                {mriFile ? `File: ${mriFile.name} (Preprocessed, Quality: High SNR)` : 'No MRI study uploaded. Will proceed using clinical & speech models.'}
-              </p>
-            </div>
-          </div>
-          <Button variant="ghost" size="sm" icon={Edit3} onClick={() => onGoToStep(1)}>
-            Edit Section
-          </Button>
-        </div>
-
-        {/* 3. Cognitive Evaluation */}
-        <div className="p-4 rounded-2xl bg-surface border border-border flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-cyan-500/10 text-cyan-500 flex items-center justify-center font-bold text-xs">
-              <MessageSquare size={18} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-foreground">Cognitive Evaluation</span>
-                {isCognitiveComplete ? (
-                  <span className="text-[10px] font-semibold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">Complete</span>
-                ) : (
-                  <span className="text-[10px] font-semibold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">Partial</span>
-                )}
-              </div>
-              <p className="text-xs text-foreground-muted mt-0.5">
-                MMSE Score: {cognData.mmse || 0}/30 · MoCA Score: {cognData.moca || 0}/30 · Clock Draw: {cognData.clock_draw || 0}/6
-              </p>
-            </div>
-          </div>
-          <Button variant="ghost" size="sm" icon={Edit3} onClick={() => onGoToStep(2)}>
-            Edit Section
-          </Button>
-        </div>
-
-        {/* 4. Speech & Conversation Assessment */}
-        <div className="p-4 rounded-2xl bg-surface border border-border flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center font-bold text-xs">
-              <Mic size={18} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-foreground">Speech & Conversation Assessment</span>
-                {isSpeechComplete ? (
-                  <span className="text-[10px] font-semibold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">Ready</span>
-                ) : (
-                  <span className="text-[10px] font-semibold text-foreground-muted bg-surface-secondary px-2 py-0.5 rounded-full border border-border">Optional</span>
-                )}
-              </div>
-              <p className="text-xs text-foreground-muted mt-0.5">
-                {speechText ? `Transcript sample attached (${speechText.split(/\s+/).filter(Boolean).length} words)` : audioFile ? `Audio File: ${audioFile.name}` : 'No speech sample recorded.'}
-              </p>
-            </div>
-          </div>
-          <Button variant="ghost" size="sm" icon={Edit3} onClick={() => onGoToStep(3)}>
-            Edit Section
-          </Button>
-        </div>
-
-        {/* 5. Clinical Risk Factors */}
-        <div className="p-4 rounded-2xl bg-surface border border-border flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center font-bold text-xs">
-              <HeartPulse size={18} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-foreground">Clinical Risk Factors</span>
-                {isRiskComplete ? (
-                  <span className="text-[10px] font-semibold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">Evaluated</span>
-                ) : (
-                  <span className="text-[10px] font-semibold text-foreground-muted bg-surface-secondary px-2 py-0.5 rounded-full border border-border">Default Low Risk</span>
-                )}
-              </div>
-              <p className="text-xs text-foreground-muted mt-0.5">
-                Lancet Modifiable Risk Load: {Object.keys(risk).length} risk factor(s) documented
-              </p>
-            </div>
-          </div>
-          <Button variant="ghost" size="sm" icon={Edit3} onClick={() => onGoToStep(4)}>
-            Edit Section
-          </Button>
-        </div>
-      </div>
-
-      {/* ── Bottom Final Action CTA ────────────────────────────────────── */}
-      <div className="pt-4 border-t border-border flex items-center justify-between">
-        <div className="text-xs text-foreground-muted">
-          Clicking "Run Analysis" will execute the Multimodal Fusion Model.
-        </div>
-        <Button
-          variant="primary"
-          size="md"
-          icon={Zap}
-          onClick={onSubmit}
-          className="px-6 py-2.5 shadow-lg shadow-primary/20"
+        {/* CARD 1: PATIENT INFORMATION */}
+        <div
+          onClick={() => onGoToStep(0)}
+          className="p-5 rounded-2xl bg-surface border border-primary/30 hover:border-primary cursor-pointer transition-all space-y-3.5 group shadow-2xs"
         >
-          Run Analysis & Generate Report
-        </Button>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold shrink-0">
+                <User size={20} />
+              </div>
+              <div>
+                <h4 className="text-base font-extrabold text-foreground group-hover:text-primary transition-colors">
+                  1. Patient Information
+                </h4>
+                <p className="text-sm text-foreground-muted font-medium">Patient name, age, and ID details</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className={`px-3 py-1 rounded-full text-xs font-extrabold ${
+                isPatientComplete ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+              }`}>
+                {isPatientComplete ? 'Complete' : 'Needs Details'}
+              </span>
+              <ChevronRight size={18} className="text-foreground-muted group-hover:text-primary transition-colors" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2 border-t border-border/40 text-sm">
+            <div className="p-3 rounded-xl bg-background border border-border">
+              <span className="text-xs text-foreground-muted block font-semibold">Full Name</span>
+              <span className="font-bold text-foreground block text-sm mt-0.5 break-words">{patient.name || 'Not entered'}</span>
+            </div>
+            <div className="p-3 rounded-xl bg-background border border-border">
+              <span className="text-xs text-foreground-muted block font-semibold">Patient ID</span>
+              <span className="font-bold font-mono text-primary block text-sm mt-0.5 break-all">{patient.patient_id || 'Not entered'}</span>
+            </div>
+            <div className="p-3 rounded-xl bg-background border border-border">
+              <span className="text-xs text-foreground-muted block font-semibold">Age & Gender</span>
+              <span className="font-bold text-foreground block text-sm mt-0.5">{patient.age ? `${patient.age} yrs` : '?'}, {patient.sex || 'M'}</span>
+            </div>
+            <div className="p-3 rounded-xl bg-background border border-border">
+              <span className="text-xs text-foreground-muted block font-semibold">Years of Schooling</span>
+              <span className="font-bold text-foreground block text-sm mt-0.5">{patient.education_years || 12} Years</span>
+            </div>
+          </div>
+        </div>
+
+        {/* CARD 2: BRAIN MRI SCAN */}
+        <div
+          onClick={() => onGoToStep(1)}
+          className="p-5 rounded-2xl bg-surface border border-indigo-500/30 hover:border-indigo-500 cursor-pointer transition-all space-y-3.5 group shadow-2xs"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center font-bold shrink-0">
+                <Brain size={20} />
+              </div>
+              <div>
+                <h4 className="text-base font-extrabold text-foreground group-hover:text-indigo-400 transition-colors">
+                  2. Brain MRI Scan
+                </h4>
+                <p className="text-sm text-foreground-muted font-medium">Brain scan image file</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className={`px-3 py-1 rounded-full text-xs font-extrabold ${
+                isMriComplete ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-surface-secondary text-foreground-muted border border-border'
+              }`}>
+                {isMriComplete ? 'Scan Uploaded' : 'Not Uploaded'}
+              </span>
+              <ChevronRight size={18} className="text-foreground-muted group-hover:text-indigo-400 transition-colors" />
+            </div>
+          </div>
+
+          <div className="p-3 rounded-xl bg-background border border-border text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+            <span className="text-foreground-muted font-semibold shrink-0">Scan Status:</span>
+            <span className="font-bold text-indigo-400 sm:text-right leading-normal">
+              {mriFile ? `Uploaded File: ${mriFile.name}` : 'No MRI scan uploaded (Analysis will run using Cognitive & Speech tests)'}
+            </span>
+          </div>
+        </div>
+
+        {/* CARD 3: MEMORY & BRAIN TEST */}
+        <div
+          onClick={() => onGoToStep(2)}
+          className="p-5 rounded-2xl bg-surface border border-cyan-500/30 hover:border-cyan-500 cursor-pointer transition-all space-y-3.5 group shadow-2xs"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center font-bold shrink-0">
+                <MessageSquare size={20} />
+              </div>
+              <div>
+                <h4 className="text-base font-extrabold text-foreground group-hover:text-cyan-400 transition-colors">
+                  3. Memory & Brain Test
+                </h4>
+                <p className="text-sm text-foreground-muted font-medium">Memory recall, focus, and brain screening scores</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className={`px-3 py-1 rounded-full text-xs font-extrabold ${
+                isCognitiveComplete ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+              }`}>
+                {isCognitiveComplete ? 'Complete' : 'Pending'}
+              </span>
+              <ChevronRight size={18} className="text-foreground-muted group-hover:text-cyan-400 transition-colors" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2 border-t border-border/40 text-sm">
+            <div className="p-3 rounded-xl bg-background border border-border">
+              <span className="text-xs text-foreground-muted block font-semibold">Basic Memory Check</span>
+              <span className="font-extrabold text-cyan-400 text-sm block mt-0.5">{cognData.mmse || 0} / 30</span>
+            </div>
+            <div className="p-3 rounded-xl bg-background border border-border">
+              <span className="text-xs text-foreground-muted block font-semibold">Advanced Focus Check</span>
+              <span className="font-extrabold text-cyan-400 text-sm block mt-0.5">{cognData.moca || 0} / 30</span>
+            </div>
+            <div className="p-3 rounded-xl bg-background border border-border">
+              <span className="text-xs text-foreground-muted block font-semibold">Animal Naming Test</span>
+              <span className="font-bold text-foreground block text-sm mt-0.5">{cognData.animal_fluency ? `${cognData.animal_fluency} animals` : 'Recorded'}</span>
+            </div>
+            <div className="p-3 rounded-xl bg-background border border-border">
+              <span className="text-xs text-foreground-muted block font-semibold">Clock Drawing Test</span>
+              <span className="font-bold text-foreground block text-sm mt-0.5">{cognData.clock_draw ? `${cognData.clock_draw} / 5 pts` : 'Recorded'}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* CARD 4: VOICE & SPEECH TEST */}
+        <div
+          onClick={() => onGoToStep(3)}
+          className="p-5 rounded-2xl bg-surface border border-amber-500/30 hover:border-amber-500 cursor-pointer transition-all space-y-3.5 group shadow-2xs"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center font-bold shrink-0">
+                <Mic size={20} />
+              </div>
+              <div>
+                <h4 className="text-base font-extrabold text-foreground group-hover:text-amber-400 transition-colors">
+                  4. Voice & Speech Test
+                </h4>
+                <p className="text-sm text-foreground-muted font-medium">Voice recording and spoken transcript</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className={`px-3 py-1 rounded-full text-xs font-extrabold ${
+                isSpeechComplete ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-surface-secondary text-foreground-muted border border-border'
+              }`}>
+                {isSpeechComplete ? 'Voice Recorded' : 'Not Recorded'}
+              </span>
+              <ChevronRight size={18} className="text-foreground-muted group-hover:text-amber-400 transition-colors" />
+            </div>
+          </div>
+
+          <div className="p-3 rounded-xl bg-background border border-border text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+            <span className="text-foreground-muted font-semibold shrink-0">Voice Transcript:</span>
+            <span className="font-bold text-amber-400 sm:text-right leading-normal">
+              {speechText ? `Transcript Saved (${speechText.split(/\s+/).filter(Boolean).length} words)` : audioFile ? `Audio File: ${audioFile.name}` : 'No voice recording attached'}
+            </span>
+          </div>
+        </div>
+
+        {/* CARD 5: HEALTH & RISK FACTORS */}
+        <div
+          onClick={() => onGoToStep(4)}
+          className="p-5 rounded-2xl bg-surface border border-rose-500/30 hover:border-rose-500 cursor-pointer transition-all flex items-center justify-between group shadow-2xs"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center font-bold shrink-0">
+              <HeartPulse size={20} />
+            </div>
+            <div>
+              <h4 className="text-base font-extrabold text-foreground group-hover:text-rose-400 transition-colors">
+                5. Health & Risk Factors
+              </h4>
+              <p className="text-sm text-foreground-muted font-medium">Daily habits, heart health, and family history flags</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <span className={`px-3 py-1 rounded-full text-xs font-extrabold ${
+              isRiskComplete ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-surface-secondary text-foreground-muted border border-border'
+            }`}>
+              {isRiskComplete ? `${riskFlagCount} Risk Flags Selected` : 'No Risk Flags Selected'}
+            </span>
+            <ChevronRight size={18} className="text-foreground-muted group-hover:text-rose-400 transition-colors" />
+          </div>
+        </div>
       </div>
     </div>
   )

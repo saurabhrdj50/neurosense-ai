@@ -1,5 +1,14 @@
 import React, { useEffect, useRef } from 'react';
 
+/**
+ * Neon Brain Hero Image Component with Background Removal & Glow Animation
+ * Features:
+ * - On-the-fly Canvas Luminance Keying: Removes black background from neon_brain_hero.png
+ * - Glowing Outer Neon Halo (Magenta & Cyan radial gradients)
+ * - Interactive Mouse Tilt & Organic Floating Oscillations
+ * - Synaptic Light Sparks & Orbiting Satellites
+ * - Works seamlessly on Light and Dark modes!
+ */
 export default function BrainCanvas({ isDark = true }) {
   const canvasRef = useRef(null);
 
@@ -22,7 +31,7 @@ export default function BrainCanvas({ isDark = true }) {
     };
     window.addEventListener('resize', handleResize);
 
-    // Mouse tilt interaction
+    // Mouse tilt tracking
     let mouseX = 0;
     let mouseY = 0;
     let targetMouseX = 0;
@@ -32,186 +41,193 @@ export default function BrainCanvas({ isDark = true }) {
       const rect = canvas.getBoundingClientRect();
       const x = e.clientX - rect.left - width / 2;
       const y = e.clientY - rect.top - height / 2;
-      targetMouseX = (x / width) * 0.5;
-      targetMouseY = (y / height) * 0.5;
+      targetMouseX = (x / width) * 20;
+      targetMouseY = (y / height) * 20;
     };
-
     window.addEventListener('mousemove', handleMouseMove);
 
-    // Generate 3D Brain Point Cloud (ellipsoidal double lobes with neural cortex folds)
-    const points = [];
-    const numPoints = 220;
-    const phiStep = Math.PI * (3 - Math.sqrt(5)); // Golden ratio angle
+    // Load High-Res Neon Wireframe Brain Image Asset
+    const rawImg = new Image();
+    rawImg.src = '/images/glowing_brain_3d_isolated.png';
+    let processedCanvas = null;
+    let imgLoaded = false;
 
-    for (let i = 0; i < numPoints; i++) {
-      const y = 1 - (i / (numPoints - 1)) * 2; // -1 to 1
-      const radiusAtY = Math.sqrt(1 - y * y);
-      const theta = phiStep * i;
+    rawImg.onload = () => {
+      // Create offscreen canvas to process background removal (Luminance Keying)
+      const offscreen = document.createElement('canvas');
+      offscreen.width = rawImg.width;
+      offscreen.height = rawImg.height;
+      const offCtx = offscreen.getContext('2d');
+      offCtx.drawImage(rawImg, 0, 0);
 
-      // Sculpt two brain hemispheres (left & right lobe offset)
-      const isLeft = Math.cos(theta) < 0;
-      const lobeOffset = isLeft ? -0.18 : 0.18;
+      const imgData = offCtx.getImageData(0, 0, rawImg.width, rawImg.height);
+      const data = imgData.data;
 
-      // Add cortex surface turbulence/folds
-      const foldNoise = Math.sin(y * 10) * Math.cos(theta * 8) * 0.12;
-      const radius = (0.85 + foldNoise) * 160;
+      // Loop through pixels and make black/dark pixels transparent
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
 
-      const x = Math.cos(theta) * radiusAtY * radius + lobeOffset * 100;
-      const z = Math.sin(theta) * radiusAtY * radius;
-      const py = y * radius * 0.9;
+        // Perceived Luminance
+        const brightness = r * 0.299 + g * 0.587 + b * 0.114;
 
-      points.push({
-        origX: x,
-        origY: py,
-        origZ: z,
-        x,
-        y: py,
-        z,
-        pulseOffset: Math.random() * Math.PI * 2,
-        pulseSpeed: 0.02 + Math.random() * 0.03,
-        size: 1.8 + Math.random() * 2.2,
-      });
-    }
+        if (brightness < 20) {
+          // Pure black background -> transparent
+          data[i + 3] = 0;
+        } else if (brightness < 50) {
+          // Soft edge feathering threshold
+          const alpha = (brightness - 20) / 30;
+          data[i + 3] = Math.round(data[i + 3] * alpha);
+        }
+      }
 
-    // Floating Background Ambient Particles
+      offCtx.putImageData(imgData, 0, 0);
+      processedCanvas = offscreen;
+      imgLoaded = true;
+    };
+
+    // ── Floating Synaptic Sparks (Magenta & Cyan) ───────────────
     const particles = [];
-    const numParticles = 60;
-    for (let i = 0; i < numParticles; i++) {
+    for (let i = 0; i < 60; i++) {
       particles.push({
-        x: (Math.random() - 0.5) * width * 1.2,
-        y: (Math.random() - 0.5) * height * 1.2,
-        z: Math.random() * 400 - 200,
+        x: (Math.random() - 0.5) * 500,
+        y: (Math.random() - 0.5) * 500,
         speedY: -0.2 - Math.random() * 0.4,
-        size: 1 + Math.random() * 2,
-        alpha: 0.1 + Math.random() * 0.4,
+        speedX: (Math.random() - 0.5) * 0.3,
+        size: 1.5 + Math.random() * 2.8,
+        alpha: 0.25 + Math.random() * 0.65,
+        isMagenta: i % 2 === 0,
+        freq: 0.8 + Math.random() * 1.5,
+        phase: Math.random() * Math.PI * 2,
       });
     }
 
-    let angleY = 0;
-    let angleX = 0;
+    // ── Orbiting Satellites ─────────────────────────────────────
+    const satellites = [];
+    for (let k = 0; k < 10; k++) {
+      satellites.push({
+        radius: 220 + (k % 3) * 25,
+        angle: (Math.PI * 2 * k) / 10,
+        speed: 0.008 + (k % 2) * 0.006,
+        size: 2.4 + Math.random() * 1.6,
+        isCyan: k % 2 === 0,
+      });
+    }
+
+    let time = 0;
 
     const render = () => {
       ctx.clearRect(0, 0, width, height);
+      time += 0.016;
 
       // Smooth mouse interpolation
       mouseX += (targetMouseX - mouseX) * 0.05;
       mouseY += (targetMouseY - mouseY) * 0.05;
 
-      angleY += 0.006;
-      angleX = Math.sin(angleY * 0.5) * 0.15 + mouseY;
+      const centerX = width > 900 ? width * 0.70 + mouseX : width * 0.58 + mouseX;
+      const bob = Math.sin(time * 1.2) * 12; // Floating bobbing
+      const centerY = height / 2 + mouseY + bob;
 
-      const cosY = Math.cos(angleY + mouseX);
-      const sinY = Math.sin(angleY + mouseX);
-      const cosX = Math.cos(angleX);
-      const sinX = Math.sin(angleX);
+      const cyanRgb = isDark ? '6, 182, 212' : '14, 165, 233';     // Cyan
+      const magentaRgb = isDark ? '217, 70, 239' : '192, 38, 211'; // Magenta
+      const purpleRgb = isDark ? '168, 85, 247' : '147, 51, 234';  // Purple
 
-      const centerX = width / 2;
-      const centerY = height / 2;
+      // ── 1. DRAW INTENSE NEON GLOWING RADIAL HALO ────────────────
+      ctx.save();
+      const haloGrad = ctx.createRadialGradient(
+        centerX, centerY - 10, 10,
+        centerX, centerY - 10, 240
+      );
+      haloGrad.addColorStop(0, 'rgba(255, 255, 255, 0.90)');
+      haloGrad.addColorStop(0.2, `rgba(${magentaRgb}, ${isDark ? 0.65 : 0.45})`);
+      haloGrad.addColorStop(0.55, `rgba(${purpleRgb}, ${isDark ? 0.35 : 0.22})`);
+      haloGrad.addColorStop(0.85, `rgba(${cyanRgb}, ${isDark ? 0.15 : 0.08})`);
+      haloGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
 
-      // Color Tokens
-      const primaryColor = isDark ? '99, 102, 241' : '91, 92, 255'; // Indigo
-      const accentColor = isDark ? '0, 217, 255' : '0, 174, 239'; // Cyan
-      const purpleColor = isDark ? '168, 85, 247' : '147, 51, 234'; // Purple
+      ctx.fillStyle = haloGrad;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY - 10, 240, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
 
-      // Render Floating Particles
+      // ── 2. CONCENTRIC ORBITAL RINGS & SATELLITES ────────────────
+      ctx.save();
+      ctx.lineWidth = 1.2;
+      [210, 240, 270].forEach((r, idx) => {
+        ctx.save();
+        ctx.strokeStyle = idx % 2 === 0 ? `rgba(${magentaRgb}, 0.28)` : `rgba(${cyanRgb}, 0.28)`;
+        ctx.setLineDash([8, 12]);
+        ctx.beginPath();
+        ctx.ellipse(centerX, centerY, r, r * 0.72, Math.PI / 12, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      });
+
+      // Satellites
+      satellites.forEach((sat) => {
+        sat.angle += sat.speed;
+        const sx = centerX + Math.cos(sat.angle) * sat.radius;
+        const sy = centerY + Math.sin(sat.angle) * (sat.radius * 0.72);
+        const col = sat.isCyan ? cyanRgb : magentaRgb;
+
+        ctx.fillStyle = `rgba(${col}, 0.95)`;
+        ctx.beginPath();
+        ctx.arc(sx, sy, sat.size, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = `rgba(${col}, 0.35)`;
+        ctx.beginPath();
+        ctx.arc(sx, sy, sat.size * 3.5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.restore();
+
+      // ── 3. FLOATING SYNAPTIC PARTICLES ──────────────────────────
       particles.forEach((p) => {
         p.y += p.speedY;
-        if (p.y < -height / 2) p.y = height / 2;
+        p.x += p.speedX;
+        if (p.y < -250) p.y = 250;
+        if (p.x < -250) p.x = 250;
+        if (p.x > 250) p.x = -250;
 
-        const screenX = centerX + p.x;
-        const screenY = centerY + p.y;
+        const twinkle = 0.5 + 0.5 * Math.sin(time * p.freq + p.phase);
+        const colorStr = p.isMagenta ? magentaRgb : cyanRgb;
 
-        ctx.fillStyle = `rgba(${accentColor}, ${p.alpha * (isDark ? 0.6 : 0.8)})`;
+        ctx.fillStyle = `rgba(${colorStr}, ${p.alpha * twinkle})`;
         ctx.beginPath();
-        ctx.arc(screenX, screenY, p.size, 0, Math.PI * 2);
+        ctx.arc(centerX + p.x, centerY + p.y, p.size, 0, Math.PI * 2);
         ctx.fill();
       });
 
-      // Transform 3D points
-      const transformedPoints = points.map((p) => {
-        // Y rotation
-        let x1 = p.origX * cosY - p.origZ * sinY;
-        let z1 = p.origX * sinY + p.origZ * cosY;
+      // ── 4. DRAW TRANSPARENT GLOWING BRAIN IMAGE ───────────────
+      if (imgLoaded && processedCanvas) {
+        ctx.save();
 
-        // X rotation
-        let y2 = p.origY * cosX - z1 * sinX;
-        let z2 = p.origY * sinX + z1 * cosX;
+        // Calculate fit scale (max height ~440px)
+        const imgMaxH = Math.min(height * 0.76, 450);
+        const scale = imgMaxH / processedCanvas.height;
+        const drawW = processedCanvas.width * scale;
+        const drawH = processedCanvas.height * scale;
 
-        // Perspective projection
-        const focalLength = 400;
-        const scale = focalLength / (focalLength + z2 + 100);
-        const projX = centerX + x1 * scale;
-        const projY = centerY + y2 * scale;
+        const imgX = centerX - drawW / 2;
+        const imgY = centerY - drawH / 2;
 
-        p.pulseOffset += p.pulseSpeed;
-        const pulse = (Math.sin(p.pulseOffset) + 1) / 2;
+        // Multi-Layer Outer Neon Glow Drop Shadow
+        ctx.shadowColor = `rgba(${magentaRgb}, 0.85)`;
+        ctx.shadowBlur = 35;
 
-        return {
-          projX,
-          projY,
-          scale,
-          z: z2,
-          pulse,
-          size: p.size * scale,
-        };
-      });
+        // Draw processed image with transparent background
+        ctx.drawImage(processedCanvas, imgX, imgY, drawW, drawH);
 
-      // Sort points by z for realistic depth rendering
-      transformedPoints.sort((a, b) => b.z - a.z);
+        // Second pass overlay for extra vivid color pop
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.shadowColor = `rgba(${cyanRgb}, 0.9)`;
+        ctx.shadowBlur = 20;
+        ctx.drawImage(processedCanvas, imgX, imgY, drawW, drawH);
 
-      // Draw Synaptic Connections between close points
-      for (let i = 0; i < transformedPoints.length; i++) {
-        const p1 = transformedPoints[i];
-        let maxConnections = 0;
-
-        for (let j = i + 1; j < transformedPoints.length; j++) {
-          if (maxConnections >= 3) break;
-          const p2 = transformedPoints[j];
-          const dx = p1.projX - p2.projX;
-          const dy = p1.projY - p2.projY;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-
-          const maxDist = 55 * p1.scale;
-          if (dist < maxDist) {
-            maxConnections++;
-            const alpha = (1 - dist / maxDist) * 0.35 * Math.min(p1.scale, 1);
-
-            const isAccentLine = (i + j) % 5 === 0;
-            const lineColor = isAccentLine ? accentColor : primaryColor;
-
-            ctx.strokeStyle = `rgba(${lineColor}, ${alpha})`;
-            ctx.lineWidth = (isAccentLine ? 1.2 : 0.8) * p1.scale;
-            ctx.beginPath();
-            ctx.moveTo(p1.projX, p1.projY);
-            ctx.lineTo(p2.projX, p2.projY);
-            ctx.stroke();
-          }
-        }
+        ctx.restore();
       }
-
-      // Draw Nodes
-      transformedPoints.forEach((p, idx) => {
-        const isCyan = idx % 7 === 0;
-        const isPurple = idx % 11 === 0;
-        const nodeColor = isCyan ? accentColor : isPurple ? purpleColor : primaryColor;
-
-        const baseAlpha = (p.z + 200) / 400;
-        const alpha = Math.max(0.15, Math.min(0.95, baseAlpha * (0.6 + p.pulse * 0.4)));
-
-        // Glow halo on high pulses
-        if (p.pulse > 0.7 && p.scale > 0.8) {
-          ctx.fillStyle = `rgba(${nodeColor}, ${alpha * 0.3})`;
-          ctx.beginPath();
-          ctx.arc(p.projX, p.projY, p.size * 3.5, 0, Math.PI * 2);
-          ctx.fill();
-        }
-
-        // Core point
-        ctx.fillStyle = `rgba(${nodeColor}, ${alpha})`;
-        ctx.beginPath();
-        ctx.arc(p.projX, p.projY, p.size, 0, Math.PI * 2);
-        ctx.fill();
-      });
 
       animationFrameId = requestAnimationFrame(render);
     };

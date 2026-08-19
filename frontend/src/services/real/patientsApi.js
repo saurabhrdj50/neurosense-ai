@@ -25,4 +25,8 @@ export const patientsApi = {
   export: (patientId) => {
     window.open(`${API_URL}/api/patients/export/${patientId}`, '_blank')
   },
+
+  exportAll: () => {
+    window.open(`${API_URL}/api/patients/export`, '_blank')
+  },
 }

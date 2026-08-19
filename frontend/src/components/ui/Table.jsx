@@ -1,6 +1,6 @@
 /**
- * @fileoverview Enterprise clinical data table primitives.
- * Provides sticky headers, semantic structure, and consistent enterprise styling.
+ * Table components.
+ * Provides basic table layout elements.
  */
 import React from 'react'
 
@@ -21,7 +21,7 @@ export function TableRoot({ children, className = '' }) {
 /** Sticky table head. */
 export function Thead({ children }) {
   return (
-    <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-800/90 backdrop-blur-sm">
+    <thead className="sticky top-0 z-10 bg-surface-secondary/90 backdrop-blur-xs border-b border-border">
       {children}
     </thead>
   )
@@ -29,7 +29,7 @@ export function Thead({ children }) {
 
 /** Table body. */
 export function Tbody({ children }) {
-  return <tbody className="divide-y divide-slate-100 dark:divide-slate-800">{children}</tbody>
+  return <tbody className="divide-y divide-border">{children}</tbody>
 }
 
 /**
@@ -44,7 +44,7 @@ export function Th({ children, align = 'left', sortable, onClick, className = ''
     <th
       onClick={onClick}
       scope="col"
-      className={`px-3.5 py-2.5 text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-700 ${alignClass} ${sortable ? 'cursor-pointer select-none hover:text-slate-700 dark:hover:text-slate-200' : ''} ${className}`}
+      className={`px-4 py-3.5 text-[15px] font-bold text-foreground-muted uppercase tracking-wider ${alignClass} ${sortable ? 'cursor-pointer select-none hover:text-foreground' : ''} ${className}`}
     >
       {children}
     </th>
@@ -58,7 +58,7 @@ export function Th({ children, align = 'left', sortable, onClick, className = ''
 export function Td({ children, align = 'left', className = '' }) {
   const alignClass = align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'
   return (
-    <td className={`px-3.5 py-3 text-xs text-slate-700 dark:text-slate-300 ${alignClass} ${className}`}>
+    <td className={`px-4 py-3.5 text-[15px] font-medium text-foreground ${alignClass} ${className}`}>
       {children}
     </td>
   )
@@ -72,7 +72,7 @@ export function Tr({ children, selected, onClick, className = '' }) {
   return (
     <tr
       onClick={onClick}
-      className={`transition-colors duration-100 ${selected ? 'bg-blue-50 dark:bg-blue-950/20' : 'hover:bg-slate-50/80 dark:hover:bg-slate-800/40'} ${onClick ? 'cursor-pointer' : ''} ${className}`}
+      className={`transition-colors duration-150 ${selected ? 'bg-primary-soft' : 'hover:bg-surface-hover/80'} ${onClick ? 'cursor-pointer' : ''} ${className}`}
     >
       {children}
     </tr>

@@ -1,1 +1,0 @@
-Subject,Image_Data_ID,Group,Sex,Age,MRI_File_Name,MRI_Path,File_Exists,File_Size_MB,Load_Status,Dimensions,Dim_X,Dim_Y,Dim_Z,Num_Dimensions,Voxel_X_mm,Voxel_Y_mm,Voxel_Z_mm,Data_Type,Orientation,Intensity_Min,Intensity_Max,Intensity_Mean,Intensity_STD,P01,P05,P25,P50,P75,P95,P99,Zero_Voxel_Percent,NaN_Count,Inf_Count,Affine,Error,Potential_Issue

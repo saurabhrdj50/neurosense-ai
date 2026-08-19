@@ -7,16 +7,16 @@ export function Section({ icon: Icon, title, color, children, defaultOpen = true
   const [open, setOpen] = useState(defaultOpen)
   return (
     <GlassCard className="overflow-hidden">
-      <button onClick={() => setOpen(o => !o)} className="w-full flex items-center justify-between px-6 py-4"
+      <button onClick={() => setOpen(o => !o)} className="w-full flex items-center justify-between px-6 py-4.5"
         style={{ background: 'none', border: 'none', cursor: 'pointer', borderBottom: open ? '1px solid var(--border)' : 'none' }}>
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: `${color}1A`, border: `1px solid ${color}30` }}>
-            <Icon size={17} style={{ color }} />
+        <div className="flex items-center gap-3.5">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${color}1A`, border: `1px solid ${color}30` }}>
+            <Icon size={20} style={{ color }} />
           </div>
-          <span className="font-sans font-bold text-sm text-foreground">{title}</span>
+          <span className="font-sans font-bold text-lg text-foreground">{title}</span>
         </div>
         <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
-          <ChevronDown size={16} className="text-foreground-muted" />
+          <ChevronDown size={20} className="text-foreground-muted" />
         </motion.div>
       </button>
       <AnimatePresence initial={false}>
@@ -33,9 +33,9 @@ export function Section({ icon: Icon, title, color, children, defaultOpen = true
 
 export function DataRow({ label, value, color }) {
   return (
-    <div className="flex items-baseline justify-between py-2 border-b border-border">
-      <span className="text-xs text-foreground-muted font-medium">{label}</span>
-      <span className="text-xs font-semibold" style={{ color: color || 'var(--text-primary)' }}>{value ?? '—'}</span>
+    <div className="flex items-baseline justify-between py-3 border-b border-border">
+      <span className="text-[15px] text-foreground-muted font-semibold">{label}</span>
+      <span className="text-[15px] font-extrabold" style={{ color: color || 'var(--text-primary)' }}>{value ?? '—'}</span>
     </div>
   )
 }

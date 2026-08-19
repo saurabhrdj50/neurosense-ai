@@ -216,30 +216,30 @@ export default function DashboardPage() {
     <div className="space-y-5 max-w-7xl mx-auto pb-8">
 
       {/* ── Header ───────────────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-border">
         <div>
-          <h1 className="text-xl font-bold text-foreground tracking-tight">Clinical Dashboard</h1>
-          <p className="text-xs text-foreground-muted mt-0.5">
+          <h1 className="text-2xl font-extrabold text-foreground tracking-tight">Clinical Dashboard</h1>
+          <p className="text-sm text-foreground-muted mt-0.5 font-medium">
             {user?.institution ? `${user.institution} • ` : ''}Last synced at {lastRefreshed}
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap shrink-0">
           <button
             onClick={fetchDashboardData}
             disabled={refreshing}
-            className="p-2 rounded-lg border bg-surface border-border text-foreground-muted hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+            className="p-2.5 rounded-xl border bg-surface border-border text-foreground-muted hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50 min-h-[44px] min-w-[44px] flex items-center justify-center shrink-0"
             title="Refresh Data"
             aria-label="Refresh Data"
           >
-            <RefreshCw size={14} className={refreshing ? 'animate-spin text-indigo-400' : ''} />
+            <RefreshCw size={18} className={refreshing ? 'animate-spin text-primary' : ''} />
           </button>
 
-          <Button variant="outline" size="sm" onClick={() => navigate('/patients')}>
+          <Button variant="outline" size="md" onClick={() => navigate('/patients')}>
             Patient Roster
           </Button>
 
-          <Button variant="primary" size="sm" icon={Plus} onClick={() => navigate('/analysis')}>
+          <Button variant="primary" size="md" icon={Plus} onClick={() => navigate('/analysis')}>
             New Assessment
           </Button>
         </div>
@@ -248,74 +248,74 @@ export default function DashboardPage() {
       {/* ── PRIMARY FOCUS: High-Risk Urgent Triage Section ──────────────── */}
       <section 
         aria-label="Urgent Clinical Triage" 
-        className="bg-surface rounded-xl border border-rose-500/30 overflow-hidden shadow-xs"
+        className="bg-card rounded-2xl border border-rose-500/30 overflow-hidden shadow-xs"
       >
-        <div className="px-4 py-3 bg-rose-500/10 border-b border-rose-500/20 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <AlertTriangle size={16} className="text-rose-400 shrink-0" />
-            <h2 className="text-xs font-bold text-foreground uppercase tracking-wider">
-              Urgent Clinical Triage — High-Risk Cases ({stats.highRiskCount})
+        <div className="px-5 py-3.5 bg-rose-500/10 border-b border-rose-500/20 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <AlertTriangle size={20} className="text-rose-500 dark:text-rose-400 shrink-0" />
+            <h2 className="text-base font-extrabold text-foreground uppercase tracking-wider">
+              Urgent Attention — High Risk Patients ({stats.highRiskCount})
             </h2>
           </div>
           {stats.highRiskCount > 0 && (
             <button
               onClick={() => navigate('/patients')}
-              className="text-[11px] font-semibold text-rose-400 hover:underline flex items-center gap-1 focus:outline-none focus:ring-1 focus:ring-rose-500"
+              className="text-sm font-bold text-rose-600 dark:text-rose-400 hover:underline flex items-center gap-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/50 rounded-sm"
             >
-              View All High-Risk <ArrowRight size={12} />
+              View All High-Risk <ArrowRight size={15} />
             </button>
           )}
         </div>
 
         {priorityAnalyses.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead className="bg-background/50 border-b border-border text-foreground-muted text-[11px] font-semibold uppercase tracking-wider select-none">
+            <table className="w-full text-left text-sm border-collapse">
+              <thead className="bg-surface-secondary/80 border-b border-border text-foreground-muted text-[15px] font-bold uppercase tracking-wider select-none">
                 <tr>
-                  <th scope="col" className="py-2.5 px-4 w-28">
+                  <th scope="col" className="py-3.5 px-4 w-32">
                     <button 
                       onClick={() => handleSortToggle('priority', 'patientId')} 
-                      className="flex items-center gap-1.5 hover:text-foreground font-semibold uppercase"
+                      className="flex items-center gap-1.5 hover:text-foreground font-bold uppercase"
                     >
                       Patient ID {renderSortIcon(prioritySort, 'patientId')}
                     </button>
                   </th>
-                  <th scope="col" className="py-2.5 px-4 min-w-[140px]">
+                  <th scope="col" className="py-3.5 px-4 min-w-[160px]">
                     <button 
                       onClick={() => handleSortToggle('priority', 'name')} 
-                      className="flex items-center gap-1.5 hover:text-foreground font-semibold uppercase"
+                      className="flex items-center gap-1.5 hover:text-foreground font-bold uppercase"
                     >
                       Patient Name {renderSortIcon(prioritySort, 'name')}
                     </button>
                   </th>
-                  <th scope="col" className="py-2.5 px-4 min-w-[160px]">
+                  <th scope="col" className="py-3.5 px-4 min-w-[180px]">
                     <button 
                       onClick={() => handleSortToggle('priority', 'stage')} 
-                      className="flex items-center gap-1.5 hover:text-foreground font-semibold uppercase"
+                      className="flex items-center gap-1.5 hover:text-foreground font-bold uppercase"
                     >
-                      Diagnostic Classification {renderSortIcon(prioritySort, 'stage')}
+                      Diagnosis Stage {renderSortIcon(prioritySort, 'stage')}
                     </button>
                   </th>
-                  <th scope="col" className="py-2.5 px-4 w-28 text-right pr-6">
+                  <th scope="col" className="py-3.5 px-4 w-32 text-right pr-6">
                     <button 
                       onClick={() => handleSortToggle('priority', 'conf')} 
-                      className="flex items-center justify-end gap-1.5 w-full hover:text-foreground font-semibold uppercase"
+                      className="flex items-center justify-end gap-1.5 w-full hover:text-foreground font-bold uppercase"
                     >
                       AI Confidence {renderSortIcon(prioritySort, 'conf')}
                     </button>
                   </th>
-                  <th scope="col" className="py-2.5 px-4 w-32">
+                  <th scope="col" className="py-3.5 px-4 w-36">
                     <button 
                       onClick={() => handleSortToggle('priority', 'time')} 
-                      className="flex items-center gap-1.5 hover:text-foreground font-semibold uppercase"
+                      className="flex items-center gap-1.5 hover:text-foreground font-bold uppercase"
                     >
                       Evaluated {renderSortIcon(prioritySort, 'time')}
                     </button>
                   </th>
-                  <th scope="col" className="py-2.5 px-4 w-28 text-right">Action</th>
+                  <th scope="col" className="py-3.5 px-4 w-32 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border font-medium">
+              <tbody className="divide-y divide-border text-[15px] font-medium">
                 {sortedPriorityAnalyses.map((item) => (
                   <tr
                     key={item.id}
@@ -328,27 +328,27 @@ export default function DashboardPage() {
                         navigate(`/history/${item.id}`)
                       }
                     }}
-                    className="hover:bg-rose-500/5 cursor-pointer transition-colors focus:outline-none focus:bg-rose-500/10"
+                    className="hover:bg-rose-500/5 dark:hover:bg-rose-500/10 cursor-pointer transition-colors focus:outline-none focus:bg-rose-500/10"
                     aria-label={`Open history dossier for patient ${item.name}`}
                   >
-                    <td className="py-2.5 px-4 font-mono text-[11px] font-bold text-foreground-muted">
+                    <td className="py-3.5 px-4 font-mono text-sm font-bold text-foreground-muted">
                       {item.patientId}
                     </td>
-                    <td className="py-2.5 px-4 font-semibold text-foreground">
+                    <td className="py-3.5 px-4 font-bold text-foreground">
                       {item.name}
                     </td>
-                    <td className="py-2.5 px-4 text-rose-400 font-semibold">
+                    <td className="py-3.5 px-4 text-rose-600 dark:text-rose-400 font-bold">
                       {item.stage}
                     </td>
-                    <td className="py-2.5 px-4 text-right pr-6 font-mono font-bold text-foreground">
+                    <td className="py-3.5 px-4 text-right pr-6 font-mono font-extrabold text-foreground">
                       {item.conf > 0 ? `${item.conf}%` : 'N/A'}
                     </td>
-                    <td className="py-2.5 px-4 text-foreground-muted text-[11px]">
+                    <td className="py-3.5 px-4 text-foreground-muted text-sm font-medium">
                       {item.time}
                     </td>
-                    <td className="py-2.5 px-4 text-right">
-                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-400 hover:underline">
-                        Review Dossier <ChevronRight size={12} />
+                    <td className="py-3.5 px-4 text-right">
+                      <span className="inline-flex items-center gap-1 text-sm font-bold text-rose-600 dark:text-rose-400 hover:underline">
+                        Review Dossier <ChevronRight size={15} />
                       </span>
                     </td>
                   </tr>
@@ -357,75 +357,75 @@ export default function DashboardPage() {
             </table>
           </div>
         ) : (
-          <div className="py-6 px-4 text-center text-xs text-foreground-muted flex items-center justify-center gap-2">
-            <CheckCircle2 size={16} className="text-emerald-400" />
+          <div className="py-8 px-4 text-center text-sm font-medium text-foreground-muted flex items-center justify-center gap-2">
+            <CheckCircle2 size={18} className="text-emerald-500" />
             <span>Zero high-risk cases currently require urgent clinical intervention.</span>
           </div>
         )}
       </section>
 
       {/* ── Compact Information-Dense KPI Grid ───────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4.5">
         {[
           { label: 'Total Patients', value: stats.totalPatients, sub: 'Active registry', color: 'text-foreground' },
           { label: 'Evaluations Run', value: stats.totalAnalyses, sub: 'Full assessments', color: 'text-foreground' },
-          { label: 'High-Risk Alerts', value: stats.highRiskCount, sub: stats.highRiskCount > 0 ? 'Action required' : 'All clear', color: stats.highRiskCount > 0 ? 'text-rose-400 font-bold' : 'text-emerald-400' },
-          { label: '24h New Cases', value: stats.recentActivity, sub: 'Recent evaluations', color: 'text-indigo-400' },
+          { label: 'High-Risk Alerts', value: stats.highRiskCount, sub: stats.highRiskCount > 0 ? 'Action required' : 'All clear', color: stats.highRiskCount > 0 ? 'text-rose-600 dark:text-rose-400 font-extrabold' : 'text-emerald-600 dark:text-emerald-400 font-bold' },
+          { label: '24h New Cases', value: stats.recentActivity, sub: 'Recent evaluations', color: 'text-primary font-extrabold' },
         ].map((kpi, idx) => (
-          <div key={idx} className="p-3.5 rounded-xl bg-surface border border-border space-y-1">
-            <span className="text-[11px] font-semibold text-foreground-muted block truncate uppercase tracking-wider">{kpi.label}</span>
-            <div className="flex items-baseline justify-between">
-              <span className={`text-xl font-bold font-mono ${kpi.color}`}>{ready ? kpi.value : '...'}</span>
-              <span className="text-[10px] font-medium text-foreground-muted">{kpi.sub}</span>
+          <div key={idx} className="p-6 rounded-2xl bg-card border border-border space-y-3 shadow-xs hover:border-border-strong transition-all duration-150">
+            <span className="text-lg font-bold text-foreground block truncate">{kpi.label}</span>
+            <div className="flex items-baseline justify-between gap-2">
+              <span className={`text-3xl sm:text-4xl font-extrabold font-mono tracking-tight ${kpi.color}`}>{ready ? kpi.value : '...'}</span>
+              <span className="text-[15px] font-semibold text-foreground-muted shrink-0">{kpi.sub}</span>
             </div>
           </div>
         ))}
       </div>
 
-      {/* ── Compact Analytics Charts (Reduced Height) ───────────────────── */}
+      {/* ── Compact Analytics Charts ─────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         
         {/* Longitudinal Progression Area Chart */}
-        <div className="lg:col-span-2 bg-surface p-4 rounded-xl border border-border">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-bold text-foreground">Diagnostic Progression Trajectories</h3>
-            <span className="text-[10px] font-mono text-foreground-muted bg-background px-2 py-0.5 rounded border border-border">
+        <div className="lg:col-span-2 bg-card p-5 rounded-2xl border border-border shadow-2xs">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-[15px] font-extrabold text-foreground uppercase tracking-wider">Diagnostic Progression Trajectories</h3>
+            <span className="text-sm font-mono font-semibold text-foreground-muted bg-surface-secondary px-3 py-1 rounded-lg border border-border">
               6-Month Window
             </span>
           </div>
 
           {trendData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={160}>
+            <ResponsiveContainer width="100%" height={180}>
               <AreaChart data={trendData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                <XAxis dataKey="month" tick={{ fill: textColor, fontSize: 10 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: textColor, fontSize: 10 }} axisLine={false} tickLine={false} />
+                <XAxis dataKey="month" tick={{ fill: textColor, fontSize: 13, fontWeight: 500 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: textColor, fontSize: 13, fontWeight: 500 }} axisLine={false} tickLine={false} />
                 <Tooltip content={<ChartTooltip />} />
-                <Area type="monotone" dataKey="normal" name="Normal" stroke="#10B981" strokeWidth={1.5} fill="#10B981" fillOpacity={0.15} />
-                <Area type="monotone" dataKey="mild" name="Mild (MCI)" stroke="#F59E0B" strokeWidth={1.5} fill="#F59E0B" fillOpacity={0.15} />
-                <Area type="monotone" dataKey="moderate" name="Moderate/Severe" stroke="#EF4444" strokeWidth={1.5} fill="#EF4444" fillOpacity={0.15} />
+                <Area type="monotone" dataKey="normal" name="Normal" stroke="#10B981" strokeWidth={2} fill="#10B981" fillOpacity={0.15} />
+                <Area type="monotone" dataKey="mild" name="Mild (MCI)" stroke="#F59E0B" strokeWidth={2} fill="#F59E0B" fillOpacity={0.15} />
+                <Area type="monotone" dataKey="moderate" name="Moderate/Severe" stroke="#EF4444" strokeWidth={2} fill="#EF4444" fillOpacity={0.15} />
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div className="py-10 text-center text-xs text-foreground-muted">No trend data available</div>
+            <div className="py-10 text-center text-sm font-medium text-foreground-muted">No trend data available</div>
           )}
         </div>
 
         {/* Stage Spectrum Pie Chart */}
-        <div className="bg-surface p-4 rounded-xl border border-border flex flex-col justify-between">
-          <h3 className="text-xs font-bold text-foreground mb-2">Cohort Risk Spectrum</h3>
+        <div className="bg-card p-5 rounded-2xl border border-border shadow-2xs flex flex-col justify-between">
+          <h3 className="text-[15px] font-extrabold text-foreground mb-3 uppercase tracking-wider">Cohort Risk Spectrum</h3>
 
           {riskDistribution.length > 0 ? (
-            <div className="flex items-center justify-between gap-2">
-              <div className="w-1/2 h-[130px]">
+            <div className="flex items-center justify-between gap-3">
+              <div className="w-1/2 h-[140px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={riskDistribution}
                       cx="50%"
                       cy="50%"
-                      innerRadius={30}
-                      outerRadius={55}
+                      innerRadius={32}
+                      outerRadius={60}
                       dataKey="value"
                       strokeWidth={0}
                     >
@@ -438,12 +438,12 @@ export default function DashboardPage() {
                 </ResponsiveContainer>
               </div>
 
-              <div className="w-1/2 space-y-1.5 text-xs">
+              <div className="w-1/2 space-y-2.5 text-sm">
                 {riskDistribution.map((d) => (
-                  <div key={d.name} className="flex items-center justify-between text-[11px]">
+                  <div key={d.name} className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="w-2 h-2 rounded-xs shrink-0" style={{ background: d.color }} />
-                      <span className="text-foreground-muted truncate">{d.name}</span>
+                      <span className="w-2.5 h-2.5 rounded-xs shrink-0" style={{ background: d.color }} />
+                      <span className="text-foreground-muted font-medium truncate">{d.name}</span>
                     </div>
                     <span className="font-mono font-bold text-foreground">{d.value}% ({d.count})</span>
                   </div>
@@ -451,7 +451,7 @@ export default function DashboardPage() {
               </div>
             </div>
           ) : (
-            <div className="py-10 text-center text-xs text-foreground-muted">No distribution data</div>
+            <div className="py-10 text-center text-sm font-medium text-foreground-muted">No distribution data</div>
           )}
         </div>
       </div>
@@ -459,76 +459,76 @@ export default function DashboardPage() {
       {/* ── Recent Assessments (Structured Data Table) ───────────────────── */}
       <section 
         aria-label="Recent Patient Assessments"
-        className="bg-surface rounded-xl border border-border overflow-hidden"
+        className="bg-card rounded-2xl border border-border overflow-hidden shadow-2xs"
       >
-        <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-          <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">
+        <div className="px-5 py-3.5 border-b border-border flex items-center justify-between">
+          <h3 className="text-[15px] font-extrabold text-foreground uppercase tracking-wider">
             Recent Patient Assessments ({recentAnalyses.length})
           </h3>
           <button
             onClick={() => navigate('/patients')}
-            className="text-[11px] font-semibold text-indigo-400 hover:underline flex items-center gap-1 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="text-sm font-bold text-primary hover:underline flex items-center gap-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-sm"
           >
-            All Patient Dossiers <ArrowRight size={12} />
+            All Patient Dossiers <ArrowRight size={15} />
           </button>
         </div>
 
         {recentAnalyses.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead className="bg-background/50 border-b border-border text-foreground-muted text-[11px] font-semibold uppercase tracking-wider select-none">
+            <table className="w-full text-left text-sm border-collapse">
+              <thead className="bg-surface-secondary/80 border-b border-border text-foreground-muted text-[15px] font-bold uppercase tracking-wider select-none">
                 <tr>
-                  <th scope="col" className="py-2.5 px-4 w-28">
+                  <th scope="col" className="py-3.5 px-4 w-32">
                     <button 
                       onClick={() => handleSortToggle('recent', 'patientId')} 
-                      className="flex items-center gap-1.5 hover:text-foreground font-semibold uppercase"
+                      className="flex items-center gap-1.5 hover:text-foreground font-bold uppercase"
                     >
                       Patient ID {renderSortIcon(recentSort, 'patientId')}
                     </button>
                   </th>
-                  <th scope="col" className="py-2.5 px-4 min-w-[140px]">
+                  <th scope="col" className="py-3.5 px-4 min-w-[160px]">
                     <button 
                       onClick={() => handleSortToggle('recent', 'name')} 
-                      className="flex items-center gap-1.5 hover:text-foreground font-semibold uppercase"
+                      className="flex items-center gap-1.5 hover:text-foreground font-bold uppercase"
                     >
                       Patient Name {renderSortIcon(recentSort, 'name')}
                     </button>
                   </th>
-                  <th scope="col" className="py-2.5 px-4 min-w-[160px]">
+                  <th scope="col" className="py-3.5 px-4 min-w-[180px]">
                     <button 
                       onClick={() => handleSortToggle('recent', 'stage')} 
-                      className="flex items-center gap-1.5 hover:text-foreground font-semibold uppercase"
+                      className="flex items-center gap-1.5 hover:text-foreground font-bold uppercase"
                     >
                       Diagnostic Classification {renderSortIcon(recentSort, 'stage')}
                     </button>
                   </th>
-                  <th scope="col" className="py-2.5 px-4 w-28 text-right pr-6">
+                  <th scope="col" className="py-3.5 px-4 w-32 text-right pr-6">
                     <button 
                       onClick={() => handleSortToggle('recent', 'conf')} 
-                      className="flex items-center justify-end gap-1.5 w-full hover:text-foreground font-semibold uppercase"
+                      className="flex items-center justify-end gap-1.5 w-full hover:text-foreground font-bold uppercase"
                     >
                       AI Confidence {renderSortIcon(recentSort, 'conf')}
                     </button>
                   </th>
-                  <th scope="col" className="py-2.5 px-4 w-32">
+                  <th scope="col" className="py-3.5 px-4 w-36">
                     <button 
                       onClick={() => handleSortToggle('recent', 'risk')} 
-                      className="flex items-center gap-1.5 hover:text-foreground font-semibold uppercase"
+                      className="flex items-center gap-1.5 hover:text-foreground font-bold uppercase"
                     >
                       Risk Level {renderSortIcon(recentSort, 'risk')}
                     </button>
                   </th>
-                  <th scope="col" className="py-2.5 px-4 w-32">
+                  <th scope="col" className="py-3.5 px-4 w-36">
                     <button 
                       onClick={() => handleSortToggle('recent', 'time')} 
-                      className="flex items-center gap-1.5 hover:text-foreground font-semibold uppercase"
+                      className="flex items-center gap-1.5 hover:text-foreground font-bold uppercase"
                     >
                       Date Evaluated {renderSortIcon(recentSort, 'time')}
                     </button>
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border font-medium">
+              <tbody className="divide-y divide-border text-[15px] font-medium">
                 {sortedRecentAnalyses.map((item) => (
                   <tr
                     key={item.id}
@@ -541,27 +541,27 @@ export default function DashboardPage() {
                         navigate(`/history/${item.id}`)
                       }
                     }}
-                    className="hover:bg-surface-hover cursor-pointer transition-colors focus:outline-none focus:bg-surface-hover"
+                    className="hover:bg-surface-hover/80 cursor-pointer transition-colors focus:outline-none focus:bg-surface-hover"
                     aria-label={`Open history dossier for patient ${item.name}`}
                   >
-                    <td className="py-2.5 px-4 font-mono text-[11px] text-foreground-muted">
+                    <td className="py-3.5 px-4 font-mono text-sm font-bold text-foreground-muted">
                       {item.patientId}
                     </td>
-                    <td className="py-2.5 px-4 font-semibold text-foreground">
+                    <td className="py-3.5 px-4 font-bold text-foreground">
                       {item.name}
                     </td>
-                    <td className="py-2.5 px-4 text-foreground">
+                    <td className="py-3.5 px-4 text-foreground font-medium">
                       {item.stage}
                     </td>
-                    <td className="py-2.5 px-4 text-right pr-6 font-mono font-bold text-foreground">
+                    <td className="py-3.5 px-4 text-right pr-6 font-mono font-extrabold text-foreground">
                       {item.conf > 0 ? `${item.conf}%` : 'N/A'}
                     </td>
-                    <td className="py-2.5 px-4">
+                    <td className="py-3.5 px-4">
                       <Badge variant={item.risk.toLowerCase()}>
                         {item.risk}
                       </Badge>
                     </td>
-                    <td className="py-2.5 px-4 text-foreground-muted text-[11px]">
+                    <td className="py-3.5 px-4 text-foreground-muted text-sm font-medium">
                       {item.time}
                     </td>
                   </tr>
@@ -570,7 +570,7 @@ export default function DashboardPage() {
             </table>
           </div>
         ) : (
-          <div className="py-8 text-center text-xs text-foreground-muted">
+          <div className="py-8 text-center text-sm font-medium text-foreground-muted">
             No recent patient assessments found.
           </div>
         )}

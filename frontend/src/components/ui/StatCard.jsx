@@ -48,22 +48,22 @@ export default function StatCard({
   const td = trend ? trendConfig[trend] : null
 
   return (
-    <div className={`bg-card border border-border rounded-xl p-4 flex items-start justify-between gap-3 shadow-2xs ${className}`}>
-      <div className="flex items-start gap-3 min-w-0">
+    <div className={`bg-card border border-border rounded-2xl p-5 flex items-start justify-between gap-4 shadow-2xs hover:border-border-strong transition-all duration-150 ${className}`}>
+      <div className="flex items-start gap-3.5 min-w-0">
         {Icon && (
-          <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 border ${iconCls}`}>
-            <Icon size={18} />
+          <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border ${iconCls}`}>
+            <Icon size={20} />
           </div>
         )}
         <div className="min-w-0">
-          <p className="text-xs font-medium text-muted truncate">{label}</p>
-          <p className="text-2xl font-bold text-foreground tracking-tight leading-tight mt-0.5">{value}</p>
-          {subtext && <p className="text-xs text-subtle mt-0.5">{subtext}</p>}
+          <p className="text-[15px] font-bold uppercase tracking-wider text-foreground-muted truncate">{label}</p>
+          <p className="text-3xl font-extrabold font-mono text-foreground tracking-tight leading-tight mt-1">{value}</p>
+          {subtext && <p className="text-sm font-medium text-foreground-muted mt-1.5">{subtext}</p>}
         </div>
       </div>
       {td && trendLabel && (
-        <div className={`flex items-center gap-1 px-2 py-0.5 rounded-md border text-xs font-semibold shrink-0 ${td.cls}`}>
-          <td.icon size={12} />
+        <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-sm font-semibold shrink-0 ${td.cls}`}>
+          <td.icon size={15} />
           {trendLabel}
         </div>
       )}

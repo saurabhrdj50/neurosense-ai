@@ -1,58 +1,89 @@
-import React, { useState, useRef, useEffect } from 'react'
-import { motion } from 'framer-motion'
-import { Activity, Clock, ChevronLeft, ChevronRight, Check, Sparkles, RefreshCw, PenTool, Eraser } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { ChevronLeft, ChevronRight, BarChart2, BookOpen, Maximize2, X, Box, PenTool, Clock } from 'lucide-react'
 
 const GUIDED_QUESTIONS = [
-  { id: 'orientation_time', test: 'MMSE', label: 'Orientation to Time', prompt: 'Ask: What is today’s year, season, date, day of week, and month?', max: 5 },
-  { id: 'orientation_place', test: 'MMSE', label: 'Orientation to Place', prompt: 'Ask: Where are we now? (State, county, town, clinic, floor)', max: 5 },
-  { id: 'registration', test: 'MMSE', label: '3-Word Registration', prompt: 'Name 3 objects: Apple, Table, Penny. Ask patient to repeat them immediately.', max: 3 },
-  { id: 'attention_calc', test: 'MMSE', label: 'Attention & Serial 7s', prompt: 'Ask patient to count backwards from 100 by 7s (100, 93, 86, 79, 72, 65).', max: 5 },
-  { id: 'recall', test: 'MMSE', label: '3-Word Delayed Recall', prompt: 'Ask patient to recall the 3 words given earlier (Apple, Table, Penny).', max: 3 },
-  { id: 'naming', test: 'MMSE', label: 'Object Naming', prompt: 'Show a pencil and a wristwatch. Ask: What are these called?', max: 2 },
-  { id: 'repetition', test: 'MMSE', label: 'Phrase Repetition', prompt: 'Ask patient to repeat: "No ifs, ands, or buts."', max: 1 },
-  { id: 'three_stage_cmd', test: 'MMSE', label: '3-Stage Command', prompt: 'Instruct: Take this paper in your right hand, fold it in half, and put it on the floor.', max: 3 },
-  { id: 'reading_exec', test: 'MMSE', label: 'Read & Obey', prompt: 'Show text "CLOSE YOUR EYES". Ask patient to read and perform.', max: 1 },
-  { id: 'moca_visuospatial', test: 'MoCA', label: 'Visuospatial / Executive', prompt: 'Administer Trail Making B sequence and 3D Cube copy.', max: 5 },
-  { id: 'moca_abstraction', test: 'MoCA', label: 'Abstraction Similarity', prompt: 'Ask similarities: Train-Bicycle (Transportation), Watch-Ruler (Measuring tools).', max: 2 },
+  { id: 'orientation_time', test: 'Basic', category: 'Time & Place', label: 'Time Awareness', prompt: 'What is today’s year, season, date, day of week, and month?', max: 5 },
+  { id: 'orientation_place', test: 'Basic', category: 'Time & Place', label: 'Location Awareness', prompt: 'Where are we right now? (State, city, hospital/clinic, floor, room)', max: 5 },
+  { id: 'registration', test: 'Basic', category: 'Memory', label: '3 Words Registration', prompt: 'Repeat 3 words: Apple, Table, Penny.', max: 3 },
+  { id: 'attention_calc', test: 'Basic', category: 'Focus & Math', label: 'Serial 7s', prompt: 'Count backward from 100 by 7s (100, 93, 86, 79, 72, 65).', max: 5 },
+  { id: 'recall', test: 'Basic', category: 'Memory', label: '3 Words Recall', prompt: 'What were the 3 words given earlier? (Apple, Table, Penny)', max: 3 },
+  { id: 'naming', test: 'Basic', category: 'Language', label: 'Object Naming', prompt: 'Name these items shown below (Pencil & Watch).', max: 2, hasVisual: 'naming' },
+  { id: 'animal_fluency', test: 'Basic', category: 'Language', label: '60-Second Animal Naming', prompt: 'Name as many animals as you can in 1 minute. (Target: 11 or more animals is normal).', max: 3 },
+  { id: 'clock_drawing', test: 'Advanced', category: 'Visuals & Drawing', label: 'Clock Drawing Test', prompt: 'Draw a clock face with all 12 numbers and set the hands to 10 minutes past 11 (11:10).', max: 3, hasVisual: 'clock_drawing' },
+  { id: 'repetition', test: 'Basic', category: 'Language', label: 'Phrase Repetition', prompt: 'Repeat: "No ifs, ands, or buts."', max: 1 },
+  { id: 'three_stage_cmd', test: 'Basic', category: 'Language', label: '3-Step Command', prompt: 'Take paper in right hand, fold in half, put on floor.', max: 3 },
+  { id: 'reading_exec', test: 'Basic', category: 'Language', label: 'Read & Action', prompt: 'Read card "CLOSE YOUR EYES" and perform the action.', max: 1, hasVisual: 'fullscreen_text', textToDisplay: 'CLOSE YOUR EYES' },
+  { id: 'moca_visuospatial', test: 'Advanced', category: 'Visuals & Drawing', label: 'Pattern & 3D Shape Test', prompt: 'Connect numbers and letters (1-A-2-B) and copy 3D box.', max: 5, hasVisual: '3d_cube' },
+  { id: 'moca_abstraction', test: 'Advanced', category: 'Visuals & Drawing', label: 'Similarities', prompt: 'How are Train & Bicycle similar? Watch & Ruler similar?', max: 2 },
 ]
 
-const CDT_CRITERIA = [
-  { id: 'cdt_contour', label: 'Closed Circular Contour (+1)', points: 1 },
-  { id: 'cdt_numbers', label: 'All 12 Numbers Present & Ordered (+2)', points: 2 },
-  { id: 'cdt_spacing', label: 'Symmetrical Spacing Across Quadrants (+1)', points: 1 },
-  { id: 'cdt_hands', label: 'Two Distinct Hands From Center (+1)', points: 1 },
-  { id: 'cdt_time', label: 'Accurate Target Time (10 past 11) (+1)', points: 1 },
-]
-
-export function CognitiveStep({ cognData, setCognData }) {
+export function CognitiveStep({ cognData, setCognData, patient }) {
   const [currentQIndex, setCurrentQIndex] = useState(0)
-  const [drawingMode, setDrawingMode] = useState('pen')
-  const [isDrawing, setIsDrawing] = useState(false)
-  const canvasRef = useRef(null)
+  const [patientModalText, setPatientModalText] = useState(null)
 
   const mmseScores = cognData.mmse_breakdown || {}
   const mocaScores = cognData.moca_breakdown || {}
-  const cdtScores = cognData.cdt_breakdown || {}
 
-  /* Compute continuous running scores */
   const totalMMSE = Object.values(mmseScores).reduce((a, b) => a + Number(b || 0), 0)
-  const totalMoCA = Object.values(mocaScores).reduce((a, b) => a + Number(b || 0), 0)
-  const totalCDT = Object.values(cdtScores).reduce((a, b) => a + (b ? 1 : 0), 0) + (cdtScores.cdt_numbers ? 1 : 0)
+  const rawMoCA = Object.values(mocaScores).reduce((a, b) => a + Number(b || 0), 0)
+
+  const eduYears = Number(patient?.education_years || 16)
+  const isEduAdjusted = eduYears <= 12 && rawMoCA > 0 && rawMoCA < 30
+  const adjustedMoCA = isEduAdjusted ? Math.min(30, rawMoCA + 1) : rawMoCA
+
+  const orientationScore = Number(mmseScores.orientation_time || 0) + Number(mmseScores.orientation_place || 0)
+  const memoryScore = Number(mmseScores.registration || 0) + Number(mmseScores.recall || 0)
+  const attentionScore = Number(mmseScores.attention_calc || 0)
+  const languageScore = Number(mmseScores.naming || 0) + Number(mmseScores.animal_fluency || 0) + Number(mmseScores.repetition || 0) + Number(mmseScores.three_stage_cmd || 0) + Number(mmseScores.reading_exec || 0)
+  const visuoScore = Number(mocaScores.clock_drawing || 0) + Number(mocaScores.moca_visuospatial || 0) + Number(mocaScores.moca_abstraction || 0)
+
+  const getBrainStage = () => {
+    if (totalMMSE === 0 && rawMoCA === 0) {
+      return { stage: 'Pending Assessment', color: 'text-foreground-muted bg-surface-secondary border-border' }
+    }
+    if (totalMMSE >= 29 && adjustedMoCA >= 26) {
+      return { stage: 'Normal Cognition', color: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/30' }
+    }
+    if (totalMMSE >= 27) {
+      return { stage: 'Subtle Decline', color: 'text-cyan-500 bg-cyan-500/10 border-cyan-500/30' }
+    }
+    if (adjustedMoCA >= 18 || totalMMSE >= 22) {
+      return { stage: 'Mild Memory Loss (MCI)', color: 'text-amber-500 bg-amber-500/10 border-amber-500/30' }
+    }
+    if (totalMMSE >= 19 || adjustedMoCA >= 10) {
+      return { stage: 'Moderate Decline', color: 'text-orange-500 bg-orange-500/10 border-orange-500/30' }
+    }
+    return { stage: 'Significant Impairment', color: 'text-rose-500 bg-rose-500/10 border-rose-500/30' }
+  }
+
+  const brainStage = getBrainStage()
+
+  const domainScores = {
+    orientation: { score: orientationScore, max: 10 },
+    memory: { score: memoryScore, max: 6 },
+    attention: { score: attentionScore, max: 5 },
+    language: { score: languageScore, max: 10 },
+    visuospatial: { score: visuoScore, max: 10 }
+  }
 
   useEffect(() => {
     setCognData(prev => ({
       ...prev,
       mmse: totalMMSE,
-      moca: totalMoCA,
-      clock_draw: totalCDT
+      moca: adjustedMoCA,
+      moca_raw: rawMoCA,
+      education_adjusted: isEduAdjusted,
+      nia_aa_stage: brainStage.stage,
+      domains: domainScores,
     }))
-  }, [totalMMSE, totalMoCA, totalCDT, setCognData])
+  }, [totalMMSE, adjustedMoCA, rawMoCA, isEduAdjusted, brainStage.stage, orientationScore, memoryScore, attentionScore, languageScore, visuoScore, setCognData])
 
   const currentQ = GUIDED_QUESTIONS[currentQIndex]
-  const currentScore = mmseScores[currentQ.id] !== undefined ? mmseScores[currentQ.id] : (mocaScores[currentQ.id] || 0)
+  const currentScore = currentQ.test === 'Basic' ? (mmseScores[currentQ.id] ?? 0) : (mocaScores[currentQ.id] ?? 0)
 
   const setQuestionScore = (scoreVal) => {
-    if (currentQ.test === 'MMSE') {
+    if (currentQ.test === 'Basic') {
       setCognData(p => ({
         ...p,
         mmse_breakdown: { ...(p.mmse_breakdown || {}), [currentQ.id]: scoreVal }
@@ -65,153 +96,203 @@ export function CognitiveStep({ cognData, setCognData }) {
     }
   }
 
-  const toggleCDTItem = (id) => {
-    setCognData(p => ({
-      ...p,
-      cdt_breakdown: { ...(p.cdt_breakdown || {}), [id]: !p.cdt_breakdown?.[id] }
-    }))
-  }
-
-  const applyPreset = (type) => {
-    if (type === 'normal') {
-      setCognData(p => ({
-        ...p,
-        mmse_breakdown: { orientation_time: 5, orientation_place: 5, registration: 3, attention_calc: 5, recall: 3, naming: 2, repetition: 1, three_stage_cmd: 3, reading_exec: 1 },
-        moca_breakdown: { moca_visuospatial: 5, moca_abstraction: 2 },
-        cdt_breakdown: { cdt_contour: true, cdt_numbers: true, cdt_spacing: true, cdt_hands: true, cdt_time: true }
-      }))
-    } else if (type === 'mci') {
-      setCognData(p => ({
-        ...p,
-        mmse_breakdown: { orientation_time: 4, orientation_place: 4, registration: 3, attention_calc: 4, recall: 2, naming: 2, repetition: 1, three_stage_cmd: 3, reading_exec: 1 },
-        moca_breakdown: { moca_visuospatial: 3, moca_abstraction: 1 },
-        cdt_breakdown: { cdt_contour: true, cdt_numbers: true, cdt_spacing: false, cdt_hands: true, cdt_time: false }
-      }))
-    }
-  }
-
-  /* Canvas Handlers */
-  const startDrawing = (e) => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const rect = canvas.getBoundingClientRect()
-    const ctx = canvas.getContext('2d')
-    ctx.beginPath()
-    ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top)
-    setIsDrawing(true)
-  }
-
-  const draw = (e) => {
-    if (!isDrawing || !canvasRef.current) return
-    const rect = canvasRef.current.getBoundingClientRect()
-    const ctx = canvasRef.current.getContext('2d')
-    ctx.strokeStyle = drawingMode === 'eraser' ? '#0F172A' : '#6366F1'
-    ctx.lineWidth = drawingMode === 'eraser' ? 16 : 3
-    ctx.lineCap = 'round'
-    ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top)
-    ctx.stroke()
-  }
-
-  const stopDrawing = () => {
-    setIsDrawing(false)
-  }
-
-  const clearCanvas = () => {
-    if (!canvasRef.current) return
-    const ctx = canvasRef.current.getContext('2d')
-    ctx.fillStyle = '#0F172A'
-    ctx.fillRect(0, 0, canvasRef.current.width, canvasRef.current.height)
-  }
-
   return (
     <div className="space-y-5">
-      {/* Continuous Running Scores Banner */}
-      <div className="p-4 rounded-2xl bg-surface border border-border flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="text-sm font-bold text-foreground">Guided Cognitive Assessment</h2>
-          <p className="text-xs text-foreground-muted">Continuous score calculation for MMSE, MoCA, and Clock Drawing.</p>
+      {/* ── FULLSCREEN PATIENT DISPLAY MODAL ──────────────────────────────── */}
+      <AnimatePresence>
+        {patientModalText && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center select-none"
+          >
+            <button
+              type="button"
+              onClick={() => setPatientModalText(null)}
+              className="absolute top-6 right-6 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+            >
+              <X size={28} />
+            </button>
+
+            <div className="space-y-6 max-w-2xl">
+              <span className="text-sm font-mono text-cyan-400 uppercase tracking-widest block font-bold">
+                Patient Presentation Mode
+              </span>
+
+              <div className="p-12 rounded-3xl bg-white/5 border border-white/20 shadow-2xl">
+                <h1 className="text-5xl sm:text-7xl font-extrabold text-white tracking-wide uppercase leading-tight">
+                  {patientModalText}
+                </h1>
+              </div>
+
+              <p className="text-sm text-slate-400 font-medium">
+                Instruct patient to read text and perform the action. Click X or anywhere to close.
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── SCORE HEADER WITH PLAIN EVERYDAY LABELS ───────────────────────── */}
+      <div className="p-5 rounded-2xl bg-surface border border-border space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+              <BookOpen size={20} className="text-primary" />
+              Memory & Brain Test
+            </h2>
+            <p className="text-sm text-foreground-muted font-medium">Simple guided questions to check memory, recall, and focus skills</p>
+          </div>
         </div>
 
-        {/* Live Running Scores Badges */}
-        <div className="flex items-center gap-3">
-          <div className="px-3 py-1.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-center">
-            <span className="text-[10px] font-bold text-indigo-400 block uppercase">MMSE</span>
-            <span className="text-base font-extrabold text-foreground">{totalMMSE} <span className="text-xs text-foreground-muted">/ 30</span></span>
+        {/* Score Badges Row with Plain Everyday Labels */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="p-3.5 rounded-xl bg-background border border-border space-y-0.5">
+            <span className="text-xs text-foreground font-bold block">Basic Memory Check</span>
+            <div className="flex items-baseline justify-between">
+              <span className="text-2xl font-extrabold text-foreground">{totalMMSE} <span className="text-xs text-foreground-muted font-normal">/ 30</span></span>
+              <span className="text-[11px] text-foreground-muted">Daily Recall</span>
+            </div>
           </div>
 
-          <div className="px-3 py-1.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-center">
-            <span className="text-[10px] font-bold text-cyan-400 block uppercase">MoCA</span>
-            <span className="text-base font-extrabold text-foreground">{totalMoCA} <span className="text-xs text-foreground-muted">/ 30</span></span>
+          <div className="p-3.5 rounded-xl bg-background border border-border space-y-0.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-foreground font-bold">Advanced Focus & Recall</span>
+              {isEduAdjusted && <span className="text-[10px] text-cyan-400 font-bold">+1 Bonus</span>}
+            </div>
+            <div className="flex items-baseline justify-between">
+              <span className="text-2xl font-extrabold text-foreground">{adjustedMoCA} <span className="text-xs text-foreground-muted font-normal">/ 30</span></span>
+              <span className="text-[11px] text-foreground-muted">Problem-Solving</span>
+            </div>
           </div>
 
-          <div className="px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-center">
-            <span className="text-[10px] font-bold text-amber-400 block uppercase">CDT</span>
-            <span className="text-base font-extrabold text-foreground">{totalCDT} <span className="text-xs text-foreground-muted">/ 6</span></span>
-          </div>
-
-          <div className="flex gap-1 pl-2 border-l border-border">
-            <button
-              type="button"
-              onClick={() => applyPreset('normal')}
-              className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-surface border border-border hover:bg-surface-hover"
-            >
-              Preset Normal
-            </button>
-            <button
-              type="button"
-              onClick={() => applyPreset('mci')}
-              className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500/20"
-            >
-              Preset MCI
-            </button>
+          <div className={`p-3.5 rounded-xl border flex flex-col justify-center ${brainStage.color}`}>
+            <span className="text-[11px] font-semibold uppercase tracking-wider block opacity-70">Overall Memory Status</span>
+            <span className="text-base font-extrabold leading-tight">{brainStage.stage}</span>
           </div>
         </div>
       </div>
 
-      {/* Guided Question Card Stepper */}
-      <div className="p-5 rounded-2xl bg-surface border border-border space-y-4">
-        <div className="flex items-center justify-between text-xs font-semibold text-foreground-muted">
-          <span className="flex items-center gap-1.5">
-            <Activity size={14} className="text-primary" />
-            Question {currentQIndex + 1} of {GUIDED_QUESTIONS.length} ({currentQ.test} Sub-item)
+      {/* ── COGNITIVE DOMAIN CATEGORY PERFORMANCE ─────────────────────────── */}
+      <div className="p-3.5 rounded-xl bg-surface border border-border space-y-2">
+        <div className="flex items-center justify-between border-b border-border/60 pb-1.5">
+          <h3 className="text-xs font-bold text-foreground flex items-center gap-1.5">
+            <BarChart2 size={14} className="text-primary" />
+            Category Performance Breakdown
+          </h3>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+          {[
+            { label: 'Time & Place', score: orientationScore, max: 10, color: 'bg-indigo-500' },
+            { label: 'Memory', score: memoryScore, max: 6, color: 'bg-cyan-500' },
+            { label: 'Focus & Math', score: attentionScore, max: 5, color: 'bg-emerald-500' },
+            { label: 'Language', score: languageScore, max: 10, color: 'bg-amber-500' },
+            { label: 'Visuals', score: visuoScore, max: 10, color: 'bg-purple-500' },
+          ].map(domain => {
+            const pct = Math.round((domain.score / domain.max) * 100)
+            return (
+              <div key={domain.label} className="p-2 rounded-lg bg-background border border-border/70 space-y-1">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="font-semibold text-foreground truncate">{domain.label}</span>
+                  <span className="font-mono text-foreground-muted">{domain.score}/{domain.max}</span>
+                </div>
+                <div className="h-1.5 w-full rounded-full bg-surface-secondary overflow-hidden">
+                  <div className={`h-full rounded-full ${domain.color} transition-all duration-500`} style={{ width: `${pct}%` }} />
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* ── QUESTION STEPPER WITH VISUAL TEST CARDS ──────────────────────── */}
+      <div className="p-6 rounded-2xl bg-surface border border-border space-y-5">
+        <div className="flex items-center justify-between border-b border-border/60 pb-3">
+          <span className="text-sm font-bold text-foreground">
+            Question {currentQIndex + 1} of {GUIDED_QUESTIONS.length} ({currentQ.category})
           </span>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             <button
               type="button"
               disabled={currentQIndex === 0}
               onClick={() => setCurrentQIndex(i => Math.max(0, i - 1))}
-              className="p-1 rounded-lg border border-border disabled:opacity-30 hover:bg-surface-hover"
+              className="p-2 rounded-xl border border-border disabled:opacity-30 hover:bg-surface-hover min-h-[38px] min-w-[38px] flex items-center justify-center cursor-pointer"
             >
-              <ChevronLeft size={16} />
+              <ChevronLeft size={18} />
             </button>
             <button
               type="button"
               disabled={currentQIndex === GUIDED_QUESTIONS.length - 1}
               onClick={() => setCurrentQIndex(i => Math.min(GUIDED_QUESTIONS.length - 1, i + 1))}
-              className="p-1 rounded-lg border border-border disabled:opacity-30 hover:bg-surface-hover"
+              className="p-2 rounded-xl border border-border disabled:opacity-30 hover:bg-surface-hover min-h-[38px] min-w-[38px] flex items-center justify-center cursor-pointer"
             >
-              <ChevronRight size={16} />
+              <ChevronRight size={18} />
             </button>
           </div>
         </div>
 
-        <div className="space-y-2">
-          <h3 className="text-base font-bold text-foreground">{currentQ.label}</h3>
-          <p className="text-xs text-foreground-muted bg-background p-3 rounded-xl border border-border/60">
-            {currentQ.prompt}
-          </p>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-bold text-foreground">{currentQ.label}</h3>
+
+            {currentQ.hasVisual === 'fullscreen_text' && (
+              <button
+                type="button"
+                onClick={() => setPatientModalText(currentQ.textToDisplay)}
+                className="px-3 py-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+              >
+                <Maximize2 size={14} /> Present to Patient
+              </button>
+            )}
+          </div>
+
+          <div className="p-4 rounded-xl bg-background border border-border/80">
+            <p className="text-base text-foreground font-semibold">
+              {currentQ.prompt}
+            </p>
+          </div>
+
+          {currentQ.hasVisual === 'naming' && (
+            <div className="p-4 rounded-xl bg-background border border-border grid grid-cols-2 gap-4">
+              <div className="flex flex-col items-center p-3 rounded-lg bg-surface border border-border space-y-2 text-center">
+                <PenTool size={32} className="text-primary" />
+                <span className="text-xs font-bold text-foreground">1. Pencil</span>
+              </div>
+              <div className="flex flex-col items-center p-3 rounded-lg bg-surface border border-border space-y-2 text-center">
+                <Clock size={32} className="text-amber-400" />
+                <span className="text-xs font-bold text-foreground">2. Watch</span>
+              </div>
+            </div>
+          )}
+
+          {currentQ.hasVisual === 'clock_drawing' && (
+            <div className="p-4 rounded-xl bg-background border border-border flex flex-col items-center justify-center space-y-2 text-center">
+              <Clock size={44} className="text-emerald-400" />
+              <span className="text-xs font-bold text-foreground">Clock Face Reference (11:10)</span>
+              <span className="text-[11px] text-foreground-muted">Instruct patient to draw clock contour, numbers 1-12, and set hands to 11:10</span>
+            </div>
+          )}
+
+          {currentQ.hasVisual === '3d_cube' && (
+            <div className="p-4 rounded-xl bg-background border border-border flex flex-col items-center justify-center space-y-2 text-center">
+              <Box size={44} className="text-indigo-400" />
+              <span className="text-xs font-bold text-foreground">3D Cube Reference Diagram</span>
+              <span className="text-[11px] text-foreground-muted">Instruct patient to copy this 3D box structure on paper</span>
+            </div>
+          )}
         </div>
 
-        {/* Score Selection Buttons */}
-        <div className="space-y-1.5 pt-1">
-          <label className="text-xs font-semibold text-foreground-muted block">Score Assigned:</label>
-          <div className="flex flex-wrap gap-2">
+        <div className="space-y-2 pt-1">
+          <span className="text-xs font-semibold text-foreground-muted block">Select Points:</span>
+          <div className="flex flex-wrap gap-2.5">
             {Array.from({ length: currentQ.max + 1 }, (_, idx) => (
               <button
                 key={idx}
                 type="button"
                 onClick={() => setQuestionScore(idx)}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
+                className={`px-4 py-2.5 rounded-xl text-sm font-bold border min-h-[44px] min-w-[52px] cursor-pointer ${
                   currentScore === idx
                     ? 'bg-primary text-white border-primary shadow-sm'
                     : 'bg-background hover:bg-surface-hover text-foreground border-border'
@@ -220,94 +301,6 @@ export function CognitiveStep({ cognData, setCognData }) {
                 {idx} {idx === currentQ.max ? '(Full)' : 'Pts'}
               </button>
             ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Clock Drawing Test (CDT) Canvas Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Left: Canvas */}
-        <div className="p-4 rounded-2xl bg-surface border border-border space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Clock size={16} className="text-amber-400" />
-              <h3 className="text-xs font-bold text-foreground">Clock Drawing Test (CDT) Canvas</h3>
-            </div>
-
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => setDrawingMode('pen')}
-                className={`px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 ${
-                  drawingMode === 'pen' ? 'bg-primary text-white' : 'bg-background border border-border text-foreground-muted'
-                }`}
-              >
-                <PenTool size={11} /> Pen
-              </button>
-              <button
-                type="button"
-                onClick={() => setDrawingMode('eraser')}
-                className={`px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 ${
-                  drawingMode === 'eraser' ? 'bg-rose-500 text-white' : 'bg-background border border-border text-foreground-muted'
-                }`}
-              >
-                <Eraser size={11} /> Eraser
-              </button>
-              <button
-                type="button"
-                onClick={clearCanvas}
-                className="px-2 py-1 rounded-lg text-xs font-semibold bg-background border border-border text-foreground-muted hover:text-foreground"
-              >
-                Clear
-              </button>
-            </div>
-          </div>
-
-          <div className="relative aspect-square max-w-[280px] mx-auto rounded-2xl bg-slate-950 border border-slate-800 overflow-hidden">
-            <canvas
-              ref={canvasRef}
-              width={280}
-              height={280}
-              onMouseDown={startDrawing}
-              onMouseMove={draw}
-              onMouseUp={stopDrawing}
-              onMouseLeave={stopDrawing}
-              className="w-full h-full cursor-crosshair"
-            />
-            <span className="absolute bottom-2 left-2 text-[10px] text-slate-500 font-mono">"Draw a Clock showing 10 past 11"</span>
-          </div>
-        </div>
-
-        {/* Right: Sunderland Scoring Criteria Checklist */}
-        <div className="p-4 rounded-2xl bg-surface border border-border space-y-3">
-          <div className="flex items-center gap-2 border-b border-border/60 pb-2">
-            <Sparkles size={16} className="text-amber-400" />
-            <h3 className="text-xs font-bold text-foreground">Sunderland Scoring Criteria Checklist</h3>
-          </div>
-
-          <div className="space-y-2">
-            {CDT_CRITERIA.map(c => {
-              const checked = !!cdtScores[c.id]
-              return (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => toggleCDTItem(c.id)}
-                  className={`w-full text-left p-2.5 rounded-xl border text-xs transition-all flex items-center justify-between ${
-                    checked
-                      ? 'bg-amber-500/15 border-amber-500/40 text-amber-400 font-semibold'
-                      : 'bg-background border-border text-foreground-muted hover:text-foreground'
-                  }`}
-                >
-                  <span>{c.label}</span>
-                  <div className={`w-4 h-4 rounded flex items-center justify-center border ${
-                    checked ? 'bg-amber-500 border-amber-500 text-white' : 'border-border'
-                  }`}>
-                    {checked && <Check size={10} />}
-                  </div>
-                </button>
-              )
-            })}
           </div>
         </div>
       </div>

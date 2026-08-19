@@ -21,16 +21,10 @@ const ThemeContext = createContext(null)
  * @returns {JSX.Element}
  */
 export function ThemeProvider({ children }) {
-  // Theme: 'light' | 'dark' | 'system'
-  const [theme, setTheme] = useState(() => {
-    try {
-      const saved = localStorage.getItem('neurosense_theme')
-      if (saved) return saved
-    } catch (e) {
-      // ignore
-    }
-    return 'system'
-  })
+  // Theme locked to 'light' for high-contrast clinical workstation readability
+  const theme = 'light'
+  const effectiveTheme = 'light'
+  const isDark = false
 
   // FontSize: 'compact' | 'comfortable' | 'large'
   const [fontSize, setFontSize] = useState(() => {
@@ -50,54 +44,18 @@ export function ThemeProvider({ children }) {
     }
   })
 
-  // System mode listener
-  const [systemDark, setSystemDark] = useState(() => {
-    if (typeof window !== 'undefined' && window.matchMedia) {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches
-    }
-    return true
-  })
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || !window.matchMedia) return
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-    const handler = (e) => setSystemDark(e.matches)
-    if (mediaQuery.addEventListener) {
-      mediaQuery.addEventListener('change', handler)
-    } else {
-      mediaQuery.addListener(handler)
-    }
-    return () => {
-      if (mediaQuery.removeEventListener) {
-        mediaQuery.removeEventListener('change', handler)
-      } else {
-        mediaQuery.removeListener(handler)
-      }
-    }
-  }, [])
-
-  // Effective theme calculation
-  const effectiveTheme = theme === 'system' ? (systemDark ? 'dark' : 'light') : theme
-
   useEffect(() => {
     const root = document.documentElement
-    if (effectiveTheme === 'dark') {
-      root.classList.add('dark')
-      root.classList.remove('light')
-      root.setAttribute('data-theme', 'dark')
-      root.style.colorScheme = 'dark'
-    } else {
-      root.classList.add('light')
-      root.classList.remove('dark')
-      root.setAttribute('data-theme', 'light')
-      root.style.colorScheme = 'light'
-    }
+    root.classList.add('light')
+    root.classList.remove('dark')
+    root.setAttribute('data-theme', 'light')
+    root.style.colorScheme = 'light'
     try {
-      localStorage.setItem('neurosense_theme', theme)
+      localStorage.setItem('neurosense_theme', 'light')
     } catch (e) {
       // ignore
     }
-  }, [theme, effectiveTheme])
+  }, [])
 
   useEffect(() => {
     const root = document.documentElement
@@ -123,12 +81,8 @@ export function ThemeProvider({ children }) {
     }
   }, [motion])
 
-  const toggleTheme = () => {
-    setTheme(prev => {
-      const currentEffective = prev === 'system' ? (systemDark ? 'dark' : 'light') : prev
-      return currentEffective === 'dark' ? 'light' : 'dark'
-    })
-  }
+  const setTheme = () => {}
+  const toggleTheme = () => {}
 
   return (
     <ThemeContext.Provider
@@ -141,7 +95,7 @@ export function ThemeProvider({ children }) {
         setFontSize,
         motion,
         setMotion,
-        isDark: effectiveTheme === 'dark',
+        isDark: false,
       }}
     >
       {children}

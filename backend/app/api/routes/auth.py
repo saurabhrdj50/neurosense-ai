@@ -96,7 +96,6 @@ def forgot_password():
     if not data:
         data = {
             'email': request.form.get('email'),
-            'date_of_birth': request.form.get('date_of_birth'),
         }
 
     try:
@@ -105,11 +104,11 @@ def forgot_password():
         return jsonify({'success': False, 'message': str(e)}), 400
 
     user_repo = UserRepository()
-    user = user_repo.get_by_email_and_dob(validated['email'], validated['date_of_birth'])
+    user = user_repo.get_by_email(validated['email'])
 
     if not user:
         # Don't reveal exactly whether it failed or succeeded to limit info leakage
-        return jsonify({'success': False, 'message': 'If the details exist, a reset link has been sent.'}), 200
+        return jsonify({'success': False, 'message': 'If an account exists for this email, password reset instructions have been sent.'}), 200
 
     # Generate a time-limited token
     import secrets

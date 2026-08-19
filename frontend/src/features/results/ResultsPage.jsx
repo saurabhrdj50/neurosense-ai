@@ -1,9 +1,10 @@
-import React, { useEffect, useState, useMemo, Suspense, lazy } from 'react';
+import React, { useEffect, useState, useMemo, useRef, Suspense, lazy } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   AlertTriangle, CheckCircle, ArrowLeft, Download, Clock,
   Brain, MessageSquare, HeartPulse, Activity, Printer, Plus,
-  FileCheck, ShieldAlert, CheckSquare, Square, ChevronRight, User, Sparkles, Search, Calendar, FileText
+  FileCheck, ShieldAlert, CheckSquare, Square, ChevronRight, ChevronDown, User, Sparkles, Search, Calendar, FileText
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getAnalysisResults, setAnalysisResults } from '../../context/ResultsStore';
@@ -82,7 +83,7 @@ export default function ResultsPage() {
 
   /* View Mode: 'list' (History List) | 'detail' (Full Report) */
   const [viewMode, setViewMode] = useState(() => {
-    if (location.state?.fromAssessment || location.state?.autoView) return 'detail';
+    if (location.state?.fromAssessment || location.state?.autoView || location.state?.results) return 'detail';
     return 'list';
   });
 
@@ -94,12 +95,36 @@ export default function ResultsPage() {
   const [isViewingHistory, setIsViewingHistory] = useState(false);
   const [activeHistorySessionId, setActiveHistorySessionId] = useState(null);
 
+  /* Download / Export Menu State */
+  const [downloadMenuOpen, setDownloadMenuOpen] = useState(false);
+  const downloadRef = useRef(null);
+
   /* Interactive Recommendation Checklist State */
   const [checkedActions, setCheckedActions] = useState({});
 
   useEffect(() => {
-    const current = getAnalysisResults();
-    setResultsState(current);
+    const handleOutsideClick = (e) => {
+      if (downloadRef.current && !downloadRef.current.contains(e.target)) {
+        setDownloadMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
+
+  useEffect(() => {
+    const passedResults = location.state?.results;
+    if (passedResults) {
+      setAnalysisResults(passedResults);
+      setResultsState(passedResults);
+    } else {
+      const current = getAnalysisResults();
+      if (current) setResultsState(current);
+    }
+
+    if (location.state?.fromAssessment || location.state?.autoView || location.state?.results) {
+      setViewMode('detail');
+    }
     setLoading(false);
     
     async function loadHistory() {
@@ -111,7 +136,7 @@ export default function ResultsPage() {
       }
     }
     loadHistory();
-  }, []);
+  }, [location.state]);
 
   const handleSelectHistoryReport = (item) => {
     if (!item?.results) return;
@@ -209,23 +234,23 @@ export default function ResultsPage() {
   /* ── 1. LIST VIEW MODE (Default View showing Past Analysis History) ─────── */
   if (viewMode === 'list' || !results) {
     return (
-      <div className="max-w-5xl mx-auto py-6 space-y-6 font-sans">
+      <div className="max-w-5xl mx-auto py-6 space-y-6 font-sans pb-12">
         {/* Header section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-border">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3.5">
             <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold text-lg shrink-0 shadow-xs">
               <Brain size={24} />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold text-foreground tracking-tight">
+                <h1 className="text-2xl font-extrabold text-foreground tracking-tight">
                   Diagnostic Results & History
                 </h1>
-                <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
                   {pastAnalyses.length} Sessions
                 </span>
               </div>
-              <p className="text-xs text-foreground-muted mt-0.5">
+              <p className="text-sm font-medium text-foreground-muted mt-0.5">
                 Select any past clinical assessment report below to view full findings, or launch a new patient evaluation.
               </p>
             </div>
@@ -234,31 +259,21 @@ export default function ResultsPage() {
           <div className="flex items-center gap-2 flex-wrap">
             <Button
               variant="primary"
-              size="sm"
+              size="md"
               icon={Plus}
               onClick={() => navigate('/analysis')}
+              className="min-h-[40px] text-sm font-semibold"
             >
               Start New Assessment
             </Button>
 
-            <Button
-              variant="outline"
-              size="sm"
-              icon={Sparkles}
-              onClick={() => {
-                setAnalysisResults(SAMPLE_ANALYSIS_RESULT);
-                setResultsState(SAMPLE_ANALYSIS_RESULT);
-                setViewMode('detail');
-                toast.success('Loaded Sample Diagnostic Report');
-              }}
-            >
-              Load Sample Report
-            </Button>
+
 
             <Button
               variant="ghost"
-              size="sm"
+              size="md"
               onClick={() => navigate('/patients')}
+              className="min-h-[40px] text-sm font-semibold"
             >
               Patient Registry
             </Button>
@@ -266,15 +281,15 @@ export default function ResultsPage() {
         </div>
 
         {/* Search & Stage Filter Bar */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 rounded-2xl bg-surface border border-border">
-          <div className="relative w-full sm:w-80">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground-muted" />
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3.5 p-3.5 rounded-2xl bg-surface border border-border">
+          <div className="relative w-full sm:w-96">
+            <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-foreground-muted" />
             <input
               type="text"
               placeholder="Search by patient name, ID, or stage..."
               value={historySearch}
               onChange={(e) => setHistorySearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-border bg-background text-xs text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full pl-10 pr-4 h-11 rounded-xl border border-border bg-background text-sm font-medium text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-1 focus:ring-primary"
             />
           </div>
 
@@ -283,13 +298,13 @@ export default function ResultsPage() {
               { id: 'ALL', label: 'All Stages' },
               { id: 'CN', label: 'Normal (CN)' },
               { id: 'MCI', label: 'MCI Stage' },
-              { id: 'AD', label: 'Alzheimer\'s (AD)' },
+              { id: 'AD', label: "Alzheimer's (AD)" },
             ].map((tab) => (
               <button
                 key={tab.id}
                 type="button"
                 onClick={() => setHistoryStageFilter(tab.id)}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap min-h-[36px] ${
                   historyStageFilter === tab.id
                     ? 'bg-primary text-white shadow-xs'
                     : 'text-foreground-muted hover:text-foreground hover:bg-surface'
@@ -303,15 +318,15 @@ export default function ResultsPage() {
 
         {/* History Grid of Past Analyses */}
         {filteredHistory.length === 0 ? (
-          <div className="py-16 text-center text-xs text-foreground-muted space-y-3 border border-dashed border-border rounded-2xl bg-surface/50">
+          <div className="py-16 text-center text-xs text-foreground-muted space-y-3 border border-dashed border-border rounded-2xl bg-surface/50 font-sans">
             <FileText size={32} className="mx-auto text-foreground-muted opacity-40" />
-            <p className="font-medium text-foreground">No matching diagnostic analysis records found.</p>
-            <p className="text-[11px] text-foreground-muted max-w-sm mx-auto">
+            <p className="font-semibold text-foreground text-sm">No matching diagnostic analysis records found.</p>
+            <p className="text-xs text-foreground-muted max-w-sm mx-auto">
               Try adjusting your search criteria or stage filter, or create a new assessment.
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 font-sans">
             {filteredHistory.map((item) => {
               const itemStage = item.stage || 'Unknown Stage';
               const itemConf = Number(item.confidence || 0).toFixed(1);
@@ -330,25 +345,25 @@ export default function ResultsPage() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-11 h-11 rounded-xl bg-indigo-500/10 text-indigo-400 font-bold text-sm flex items-center justify-center shrink-0 border border-indigo-500/20">
+                      <div className="w-11 h-11 rounded-xl bg-indigo-500/10 text-indigo-400 font-bold text-base flex items-center justify-center shrink-0 border border-indigo-500/20">
                         {(item.patient_name || 'P')[0]}
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-sm font-bold text-foreground truncate group-hover:text-indigo-400 transition-colors">
+                          <p className="text-[15px] font-bold text-foreground truncate group-hover:text-indigo-400 transition-colors">
                             {item.patient_name}
                           </p>
-                          <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-background border border-border text-foreground-muted">
+                          <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-background border border-border text-foreground-muted">
                             {item.patient_id}
                           </span>
                         </div>
-                        <p className="text-[11px] text-foreground-muted mt-0.5 flex items-center gap-1.5">
-                          <Calendar size={11} /> {itemDate}
+                        <p className="text-xs text-foreground-muted mt-1 flex items-center gap-1.5 font-medium">
+                          <Calendar size={13} /> {itemDate}
                         </p>
                       </div>
                     </div>
 
-                    <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
+                    <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
                       {itemConf}% AI
                     </span>
                   </div>
@@ -399,87 +414,87 @@ export default function ResultsPage() {
   /* Evidence Summary Table Data */
   const evidenceSummaryRows = [
     {
-      modality: 'Volumetric MRI Neuroimaging',
-      finding: mri.hippocampal_volume ? `Hippocampal Volume: ${mri.hippocampal_volume} cm³` : (mri.summary || 'Volumetric structural scan processed'),
-      interpretation: mri.stage || 'Medial temporal lobe atrophy consistent with mild cognitive decline.',
+      modality: 'Brain MRI Scan',
+      finding: mri.hippocampal_volume ? `Hippocampus Size: ${mri.hippocampal_volume} cm³` : (mri.summary || 'Brain scan processed'),
+      interpretation: mri.stage || 'Slight brain shrinkage in memory areas, typical of mild memory changes.',
       status: mri.stage?.includes('Mild') || mri.stage?.includes('Moderate') ? 'High Risk' : 'Normal',
     },
     {
-      modality: 'Cognitive Evaluation (MMSE / MoCA)',
-      finding: cognitive.mmse ? `MMSE: ${cognitive.mmse}/30 (MoCA: ${cognitive.moca || 'N/A'})` : `Composite Score: ${cognitive.composite_score || 72}/100`,
-      interpretation: cognitive.mmse < 24 ? 'Mild cognitive impairment in memory recall and spatial orientation.' : 'Cognitive performance within expected age-adjusted bounds.',
+      modality: 'Memory & Thinking Tests (MMSE / MoCA)',
+      finding: cognitive.mmse ? `MMSE Score: ${cognitive.mmse}/30 (MoCA: ${cognitive.moca || 'N/A'})` : `Overall Score: ${cognitive.composite_score || 72}/100`,
+      interpretation: cognitive.mmse < 24 ? 'Mild difficulty with short-term memory recall and focus.' : 'Memory and thinking performance within normal range.',
       status: cognitive.mmse < 24 ? 'Mild Risk' : 'Normal',
     },
     {
-      modality: 'Speech & Acoustic Biomarkers',
-      finding: sentiment.cognitive_risk_score ? `Acoustic Risk Index: ${(sentiment.cognitive_risk_score * 100).toFixed(0)}/100` : 'Speech latency and articulation analyzed',
-      interpretation: sentiment.cognitive_risk_score > 0.4 ? 'Elevated pause duration and acoustic hesitations observed during narrative recall.' : 'Normal speech rate and prosody.',
+      modality: 'Speech & Voice Patterns',
+      finding: sentiment.cognitive_risk_score ? `Speech Risk Score: ${(sentiment.cognitive_risk_score * 100).toFixed(0)}/100` : 'Speech latency and pauses analyzed',
+      interpretation: sentiment.cognitive_risk_score > 0.4 ? 'Noticeable speech pauses and hesitation during talking.' : 'Normal speech speed and rhythm.',
       status: sentiment.cognitive_risk_score > 0.4 ? 'Mild Risk' : 'Normal',
     },
     {
-      modality: 'Clinical & Lancet Risk Profile',
-      finding: `Lancet Score: ${risk.lancet_score || risk.overall_risk_score || 42}/100`,
-      interpretation: risk.genetics?.apoe4 ? 'ApoE4 allele carrier; elevated genetic susceptibility.' : 'Moderate modifiable cardiovascular and lifestyle risk profile.',
+      modality: 'Health & Lifestyle Risk Factors',
+      finding: `Risk Score: ${risk.lancet_score || risk.overall_risk_score || 42}/100`,
+      interpretation: risk.genetics?.apoe4 ? 'ApoE4 genetic indicator present; higher risk factor.' : 'Moderate lifestyle and health risk factors detected.',
       status: risk.overall_risk_score > 60 ? 'High Risk' : 'Mild Risk',
     },
   ];
 
   /* Key Clinical Findings (Metric Progress Bars) */
   const keyClinicalFindings = [
-    { label: 'Volumetric Hippocampal Loss', value: mri.confidence ? Math.round(mri.confidence) : 78, category: 'Neuroimaging', color: 'bg-rose-500' },
-    { label: 'Short-Term Memory Recall Deficit', value: cognitive.composite_score ? Math.round(100 - cognitive.composite_score) : 45, category: 'Cognition', color: 'bg-amber-500' },
-    { label: 'Speech Pausing & Acoustic Hesitation', value: sentiment.cognitive_risk_score ? Math.round(sentiment.cognitive_risk_score * 100) : 38, category: 'Acoustics', color: 'bg-indigo-500' },
-    { label: 'Lancet Modifiable Risk Burden', value: risk.lancet_score || 52, category: 'Clinical Profile', color: 'bg-indigo-500' },
+    { label: 'Memory Center Shrinkage (Hippocampus)', value: mri.confidence ? Math.round(mri.confidence) : 78, category: 'Brain Scan', color: 'bg-rose-500' },
+    { label: 'Memory Recall Difficulty', value: cognitive.composite_score ? Math.round(100 - cognitive.composite_score) : 45, category: 'Memory Test', color: 'bg-amber-500' },
+    { label: 'Speech Pauses & Hesitations', value: sentiment.cognitive_risk_score ? Math.round(sentiment.cognitive_risk_score * 100) : 38, category: 'Voice Pattern', color: 'bg-indigo-500' },
+    { label: 'Lifestyle & Health Risk Level', value: risk.lancet_score || 52, category: 'Health Factors', color: 'bg-indigo-500' },
   ];
 
   /* Actionable Next Steps Checklist */
   const actionableNextSteps = [
-    { id: 'referral', text: 'Refer to Memory Clinic / Neuropsychology Specialist for formal diagnostic confirmation.', priority: 'High' },
-    { id: 'mri_repeat', text: 'Schedule follow-up 3D Volumetric MRI scan in 6 months to evaluate atrophy progression.', priority: 'High' },
-    { id: 'moca_full', text: 'Administer full MoCA battery and functional activities questionnaire (FAQ).', priority: 'Medium' },
-    { id: 'risk_mod', text: 'Review cardiovascular risk factors (blood pressure, lipid profile, physical activity).', priority: 'Medium' },
-    { id: 'psychoedu', text: 'Initiate patient and family psychoeducation regarding cognitive health and safety.', priority: 'Routine' },
+    { id: 'referral', text: 'Refer patient to Memory Specialist for detailed evaluation.', priority: 'High' },
+    { id: 'mri_repeat', text: 'Schedule a follow-up brain MRI scan in 6 months to monitor changes.', priority: 'High' },
+    { id: 'moca_full', text: 'Complete a full memory test and daily activity questionnaire.', priority: 'Medium' },
+    { id: 'risk_mod', text: 'Review health factors (blood pressure, physical activity, sleep).', priority: 'Medium' },
+    { id: 'psychoedu', text: 'Provide brain health and safety guidance for patient and family.', priority: 'Routine' },
   ];
 
   const TABS = [
-    { id: 'overview', label: 'Clinical Report Summary', icon: FileCheck },
-    { id: 'mri', label: 'Neuroimaging (MRI)', icon: Brain },
-    { id: 'cognitive', label: 'Cognition & Speech', icon: MessageSquare },
-    { id: 'risk', label: 'Risk Profile', icon: HeartPulse },
-    { id: 'findings', label: 'Key Clinical Findings', icon: Activity },
+    { id: 'overview', label: 'Report Summary', icon: FileCheck },
+    { id: 'mri', label: 'Brain MRI Scan', icon: Brain },
+    { id: 'cognitive', label: 'Memory & Speech', icon: MessageSquare },
+    { id: 'risk', label: 'Health Risk Factors', icon: HeartPulse },
+    { id: 'findings', label: 'Key Observations', icon: Activity },
   ];
 
   return (
-    <div className="max-w-6xl mx-auto space-y-5 pb-12 font-sans">
+    <div className="max-w-6xl mx-auto space-y-6 pb-14 font-sans">
 
       {/* ── Patient Bar & Top Header Actions ─────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border">
-        <div className="flex items-center gap-3 min-w-0">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border">
+        <div className="flex items-center gap-3.5 min-w-0">
           <Button
             variant="outline"
-            size="sm"
+            size="md"
             icon={ArrowLeft}
             onClick={() => setViewMode('list')}
-            className="shrink-0 font-semibold text-foreground hover:bg-surface-hover"
+            className="shrink-0 font-semibold text-foreground hover:bg-surface-hover min-h-[40px] text-sm"
           >
             All Reports
           </Button>
 
-          <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold text-sm shrink-0">
-            <User size={18} />
+          <div className="w-11 h-11 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold text-base shrink-0">
+            <User size={20} />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap min-w-0">
-              <h2 className="text-base font-bold text-foreground truncate max-w-[320px]" title={patient.name || 'Patient Assessment Dossier'}>
+              <h2 className="text-xl font-bold text-foreground truncate max-w-[360px]" title={patient.name || 'Patient Assessment Dossier'}>
                 {patient.name || 'Patient Assessment Dossier'}
               </h2>
               {patient.patient_id && (
-                <span className="font-mono text-xs px-2 py-0.5 rounded border bg-surface border-border text-foreground-muted shrink-0">
+                <span className="font-mono text-xs font-bold px-2 py-0.5 rounded border bg-surface border-border text-foreground-muted shrink-0">
                   {patient.patient_id}
                 </span>
               )}
             </div>
-            <p className="text-xs text-foreground-muted mt-0.5 truncate">
+            <p className="text-sm font-medium text-foreground-muted mt-0.5 truncate">
               {patient.age ? `${patient.age} yrs` : 'Age N/A'} {patient.sex ? `· ${patient.sex}` : ''} • Evaluated on {analysisDate}
             </p>
           </div>
@@ -488,32 +503,80 @@ export default function ResultsPage() {
         <div className="flex items-center gap-2 flex-wrap">
           <Button
             variant="outline"
-            size="sm"
+            size="md"
             icon={Clock}
             onClick={() => setHistoryModalOpen(true)}
-            className="bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/30 hover:bg-indigo-500/20"
+            className="bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/30 hover:bg-indigo-500/20 min-h-[40px] text-sm font-semibold"
           >
             Past Reports ({pastAnalyses.length})
           </Button>
 
-          <button
-            onClick={handlePrint}
-            className="p-2 rounded-lg border bg-surface border-border text-foreground-muted hover:text-foreground transition-colors"
-            title="Print Clinical Dossier (Ctrl+P)"
-            aria-label="Print Clinical Dossier"
-          >
-            <Printer size={14} />
-          </button>
+          {/* Consolidated Download / Export Dropdown */}
+          <div className="relative" ref={downloadRef}>
+            <Button
+              variant="outline"
+              size="md"
+              icon={Download}
+              loading={downloading}
+              onClick={() => setDownloadMenuOpen(o => !o)}
+              className="min-h-[40px] text-sm font-semibold gap-1.5"
+            >
+              <span>Download / Export</span>
+              <ChevronDown size={14} className="text-foreground-muted" />
+            </Button>
 
-          <Button variant="ghost" size="sm" icon={Download} onClick={handleExportCsv}>
-            Export CSV
-          </Button>
+            <AnimatePresence>
+              {downloadMenuOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 6 }}
+                  transition={{ duration: 0.12 }}
+                  className="absolute right-0 mt-2 w-52 bg-surface border border-border rounded-xl shadow-lg p-1.5 z-50 text-xs font-sans space-y-0.5"
+                >
+                  <button
+                    type="button"
+                    onClick={() => { setDownloadMenuOpen(false); handleDownloadPdf(); }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-foreground hover:bg-surface-hover font-semibold transition-colors text-left"
+                  >
+                    <FileText size={15} className="text-indigo-500 shrink-0" />
+                    <div>
+                      <p className="font-bold">Download PDF Report</p>
+                      <p className="text-[10px] text-foreground-muted font-normal">Full clinical document</p>
+                    </div>
+                  </button>
 
-          <Button variant="outline" size="sm" icon={Download} loading={downloading} onClick={handleDownloadPdf}>
-            Export PDF Report
-          </Button>
+                  <button
+                    type="button"
+                    onClick={() => { setDownloadMenuOpen(false); handleExportCsv(); }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-foreground hover:bg-surface-hover font-semibold transition-colors text-left"
+                  >
+                    <Download size={15} className="text-emerald-500 shrink-0" />
+                    <div>
+                      <p className="font-bold">Export CSV Dataset</p>
+                      <p className="text-[10px] text-foreground-muted font-normal">Raw diagnostic metrics</p>
+                    </div>
+                  </button>
 
-          <Button variant="primary" size="sm" icon={Plus} onClick={() => navigate('/analysis')}>
+                  <div className="my-1 border-t border-border" />
+
+                  <button
+                    type="button"
+                    onClick={() => { setDownloadMenuOpen(false); handlePrint(); }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-foreground hover:bg-surface-hover font-semibold transition-colors text-left"
+                  >
+                    <Printer size={15} className="text-foreground-muted shrink-0" />
+                    <div>
+                      <p className="font-bold">Print Dossier</p>
+                      <p className="text-[10px] text-foreground-muted font-normal">Ctrl+P print view</p>
+                    </div>
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          <Button variant="primary" size="md" icon={Plus} onClick={() => navigate('/analysis')} className="min-h-[40px] text-sm font-semibold">
             New Assessment
           </Button>
         </div>
@@ -522,34 +585,34 @@ export default function ResultsPage() {
       {/* ── FIRST SCREEN: Primary Diagnostic Verdict Banner (3-Second Rule) ── */}
       <section 
         aria-label="Primary Diagnostic Verdict"
-        className="p-5 rounded-xl border bg-surface border-border shadow-xs space-y-3"
+        className="p-6 rounded-2xl border bg-surface border-border shadow-xs space-y-4"
       >
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-4">
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-foreground-muted bg-background px-2 py-0.5 rounded border border-border">
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-foreground-muted bg-background px-2.5 py-0.5 rounded border border-border">
                 Diagnostic Conclusion
               </span>
               <Badge variant={stageConf.badgeVariant}>
                 {stageConf.risk || riskLevel}
               </Badge>
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
               {stage}
             </h1>
           </div>
 
-          <div className="flex items-center gap-4 bg-background/50 p-3 rounded-lg border border-border shrink-0">
-            <div className="text-center px-2">
-              <span className="text-[10px] font-semibold uppercase text-foreground-muted block">AI Confidence</span>
-              <span className="text-xl font-bold font-mono text-indigo-400">
+          <div className="flex items-center gap-5 bg-background/50 p-3.5 rounded-xl border border-border shrink-0">
+            <div className="text-center px-3">
+              <span className="text-xs font-bold uppercase text-foreground-muted block">AI Confidence</span>
+              <span className="text-2xl font-black font-mono text-indigo-400">
                 {(Number(conf) || 0).toFixed(1)}%
               </span>
             </div>
-            <div className="h-8 w-px bg-border" />
-            <div className="text-center px-2">
-              <span className="text-[10px] font-semibold uppercase text-foreground-muted block">Risk Index</span>
-              <span className={`text-xl font-bold font-mono ${stageConf.risk === 'High Risk' ? 'text-rose-400' : 'text-emerald-400'}`}>
+            <div className="h-10 w-px bg-border" />
+            <div className="text-center px-3">
+              <span className="text-xs font-bold uppercase text-foreground-muted block">Risk Index</span>
+              <span className={`text-2xl font-black font-mono ${stageConf.risk === 'High Risk' ? 'text-rose-400' : 'text-emerald-400'}`}>
                 {stageConf.score}/100
               </span>
             </div>
@@ -557,23 +620,23 @@ export default function ResultsPage() {
         </div>
 
         {/* Clinical Executive Summary (Plain English) */}
-        <div>
-          <h3 className="text-[11px] font-bold text-foreground-muted uppercase tracking-wider mb-1">
+        <div className="pt-2">
+          <h3 className="text-sm font-extrabold text-foreground uppercase tracking-wider mb-2">
             Clinical Executive Summary
           </h3>
-          <p className="text-xs text-foreground leading-relaxed">
+          <p className="text-base font-semibold text-foreground leading-relaxed">
             {fusion.summary || `Multimodal diagnostic analysis established ${stage} with ${(Number(conf) || 0).toFixed(1)}% AI confidence. Findings are driven by volumetric hippocampal structural metrics, cognitive evaluation scores, and acoustic speech biomarkers. Correlation with clinical history is recommended.`}
           </p>
         </div>
       </section>
 
       {/* ── Main Tabbed Diagnostic Workstation ────────────────────────────── */}
-      <div className="bg-surface rounded-xl border border-border overflow-hidden shadow-xs">
-        <div className="px-4 pt-2 border-b border-border bg-background/50">
+      <div className="bg-surface rounded-2xl border border-border overflow-hidden shadow-xs">
+        <div className="px-5 pt-3 border-b border-border bg-background/50">
           <Tabs tabs={TABS} activeTab={activeTab} onChange={setActiveTab} variant="underline" />
         </div>
 
-        <div className="p-5">
+        <div className="p-6">
           <ErrorBoundary title="Diagnostic Section Error">
             <Suspense fallback={<PanelLoader />}>
 
@@ -583,36 +646,36 @@ export default function ResultsPage() {
 
                   {/* 1. Evidence Summary Table */}
                   <section aria-label="Evidence Summary">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-extrabold text-foreground uppercase tracking-wider">
                         Evidence Summary Table
                       </h3>
-                      <span className="text-[10px] text-foreground-muted">Multimodal Fusion Findings</span>
+                      <span className="text-sm font-semibold text-foreground-muted">Multimodal Fusion Findings</span>
                     </div>
 
-                    <div className="overflow-x-auto rounded-lg border border-border">
-                      <table className="w-full text-left text-xs border-collapse">
-                        <thead className="bg-background/50 border-b border-border text-foreground-muted text-[11px] font-semibold uppercase tracking-wider">
+                    <div className="overflow-x-auto rounded-xl border border-border">
+                      <table className="w-full text-left text-[15px] border-collapse select-text">
+                        <thead className="bg-background/50 border-b border-border text-foreground-muted text-[15px] font-bold uppercase tracking-wider">
                           <tr>
-                            <th scope="col" className="py-2.5 px-4 w-1/4">Diagnostic Modality</th>
-                            <th scope="col" className="py-2.5 px-4 w-1/3">Clinical Finding / Metric</th>
-                            <th scope="col" className="py-2.5 px-4">Interpretation</th>
-                            <th scope="col" className="py-2.5 px-4 w-28 text-right">Status</th>
+                            <th scope="col" className="py-3.5 px-4 w-1/4">Diagnostic Modality</th>
+                            <th scope="col" className="py-3.5 px-4 w-1/3">Clinical Finding / Metric</th>
+                            <th scope="col" className="py-3.5 px-4">Interpretation</th>
+                            <th scope="col" className="py-3.5 px-4 w-32 text-right">Status</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border font-medium">
                           {evidenceSummaryRows.map((row, idx) => (
                             <tr key={idx} className="hover:bg-surface-hover transition-colors">
-                              <td className="py-2.5 px-4 font-semibold text-foreground">
+                              <td className="py-3.5 px-4 font-bold text-foreground text-[15px]">
                                 {row.modality}
                               </td>
-                              <td className="py-2.5 px-4 font-mono text-[11px] text-foreground">
+                              <td className="py-3.5 px-4 font-mono text-[15px] text-foreground font-semibold">
                                 {row.finding}
                               </td>
-                              <td className="py-2.5 px-4 text-foreground-muted text-[11px]">
+                              <td className="py-3.5 px-4 text-foreground-muted text-[15px] font-medium leading-relaxed">
                                 {row.interpretation}
                               </td>
-                              <td className="py-2.5 px-4 text-right">
+                              <td className="py-3.5 px-4 text-right">
                                 <Badge variant={row.status === 'High Risk' ? 'danger' : row.status === 'Mild Risk' ? 'warning' : 'success'}>
                                   {row.status}
                                 </Badge>
@@ -626,20 +689,20 @@ export default function ResultsPage() {
 
                   {/* 2. Key Clinical Findings (Metric Progress Bars) */}
                   <section aria-label="Key Clinical Findings">
-                    <h3 className="text-xs font-bold text-foreground uppercase tracking-wider mb-3">
+                    <h3 className="text-sm font-extrabold text-foreground uppercase tracking-wider mb-3">
                       Key Clinical Findings
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {keyClinicalFindings.map((item, idx) => (
-                        <div key={idx} className="p-3.5 rounded-lg border border-border bg-background/50 space-y-1.5">
-                          <div className="flex items-center justify-between text-xs">
+                        <div key={idx} className="p-4 rounded-xl border border-border bg-background/50 space-y-2">
+                          <div className="flex items-center justify-between text-sm">
                             <span className="font-semibold text-foreground">{item.label}</span>
                             <span className="font-mono font-bold text-foreground">{item.value}% Impact</span>
                           </div>
-                          <div className="w-full bg-border rounded-full h-1.5 overflow-hidden">
+                          <div className="w-full bg-border rounded-full h-2 overflow-hidden">
                             <div className={`h-full ${item.color} rounded-full`} style={{ width: `${item.value}%` }} />
                           </div>
-                          <span className="text-[10px] text-foreground-muted block">{item.category} Vector</span>
+                          <span className="text-xs text-foreground-muted block font-medium">{item.category} Vector</span>
                         </div>
                       ))}
                     </div>
@@ -647,7 +710,7 @@ export default function ResultsPage() {
 
                   {/* 3. Actionable Next Steps Checklist */}
                   <section aria-label="Actionable Recommendations">
-                    <h3 className="text-xs font-bold text-foreground uppercase tracking-wider mb-3">
+                    <h3 className="text-sm font-extrabold text-foreground uppercase tracking-wider mb-3">
                       Actionable Next Steps Checklist
                     </h3>
                     <div className="space-y-2">
@@ -657,7 +720,7 @@ export default function ResultsPage() {
                           <div
                             key={step.id}
                             onClick={() => toggleAction(step.id)}
-                            className={`flex items-start gap-3 p-3 rounded-lg border transition-all cursor-pointer select-none ${
+                            className={`flex items-start gap-3 p-3.5 rounded-xl border transition-all cursor-pointer select-none ${
                               isDone
                                 ? 'bg-emerald-500/5 border-emerald-500/30 text-foreground-muted'
                                 : 'bg-background/50 border-border text-foreground hover:border-indigo-500/40'
@@ -668,14 +731,14 @@ export default function ResultsPage() {
                               className="mt-0.5 text-indigo-400 hover:text-indigo-300 focus:outline-none"
                               aria-label={isDone ? `Uncheck ${step.text}` : `Check ${step.text}`}
                             >
-                              {isDone ? <CheckSquare size={16} className="text-emerald-400" /> : <Square size={16} />}
+                              {isDone ? <CheckSquare size={18} className="text-emerald-400" /> : <Square size={18} />}
                             </button>
-                            <div className="flex-1 text-xs leading-relaxed">
+                            <div className="flex-1 text-sm leading-relaxed">
                               <span className={isDone ? 'line-through text-foreground-muted' : 'font-medium'}>
                                 {step.text}
                               </span>
                             </div>
-                            <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded ${
+                            <span className={`text-xs font-mono font-bold px-2.5 py-1 rounded-md ${
                               step.priority === 'High' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 'bg-surface text-foreground-muted border border-border'
                             }`}>
                               {step.priority}

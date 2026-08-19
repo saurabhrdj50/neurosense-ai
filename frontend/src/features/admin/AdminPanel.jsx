@@ -1,12 +1,12 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react'
-import { UserCog, Users, Trash2, Shield, AlertTriangle, FileText, Activity, Eye, Download, LayoutGrid, List, Clock } from 'lucide-react'
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react'
+import { UserCog, Users, Trash2, Shield, AlertTriangle, FileText, Activity, Eye, Download, LayoutGrid, List, Clock, ChevronDown } from 'lucide-react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import Tabs from '../../components/ui/Tabs'
 import Badge from '../../components/ui/Badge'
-import EnterpriseTable from '../../components/ui/EnterpriseTable'
+import DataTable from '../../components/ui/DataTable'
 import { SectionSkeleton } from '../../components/ui/Skeleton'
-import SpotlightCard from '../../components/ui/SpotlightCard'
+import Card from '../../components/ui/Card'
 import { adminApi, patientsApi } from '../../services'
 
 export default function AdminPanel() {
@@ -22,6 +22,18 @@ export default function AdminPanel() {
   const [selectedDoctorId, setSelectedDoctorId] = useState(null)
   const [selectedDoctorName, setSelectedDoctorName] = useState('')
   const [viewMode, setViewMode] = useState('grid')
+  const [gridDownloadOpen, setGridDownloadOpen] = useState(false)
+  const gridDownloadRef = useRef(null)
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (gridDownloadRef.current && !gridDownloadRef.current.contains(event.target)) {
+        setGridDownloadOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   useEffect(() => {
     if (location.state?.doctorFilter) {
@@ -104,23 +116,15 @@ export default function AdminPanel() {
     return patients.filter(p => p.created_by === selectedDoctorId)
   }, [patients, selectedDoctorId])
 
-  const patientTableActions = useMemo(() => (
-    <div className="flex items-center gap-2">
-      <button
-        onClick={() => patientsApi.export()}
-        className="flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-semibold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-705 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-      >
-        <Download size={13} aria-hidden="true" />
-        Export CSV
-      </button>
-      <button
-        onClick={() => patientsApi.exportReports ? patientsApi.exportReports() : window.open(`${API_URL}/api/patients/export/reports`, '_blank')}
-        className="flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-semibold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-750 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-      >
-        <FileText size={13} aria-hidden="true" />
-        Download ZIP
-      </button>
-    </div>
+  const patientExtraExportOptions = useMemo(() => (
+    <button
+      type="button"
+      onClick={() => patientsApi.exportReports ? patientsApi.exportReports() : window.open('/api/patients/export/reports', '_blank')}
+      className="w-full flex items-center gap-2.5 px-3 py-2 text-foreground hover:bg-hover rounded-lg transition-colors font-medium text-left"
+    >
+      <FileText size={14} className="text-amber-500 shrink-0" />
+      <span>Download All Reports (.zip)</span>
+    </button>
   ), [])
 
   const TABS = [
@@ -137,7 +141,7 @@ export default function AdminPanel() {
       accessor: 'id',
       sortable: true,
       width: 100,
-      render: (val) => <span className="font-mono text-xs text-slate-500">{val}</span>
+      render: (val) => <span className="font-mono text-xs text-foreground-subtle">{val}</span>
     },
     {
       id: 'avatar',
@@ -146,7 +150,7 @@ export default function AdminPanel() {
       width: 60,
       render: (_, row) => (
         <div
-          className="w-7 h-7 rounded bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center text-xs font-semibold shrink-0"
+          className="w-7 h-7 rounded bg-surface-secondary border border-border text-foreground-muted flex items-center justify-center text-xs font-semibold shrink-0"
           aria-hidden="true"
         >
           {(row.full_name || row.username || '?')[0].toUpperCase()}
@@ -160,7 +164,7 @@ export default function AdminPanel() {
       sortable: true,
       width: 180,
       render: (val, row) => (
-        <span className="font-semibold text-slate-900 dark:text-slate-100 text-xs">
+        <span className="font-semibold text-foreground text-xs">
           {val || row.username}
         </span>
       )
@@ -191,7 +195,7 @@ export default function AdminPanel() {
       sortable: true,
       width: 140,
       render: (val) => (
-        <span className="font-semibold text-slate-700 dark:text-slate-400 text-xs">
+        <span className="font-semibold text-foreground-muted text-xs">
           {val ?? 0} patients
         </span>
       )
@@ -210,14 +214,14 @@ export default function AdminPanel() {
               setActiveTab('patients')
             }}
             title="View patients managed by this doctor"
-            className="p-1.5 rounded-md text-blue-600 hover:text-blue-800 bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/50 hover:bg-blue-100 dark:hover:bg-blue-950/50 transition-colors"
+            className="p-1.5 rounded-md text-primary bg-primary-subtle border border-primary/20 hover:bg-primary/20 transition-colors"
           >
             <Users size={13} aria-hidden="true" />
           </button>
           <button
             onClick={() => handleDeleteDoctor(row.id)}
             aria-label={`Delete ${row.full_name || row.username}`}
-            className="p-1.5 rounded-md text-red-500 hover:text-red-700 bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/50 hover:bg-red-100 dark:hover:bg-red-950/50 transition-colors"
+            className="p-1.5 rounded-md text-red-500 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 hover:bg-red-100 dark:hover:bg-red-950/50 transition-colors"
           >
             <Trash2 size={13} aria-hidden="true" />
           </button>
@@ -233,7 +237,7 @@ export default function AdminPanel() {
       accessor: 'patient_id',
       sortable: true,
       width: 120,
-      render: (val) => <span className="font-mono text-xs text-blue-600 dark:text-blue-400 font-semibold">{val}</span>
+      render: (val) => <span className="font-mono text-xs text-primary font-semibold">{val}</span>
     },
     {
       id: 'name',
@@ -244,12 +248,12 @@ export default function AdminPanel() {
       render: (val) => (
         <div className="flex items-center gap-2">
           <div
-            className="w-7 h-7 rounded bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-650 dark:text-slate-350 flex items-center justify-center text-xs font-bold shrink-0"
+            className="w-7 h-7 rounded bg-surface-secondary border border-border text-foreground-muted flex items-center justify-center text-xs font-bold shrink-0"
             aria-hidden="true"
           >
             {(val || '?')[0].toUpperCase()}
           </div>
-          <span className="font-semibold text-slate-900 dark:text-slate-100 text-xs">{val}</span>
+          <span className="font-semibold text-foreground text-xs">{val}</span>
         </div>
       )
     },
@@ -276,7 +280,7 @@ export default function AdminPanel() {
       sortable: true,
       width: 140,
       render: (val, row) => (
-        <span className="text-xs text-slate-600 dark:text-slate-400">
+        <span className="text-xs text-foreground-muted">
           {val ? `Dr. ${val}` : row.created_by ? `ID ${row.created_by}` : '—'}
         </span>
       )
@@ -290,7 +294,7 @@ export default function AdminPanel() {
       render: (val, row) => {
         const d = val || row.created_at
         return d ? (
-          <span className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
+          <span className="flex items-center gap-1 text-xs text-foreground-subtle">
             <Clock size={10} className="shrink-0" />
             {new Date(d).toLocaleDateString()}
           </span>
@@ -307,21 +311,21 @@ export default function AdminPanel() {
           <button
             onClick={() => navigate(`/history/${row.patient_id}`)}
             title="View Patient History"
-            className="p-1.5 rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-200 dark:hover:border-blue-800 transition-colors"
+            className="p-1.5 rounded-md bg-surface-secondary border border-border text-foreground-muted hover:text-primary hover:border-primary/40 transition-colors"
           >
             <Eye size={13} aria-hidden="true" />
           </button>
           <button
             onClick={() => patientsApi.export(row.patient_id)}
             title="Export CSV"
-            className="p-1.5 rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 hover:border-emerald-200 dark:hover:border-emerald-800 transition-colors"
+            className="p-1.5 rounded-md bg-surface-secondary border border-border text-foreground-muted hover:text-emerald-500 hover:border-emerald-500/40 transition-colors"
           >
             <Download size={13} aria-hidden="true" />
           </button>
           <button
             onClick={() => handleDeletePatient(row.patient_id)}
             aria-label={`Delete ${row.name}`}
-            className="p-1.5 rounded-md text-red-500 hover:text-red-700 bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/50 hover:bg-red-100 dark:hover:bg-red-950/50 transition-colors"
+            className="p-1.5 rounded-md text-red-500 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 hover:bg-red-100 dark:hover:bg-red-950/50 transition-colors"
           >
             <Trash2 size={13} aria-hidden="true" />
           </button>
@@ -336,7 +340,7 @@ export default function AdminPanel() {
       label: 'Session ID',
       sortable: true,
       width: 80,
-      render: (_, row) => <span className="font-mono text-xs text-slate-500">#{row.id || row.session_id}</span>
+      render: (_, row) => <span className="font-mono text-xs text-foreground-subtle">#{row.id || row.session_id}</span>
     },
     {
       id: 'patient_name',
@@ -344,7 +348,7 @@ export default function AdminPanel() {
       sortable: true,
       width: 160,
       render: (_, row) => (
-        <span className="font-semibold text-slate-900 dark:text-slate-100 text-xs">
+        <span className="font-semibold text-foreground text-xs">
           {row.patient_name || row.patient_info?.name || 'Unknown'}
         </span>
       )
@@ -356,7 +360,7 @@ export default function AdminPanel() {
       width: 110,
       render: (_, row) => {
         const pid = row.patient_id || row.patient_info?.patient_id || 'N/A'
-        return <span className="font-mono text-xs text-blue-600 dark:text-blue-400 font-semibold">{pid}</span>
+        return <span className="font-mono text-xs text-primary font-semibold">{pid}</span>
       }
     },
     {
@@ -380,7 +384,7 @@ export default function AdminPanel() {
       width: 110,
       render: (_, row) => {
         const conf = Number(row.confidence || row.final_confidence || row.mri_confidence || 0)
-        return <span className="font-semibold text-xs text-slate-700 dark:text-slate-400">{conf.toFixed(1)}%</span>
+        return <span className="font-semibold text-xs text-foreground-muted">{conf.toFixed(1)}%</span>
       }
     },
     {
@@ -392,7 +396,7 @@ export default function AdminPanel() {
       render: (val, row) => {
         const d = val || row.timestamp
         return d ? (
-          <span className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
+          <span className="flex items-center gap-1 text-xs text-foreground-subtle">
             <Clock size={10} className="shrink-0" />
             {new Date(d).toLocaleDateString()}
           </span>
@@ -409,14 +413,14 @@ export default function AdminPanel() {
           <button
             onClick={() => navigate(`/history/${row.patient_id || row.patient_info?.patient_id}`)}
             title="View Patient History"
-            className="p-1.5 rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+            className="p-1.5 rounded-md bg-surface-secondary border border-border text-foreground-muted hover:text-primary transition-colors"
           >
             <Eye size={13} aria-hidden="true" />
           </button>
           <button
             onClick={() => handleDeleteSession(row.id || row.session_id)}
             title="Delete Session"
-            className="p-1.5 rounded-md text-red-500 hover:text-red-700 bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/50 hover:bg-red-100 dark:hover:bg-red-950/50 transition-colors"
+            className="p-1.5 rounded-md text-red-500 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 hover:bg-red-100 dark:hover:bg-red-950/50 transition-colors"
           >
             <Trash2 size={13} aria-hidden="true" />
           </button>
@@ -433,7 +437,7 @@ export default function AdminPanel() {
       sortable: true,
       width: 140,
       render: (val) => val ? (
-        <span className="flex items-center gap-1 text-xs text-slate-500 font-mono">
+        <span className="flex items-center gap-1 text-xs text-foreground-subtle font-mono">
           <Clock size={10} className="shrink-0" />
           {new Date(val).toLocaleString()}
         </span>
@@ -445,7 +449,7 @@ export default function AdminPanel() {
       sortable: true,
       width: 130,
       render: (_, row) => (
-        <span className="font-bold text-xs text-slate-800 dark:text-slate-200">
+        <span className="font-bold text-xs text-foreground">
           {row.actor_username || `ID ${row.actor_id}` || 'System'}
         </span>
       )
@@ -465,8 +469,8 @@ export default function AdminPanel() {
       width: 200,
       render: (_, row) => (
         <div className="text-xs">
-          <span className="font-semibold text-slate-900 dark:text-slate-100">{row.resource_name || row.resource_id}</span>
-          <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono block">Type: {row.resource_type} · ID: {row.resource_id}</span>
+          <span className="font-semibold text-foreground">{row.resource_name || row.resource_id}</span>
+          <span className="text-[10px] text-foreground-subtle font-mono block">Type: {row.resource_type} · ID: {row.resource_id}</span>
         </div>
       )
     }
@@ -477,26 +481,26 @@ export default function AdminPanel() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-4">
+    <div className="max-w-6xl mx-auto space-y-5 font-sans">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded-md bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900/60 text-red-600 dark:text-red-400 flex items-center justify-center">
-          <Shield size={16} aria-hidden="true" />
+      <div className="flex items-center gap-3 pb-2 border-b border-border">
+        <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 text-red-600 dark:text-red-400 flex items-center justify-center font-bold">
+          <Shield size={20} aria-hidden="true" />
         </div>
         <div>
-          <h1 className="text-base font-bold text-slate-900 dark:text-slate-100 tracking-tight">Admin Panel & Access Governance</h1>
-          <p className="text-xs text-slate-500 mt-0.5">Manage clinician accounts, patient rosters & audit logs</p>
+          <h1 className="text-xl font-extrabold text-foreground tracking-tight">Admin Panel & Access Governance</h1>
+          <p className="text-xs font-medium text-foreground-muted mt-0.5">Manage clinician accounts, patient rosters & audit logs</p>
         </div>
       </div>
 
       {/* System health bar */}
       {health && (
-        <div className={`flex items-center gap-2 px-3 py-2 rounded-md border text-xs ${
+        <div className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl border text-xs font-medium ${
           health.status === 'healthy'
             ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/50 text-emerald-700 dark:text-emerald-400'
             : 'bg-amber-50  dark:bg-amber-950/20  border-amber-200  dark:border-amber-800/50  text-amber-700  dark:text-amber-400'
         }`}>
-          <Activity size={13} aria-hidden="true" />
+          <Activity size={15} aria-hidden="true" />
           <span>
             System: <strong>{health.status}</strong>
             {' '}· MRI Model: {health.models?.['MRI Classification Model']?.loaded ? 'Loaded' : 'Offline'}
@@ -510,32 +514,32 @@ export default function AdminPanel() {
         <Tabs tabs={TABS} activeTab={activeTab} onChange={setActiveTab} variant="segment" />
         
         {(activeTab === 'doctors' || activeTab === 'patients') && (
-          <div className="flex items-center self-end sm:self-auto gap-1 p-1 rounded-lg bg-surface-secondary border border-border">
+          <div className="flex items-center self-end sm:self-auto gap-1 p-1 rounded-xl bg-surface-secondary border border-border">
             <button
               onClick={() => setViewMode('grid')}
               type="button"
-              className={`p-1.5 rounded-md transition-all ${
+              className={`p-2 rounded-lg transition-all ${
                 viewMode === 'grid'
-                  ? 'bg-surface text-primary font-semibold shadow-xs'
+                  ? 'bg-surface text-primary font-bold shadow-xs'
                   : 'text-foreground-subtle hover:text-foreground'
               }`}
               title="Grid Cards View"
               aria-label="Switch to Grid Cards View"
             >
-              <LayoutGrid size={14} />
+              <LayoutGrid size={16} />
             </button>
             <button
               onClick={() => setViewMode('list')}
               type="button"
-              className={`p-1.5 rounded-md transition-all ${
+              className={`p-2 rounded-lg transition-all ${
                 viewMode === 'list'
-                  ? 'bg-surface text-primary font-semibold shadow-xs'
+                  ? 'bg-surface text-primary font-bold shadow-xs'
                   : 'text-foreground-subtle hover:text-foreground'
               }`}
               title="Compact List View"
               aria-label="Switch to Compact List View"
             >
-              <List size={14} />
+              <List size={16} />
             </button>
           </div>
         )}
@@ -549,23 +553,23 @@ export default function AdminPanel() {
               {doctors.map(doc => {
                 const initials = (doc.full_name || doc.username || '?')[0].toUpperCase();
                 return (
-                  <SpotlightCard
+                  <Card
                     key={doc.id}
-                    className="relative group flex flex-col justify-between p-5 transition-all duration-200"
+                    className="relative group flex flex-col justify-between p-5 transition-all duration-200 rounded-2xl"
                   >
-                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-t-xl" />
+                    <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-primary to-indigo-600 rounded-t-2xl" />
                     
                     <div>
                       <div className="flex items-start justify-between gap-3 mt-1.5">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-slate-50 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center text-sm font-bold shadow-inner">
+                          <div className="w-11 h-11 rounded-xl bg-surface-secondary border border-border text-foreground flex items-center justify-center text-base font-bold shadow-inner">
                             {initials}
                           </div>
                           <div>
-                            <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm group-hover:text-blue-600 dark:group-hover:text-blue-450 transition-colors">
+                            <h3 className="font-bold text-foreground text-sm group-hover:text-primary transition-colors">
                               Dr. {doc.full_name || doc.username}
                             </h3>
-                            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono block mt-0.5">{doc.email}</span>
+                            <span className="text-xs text-foreground-subtle font-mono block mt-0.5">{doc.email}</span>
                           </div>
                         </div>
                         <Badge variant={doc.role === 'Doctor' ? 'info' : 'neutral'}>
@@ -573,41 +577,41 @@ export default function AdminPanel() {
                         </Badge>
                       </div>
 
-                      <div className="mt-4 pt-3.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs">
-                        <span className="text-slate-400 dark:text-slate-550 font-medium">ID: <span className="font-mono text-slate-500 dark:text-slate-400">{doc.id}</span></span>
-                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100/50 dark:border-blue-900/40 text-blue-700 dark:text-blue-400 font-semibold text-[11px]">
-                          <Users size={12} />
+                      <div className="mt-4 pt-3.5 border-t border-border flex items-center justify-between text-xs font-medium">
+                        <span className="text-foreground-subtle">ID: <span className="font-mono text-foreground font-bold">{doc.id}</span></span>
+                        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary-subtle border border-primary/20 text-primary font-bold text-xs">
+                          <Users size={13} />
                           <span>{doc.patient_count ?? 0} Patients</span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="mt-5 pt-3.5 border-t border-slate-105/90 dark:border-slate-800/80 flex items-center justify-end gap-2" onClick={e => e.stopPropagation()}>
+                    <div className="mt-5 pt-3.5 border-t border-border flex items-center justify-end gap-2" onClick={e => e.stopPropagation()}>
                       <button
                         onClick={() => {
                           setSelectedDoctorId(doc.id)
                           setSelectedDoctorName(doc.full_name || doc.username)
                           setActiveTab('patients')
                         }}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-950/60 border border-blue-100/60 dark:border-blue-900/50 text-blue-700 dark:text-blue-400 transition-colors"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-primary-subtle hover:bg-primary/20 border border-primary/20 text-primary transition-colors min-h-[36px]"
                       >
-                        <Users size={12} />
+                        <Users size={14} />
                         View Patients
                       </button>
                       <button
                         onClick={() => handleDeleteDoctor(doc.id)}
-                        className="p-1.5 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 border border-transparent hover:border-red-100 dark:hover:border-red-900/30 transition-colors"
+                        className="p-2 rounded-xl text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 border border-transparent hover:border-red-200 dark:hover:border-red-900/30 transition-colors"
                         title="Delete Doctor"
                       >
-                        <Trash2 size={13} />
+                        <Trash2 size={15} />
                       </button>
                     </div>
-                  </SpotlightCard>
+                  </Card>
                 )
               })}
             </div>
           ) : (
-            <EnterpriseTable
+            <DataTable
               tableId="admin_doctors"
               columns={doctorColumns}
               data={doctors}
@@ -619,9 +623,9 @@ export default function AdminPanel() {
         {activeTab === 'patients' && (
           <div className="space-y-3">
             {selectedDoctorId && (
-              <div className="flex items-center justify-between px-3.5 py-2 bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/50 rounded-md text-xs text-blue-850 dark:text-blue-300">
-                <span className="font-medium">
-                  Filtering patients managed by: <strong className="font-bold text-blue-900 dark:text-blue-100">Dr. {selectedDoctorName}</strong>
+              <div className="flex items-center justify-between px-4 py-2.5 bg-primary-subtle border border-primary/20 rounded-xl text-xs text-primary font-medium">
+                <span>
+                  Filtering patients managed by: <strong className="font-bold text-foreground text-sm">Dr. {selectedDoctorName}</strong>
                 </span>
                 <button
                   type="button"
@@ -629,7 +633,7 @@ export default function AdminPanel() {
                     setSelectedDoctorId(null)
                     setSelectedDoctorName('')
                   }}
-                  className="font-bold underline text-blue-600 dark:text-blue-400 hover:text-blue-850 dark:hover:text-blue-200 transition-colors"
+                  className="font-bold underline text-primary hover:text-primary-hover transition-colors"
                 >
                   Clear Filter
                 </button>
@@ -638,7 +642,39 @@ export default function AdminPanel() {
 
             {viewMode === 'grid' ? (
               <div className="space-y-3">
-                <div className="flex justify-end">{patientTableActions}</div>
+                <div className="flex justify-end">
+                  <div className="relative" ref={gridDownloadRef}>
+                    <button
+                      type="button"
+                      onClick={() => setGridDownloadOpen(!gridDownloadOpen)}
+                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-surface border border-border text-foreground hover:bg-surface-hover transition-colors shadow-2xs"
+                    >
+                      <Download size={14} />
+                      <span>Download / Export</span>
+                      <ChevronDown size={13} className="text-foreground-muted" />
+                    </button>
+                    {gridDownloadOpen && (
+                      <div className="absolute right-0 mt-1.5 w-56 z-30 bg-card border border-border rounded-xl shadow-xl p-1.5 space-y-1 text-xs font-sans">
+                        <button
+                          type="button"
+                          onClick={() => { setGridDownloadOpen(false); patientsApi.export(); }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 text-foreground hover:bg-hover rounded-lg font-medium text-left"
+                        >
+                          <Download size={14} className="text-emerald-500 shrink-0" />
+                          <span>Export CSV Roster (.csv)</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setGridDownloadOpen(false); patientsApi.exportReports ? patientsApi.exportReports() : window.open('/api/patients/export/reports', '_blank'); }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 text-foreground hover:bg-hover rounded-lg font-medium text-left"
+                        >
+                          <FileText size={14} className="text-amber-500 shrink-0" />
+                          <span>Download All Reports (.zip)</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
                 
                 {filteredPatients.length === 0 ? (
                   <EmptyState icon={Users} msg="No patients found matching filter." />
@@ -656,65 +692,65 @@ export default function AdminPanel() {
                         <div
                           key={pat.patient_id}
                           onClick={() => navigate(`/history/${pat.patient_id}`)}
-                          className="group p-5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-sm hover:shadow hover:border-slate-350 dark:hover:border-slate-700 transition-all duration-200 cursor-pointer flex flex-col justify-between"
+                          className="group p-5 rounded-2xl bg-surface border border-border shadow-xs hover:shadow hover:border-indigo-500/40 transition-all duration-200 cursor-pointer flex flex-col justify-between"
                         >
                           <div>
                             <div className="flex items-start justify-between gap-3">
                               <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center text-xs font-bold shadow-inner">
+                                <div className="w-10 h-10 rounded-xl bg-surface-secondary border border-border text-foreground flex items-center justify-center text-sm font-bold shadow-inner">
                                   {initials}
                                 </div>
                                 <div>
-                                  <h3 className="font-bold text-slate-950 dark:text-slate-50 text-xs group-hover:text-blue-600 dark:group-hover:text-blue-450 transition-colors leading-tight">
+                                  <h3 className="font-bold text-foreground text-sm group-hover:text-primary transition-colors leading-tight">
                                     {pat.name}
                                   </h3>
-                                  <span className="text-[9px] text-slate-400 dark:text-slate-500 font-mono block mt-0.5">{pat.patient_id}</span>
+                                  <span className="text-xs text-foreground-subtle font-mono block mt-0.5 font-semibold">{pat.patient_id}</span>
                                 </div>
                               </div>
                             </div>
 
-                            <div className="mt-3 flex items-center gap-1.5">
-                              <span className="text-[9px] uppercase tracking-wider text-slate-400 dark:text-slate-550 font-bold block">Status:</span>
+                            <div className="mt-3.5 flex items-center gap-2">
+                              <span className="text-xs uppercase tracking-wider text-foreground-subtle font-bold block">Status:</span>
                               <Badge variant={statusVariant}>{statusStr}</Badge>
                             </div>
 
-                            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 grid grid-cols-2 gap-2 text-[11px]">
+                            <div className="mt-4 pt-3 border-t border-border grid grid-cols-2 gap-2 text-xs">
                               <div>
-                                <span className="text-slate-400 dark:text-slate-550 text-[9px] block">Age / Sex</span>
-                                <span className="font-bold text-slate-750 dark:text-slate-350">{pat.age ? `${pat.age} yrs` : '—'} · {pat.sex || '—'}</span>
+                                <span className="text-foreground-subtle text-xs block font-medium">Age / Sex</span>
+                                <span className="font-bold text-foreground">{pat.age ? `${pat.age} yrs` : '—'} · {pat.sex || '—'}</span>
                               </div>
                               <div>
-                                <span className="text-slate-400 dark:text-slate-550 text-[9px] block">Education</span>
-                                <span className="font-bold text-slate-750 dark:text-slate-350">{pat.education_years ? `${pat.education_years} yrs` : '—'}</span>
+                                <span className="text-foreground-subtle text-xs block font-medium">Education</span>
+                                <span className="font-bold text-foreground">{pat.education_years ? `${pat.education_years} yrs` : '—'}</span>
                               </div>
                             </div>
                           </div>
 
-                          <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between" onClick={e => e.stopPropagation()}>
-                            <span className="text-[10px] text-slate-400 dark:text-slate-550 font-mono">
+                          <div className="mt-4 pt-3 border-t border-border flex items-center justify-between" onClick={e => e.stopPropagation()}>
+                            <span className="text-xs text-foreground-subtle font-mono font-medium truncate max-w-[130px]">
                               {pat.doctor_username ? `Dr. ${pat.doctor_username}` : `ID: ${pat.created_by ?? '—'}`}
                             </span>
                             <div className="flex items-center gap-1">
                               <button
                                 onClick={() => navigate(`/history/${pat.patient_id}`)}
-                                className="p-1.5 rounded bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-450 transition-colors"
+                                className="p-2 rounded-xl bg-surface-secondary hover:bg-surface-hover border border-border text-foreground-muted hover:text-primary transition-colors"
                                 title="View History"
                               >
-                                <Eye size={12} />
+                                <Eye size={14} />
                               </button>
                               <button
                                 onClick={() => patientsApi.export(pat.patient_id)}
-                                className="p-1.5 rounded bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-emerald-605 dark:hover:text-emerald-450 transition-colors"
+                                className="p-2 rounded-xl bg-surface-secondary hover:bg-surface-hover border border-border text-foreground-muted hover:text-emerald-500 transition-colors"
                                 title="Export Patient Data CSV"
                               >
-                                <Download size={12} />
+                                <Download size={14} />
                               </button>
                               <button
                                 onClick={() => handleDeletePatient(pat.patient_id)}
-                                className="p-1.5 rounded text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 border border-transparent hover:border-red-100 dark:hover:border-red-900/30 transition-colors"
+                                className="p-2 rounded-xl text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 border border-transparent hover:border-red-200 dark:hover:border-red-900/30 transition-colors"
                                 title="Delete Patient"
                               >
-                                <Trash2 size={12} />
+                                <Trash2 size={14} />
                               </button>
                             </div>
                           </div>
@@ -725,19 +761,19 @@ export default function AdminPanel() {
                 )}
               </div>
             ) : (
-              <EnterpriseTable
+              <DataTable
                 tableId="admin_patients"
                 columns={patientColumns}
                 data={filteredPatients}
                 searchPlaceholder="Search patients by name or ID..."
                 selectable={false}
-                actions={patientTableActions}
+                extraExportOptions={patientExtraExportOptions}
               />
             )}
           </div>
         )}
         {activeTab === 'analyses' && (
-          <EnterpriseTable
+            <DataTable
             tableId="admin_analyses"
             columns={analysisColumns}
             data={analyses}
@@ -746,7 +782,7 @@ export default function AdminPanel() {
           />
         )}
         {activeTab === 'audit' && (
-          <EnterpriseTable
+            <DataTable
             tableId="admin_audit"
             columns={auditColumns}
             data={auditLogs}
@@ -757,9 +793,9 @@ export default function AdminPanel() {
       </div>
 
       {/* Permanent deletion warning */}
-      <div className="flex items-start gap-2.5 px-3 py-3 rounded-md bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800/50">
-        <AlertTriangle size={14} className="text-red-500 shrink-0 mt-0.5" aria-hidden="true" />
-        <p className="text-xs text-red-700 dark:text-red-400 leading-relaxed">
+      <div className="flex items-start gap-3 px-4 py-3.5 rounded-2xl bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800/50">
+        <AlertTriangle size={16} className="text-red-500 shrink-0 mt-0.5" aria-hidden="true" />
+        <p className="text-xs text-red-700 dark:text-red-400 font-medium leading-relaxed">
           Administrative deletions are permanent. All associated clinical records and session histories will be unrecoverable.
         </p>
       </div>
@@ -769,9 +805,9 @@ export default function AdminPanel() {
 
 function EmptyState({ icon: Icon, msg }) {
   return (
-    <div className="flex flex-col items-center gap-2 py-10 text-center">
-      <Icon size={24} className="text-slate-300 dark:text-slate-600" aria-hidden="true" />
-      <p className="text-xs text-slate-400">{msg}</p>
+    <div className="flex flex-col items-center gap-2.5 py-12 text-center">
+      <Icon size={28} className="text-foreground-subtle" aria-hidden="true" />
+      <p className="text-sm font-medium text-foreground-muted">{msg}</p>
     </div>
   )
 }

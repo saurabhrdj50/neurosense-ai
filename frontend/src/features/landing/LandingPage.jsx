@@ -315,13 +315,10 @@ export default function LandingPage() {
           <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground mb-4">
             Ready to Experience AI-Assisted Alzheimer's Assessment?
           </h2>
-          <p className="text-foreground-muted text-sm mb-8">Access the enterprise clinical workspace or request institutional demo access.</p>
+          <p className="text-foreground-muted text-sm mb-8">Access the enterprise clinical workspace for unified multi-modal AI diagnostics.</p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Button size="lg" variant="primary" icon={LogIn} onClick={() => navigate('/login')} className="w-full sm:w-auto px-8">
               Access Login Portal
-            </Button>
-            <Button size="lg" variant="secondary" onClick={() => setIsDemoModalOpen(true)} className="w-full sm:w-auto px-8">
-              Request Demo Access
             </Button>
           </div>
         </div>
@@ -345,16 +342,17 @@ export default function LandingPage() {
       {/* ── Institutional Demo Access Request Modal ───────────────────────── */}
       <AnimatePresence>
         {isDemoModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl relative overflow-hidden"
+              className="bg-card border border-border rounded-3xl max-w-md w-full p-6 shadow-xl relative overflow-hidden"
             >
               <button
                 onClick={() => setIsDemoModalOpen(false)}
-                className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
+                className="absolute top-4 right-4 p-2 text-foreground-muted hover:text-foreground rounded-full hover:bg-surface-hover transition-colors"
+                aria-label="Close modal"
               >
                 <X size={18} />
               </button>
@@ -364,65 +362,65 @@ export default function LandingPage() {
                   <div className="w-12 h-12 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mx-auto">
                     <CheckCircle2 size={28} />
                   </div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Request Received</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs mx-auto">
-                    Thank you! Institutional demo credentials will be dispatched to <span className="font-semibold text-indigo-600 dark:text-indigo-400">{formData.email}</span> upon verification.
+                  <h3 className="text-lg font-bold text-foreground">Request Received</h3>
+                  <p className="text-xs text-foreground-muted max-w-xs mx-auto">
+                    Thank you! Institutional demo credentials will be dispatched to <span className="font-semibold text-primary">{formData.email}</span> upon verification.
                   </p>
                 </div>
               ) : (
                 <form onSubmit={handleDemoSubmit} className="space-y-4">
                   <div className="flex items-center gap-3 mb-2">
-                    <div className="p-2.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-xl">
+                    <div className="p-2.5 bg-primary/10 text-primary rounded-xl border border-primary/20">
                       <Hospital size={20} />
                     </div>
                     <div>
-                      <h3 className="text-base font-bold text-slate-900 dark:text-white">Request Institutional Access</h3>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400">Request clinical trial workspace access</p>
+                      <h3 className="text-base font-bold text-foreground">Request Institutional Access</h3>
+                      <p className="text-[11px] text-foreground-muted">Request clinical trial workspace access</p>
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Full Name</label>
+                    <label className="block text-xs font-semibold text-foreground mb-1">Full Name</label>
                     <input
                       type="text"
                       required
                       placeholder="Dr. Eleanor Vance"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Institutional Email</label>
+                    <label className="block text-xs font-semibold text-foreground mb-1">Institutional Email</label>
                     <input
                       type="email"
                       required
                       placeholder="e.vance@medical-center.org"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Hospital / Institution Name</label>
+                    <label className="block text-xs font-semibold text-foreground mb-1">Hospital / Institution Name</label>
                     <input
                       type="text"
                       required
                       placeholder="Johns Hopkins Neurology Dept."
                       value={formData.institution}
                       onChange={(e) => setFormData({ ...formData, institution: e.target.value })}
-                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Clinical Role</label>
+                    <label className="block text-xs font-semibold text-foreground mb-1">Clinical Role</label>
                     <select
                       value={formData.role}
                       onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
                     >
                       <option>Clinician / Physician</option>
                       <option>Radiologist</option>

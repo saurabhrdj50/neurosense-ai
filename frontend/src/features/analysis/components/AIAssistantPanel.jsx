@@ -121,33 +121,33 @@ export function AIAssistantPanel({ step, patient, mriFile, cognData, speechText,
   const insight = getStepInsights()
 
   return (
-    <div className="p-3.5 rounded-2xl bg-surface border border-border shadow-2xs space-y-2 text-xs">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 font-bold text-foreground">
-          <Sparkles size={15} className="text-primary" />
+    <div className="p-6 rounded-2xl bg-surface border border-border shadow-xs space-y-4 text-base">
+      <div className="flex items-center justify-between pb-3 border-b border-border">
+        <div className="flex items-center gap-2.5 font-bold text-lg text-foreground">
+          <Sparkles size={20} className="text-primary shrink-0" />
           <span>AI Clinical Assistant</span>
         </div>
-        <span className="flex items-center gap-1 text-[11px] font-mono text-foreground-muted">
-          <Clock size={12} /> Est. {insight.estTime}
+        <span className="flex items-center gap-1.5 text-sm font-mono font-semibold text-foreground-muted bg-surface-secondary px-3 py-1 rounded-lg border border-border">
+          <Clock size={14} className="shrink-0" /> Est. {insight.estTime}
         </span>
       </div>
 
-      <div className="flex items-start gap-2 pt-0.5 text-foreground-muted">
+      <div className="flex items-start gap-3.5 text-foreground-muted">
         {insight.status === 'warning' ? (
-          <AlertTriangle size={14} className="text-amber-500 shrink-0 mt-0.5" />
+          <AlertTriangle size={20} className="text-amber-500 shrink-0 mt-0.5" />
         ) : insight.status === 'success' ? (
-          <CheckCircle2 size={14} className="text-emerald-500 shrink-0 mt-0.5" />
+          <CheckCircle2 size={20} className="text-emerald-500 shrink-0 mt-0.5" />
         ) : (
-          <Info size={14} className="text-primary shrink-0 mt-0.5" />
+          <Info size={20} className="text-primary shrink-0 mt-0.5" />
         )}
-        <div className="space-y-0.5">
-          <p className="font-semibold text-foreground">{insight.summary}</p>
-          <p className="text-[11px] leading-relaxed">{insight.suggestion}</p>
+        <div className="space-y-1.5">
+          <p className="font-extrabold text-base text-foreground leading-snug">{insight.summary}</p>
+          <p className="text-[15px] leading-relaxed text-foreground-muted font-medium">{insight.suggestion}</p>
         </div>
       </div>
 
-      <div className="flex items-center gap-1.5 pt-1 text-[11px] font-semibold text-primary border-t border-border/50">
-        <ArrowRight size={13} />
+      <div className="flex items-center gap-2.5 pt-3.5 text-base font-bold text-primary border-t border-border leading-snug">
+        <ArrowRight size={18} className="shrink-0 text-primary" />
         <span>Recommendation: {insight.nextStep}</span>
       </div>
     </div>

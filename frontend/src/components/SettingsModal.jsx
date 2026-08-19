@@ -9,7 +9,6 @@ import { useTheme } from '../context/ThemeProvider'
 const TABS = [
   { id: 'general', label: 'General', icon: SlidersHorizontal },
   { id: 'appearance', label: 'Appearance', icon: Sun },
-  { id: 'notifications', label: 'Notifications', icon: Bell },
   { id: 'profile', label: 'Profile', icon: User },
   { id: 'security', label: 'Security', icon: Shield },
   { id: 'about', label: 'About', icon: Info },
@@ -32,14 +31,7 @@ export default function SettingsModal({ isOpen, onClose }) {
     glassEffects: true,
   })
 
-  const [notifications, setNotifications] = useState({
-    analysisCompleted: true,
-    patientAdded: true,
-    reportGenerated: true,
-    systemAlerts: true,
-    emailNotifications: false,
-    desktopNotifications: true,
-  })
+
 
   const [profile, setProfile] = useState({
     name: 'Dr. Eleanor Vance',
@@ -202,32 +194,11 @@ export default function SettingsModal({ isOpen, onClose }) {
               {/* 2. APPEARANCE */}
               {activeTab === 'appearance' && (
                 <div className="space-y-6">
-                  {/* Theme */}
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Theme Mode</label>
-                    <div className="grid grid-cols-3 gap-3">
-                      {[
-                        { id: 'light', label: 'Light', icon: Sun },
-                        { id: 'dark', label: 'Dark', icon: Moon },
-                        { id: 'system', label: 'System', icon: Laptop },
-                      ].map(item => {
-                        const Icon = item.icon
-                        const active = theme === item.id
-                        return (
-                          <button
-                            key={item.id}
-                            onClick={() => setTheme(item.id)}
-                            className={`flex flex-col items-center justify-center p-3 rounded-2xl border text-xs font-semibold transition-all ${
-                              active
-                                ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 font-bold'
-                                : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 text-slate-600 dark:text-slate-400'
-                            }`}
-                          >
-                            <Icon size={18} className="mb-1" />
-                            {item.label}
-                          </button>
-                        )
-                      })}
+                  {/* High Contrast Standard Alert */}
+                  <div className="p-3.5 rounded-2xl bg-blue-50 border border-blue-200 text-blue-900 text-xs flex items-center justify-between">
+                    <div>
+                      <p className="font-bold">Clinical Workstation Light Theme Active</p>
+                      <p className="text-[11px] text-blue-700 mt-0.5">Optimized for high contrast and diagnostic readability across clinical environments.</p>
                     </div>
                   </div>
 
@@ -292,32 +263,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                 </div>
               )}
 
-              {/* 3. NOTIFICATIONS */}
-              {activeTab === 'notifications' && (
-                <div className="space-y-4">
-                  {[
-                    { id: 'analysisCompleted', label: 'Analysis Completed', desc: 'Notify when diagnostic fusion pipeline finishes' },
-                    { id: 'patientAdded', label: 'Patient Added', desc: 'Alert when a new patient record is registered' },
-                    { id: 'reportGenerated', label: 'Report Export Ready', desc: 'Notify when PDF export is synthesized' },
-                    { id: 'systemAlerts', label: 'System Telemetry Alerts', desc: 'Real-time AI model availability updates' },
-                    { id: 'emailNotifications', label: 'Email Digest Notifications', desc: 'Send daily clinical summaries via email' },
-                    { id: 'desktopNotifications', label: 'Browser Desktop Alerts', desc: 'System level desktop popups' },
-                  ].map(n => (
-                    <div key={n.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60">
-                      <div>
-                        <p className="text-xs font-bold text-slate-900 dark:text-white">{n.label}</p>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400">{n.desc}</p>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={notifications[n.id]}
-                        onChange={e => setNotifications({ ...notifications, [n.id]: e.target.checked })}
-                        className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
+
 
               {/* 4. PROFILE */}
               {activeTab === 'profile' && (

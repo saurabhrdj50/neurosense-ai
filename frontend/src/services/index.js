@@ -1,7 +1,7 @@
 import realServices from './real';
 import demoServices from './demo';
 
-export const isDemoMode = import.meta.env.VITE_DEMO_MODE === 'true' || import.meta.env.VITE_DEMO_MODE === true;
+export const isDemoMode = import.meta.env.VITE_DEMO_MODE !== 'false';
 
 const activeServices = isDemoMode ? demoServices : realServices;
 

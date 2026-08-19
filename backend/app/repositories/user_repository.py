@@ -16,7 +16,7 @@ LOCKOUT_MINUTES = 15
 
 SAMPLE_USERS = [
     {'username': 'admin', 'email': 'admin@neurosense.ai', 'password': 'Admin@123!', 'role': 'admin', 'full_name': 'System Admin', 'date_of_birth': '1985-01-15'},
-    {'username': 'doctor', 'email': 'doctor@neurosense.ai', 'password': 'Doctor@123!', 'role': 'doctor', 'full_name': 'Dr. Gupta', 'date_of_birth': '1980-06-20'},
+    {'username': 'doctor', 'email': 'doctor@neurosense.ai', 'password': 'Doctor@123', 'role': 'doctor', 'full_name': 'Dr. Gupta', 'date_of_birth': '1980-06-20'},
 ]
 
 

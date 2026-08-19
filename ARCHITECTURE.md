@@ -34,7 +34,7 @@ This document describes the system architecture of NeuroSense AI v1.0.0 in suffi
                    ▼
 ┌────────────────────────────────────────────────────────┐
 │                  Flask 3 REST API                      │
-│  Port 10000  ·  Flask-Login sessions  ·  CORS         │
+│  Port 5000   ·  Flask-Login sessions  ·  CORS         │
 │  ┌──────────┬───────────┬───────────┬───────────────┐ │
 │  │ /auth    │ /patients │ /analysis │ /utils        │ │
 │  └──────────┴───────────┴───────────┴───────────────┘ │

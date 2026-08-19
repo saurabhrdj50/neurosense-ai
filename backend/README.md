@@ -180,8 +180,8 @@ Set `PORT=10000` in your deployment environment's env vars (e.g. Render.com).
 
 | Username | Password | Role |
 |----------|----------|------|
-| `admin` | `admin123` | Admin |
-| `doctor` | `doctor123` | Doctor |
+| `admin` | `Admin@123!` | Admin |
+| `doctor` | `Doctor@123` | Doctor |
 
 > These are auto-seeded when `FLASK_ENV != production`. **Never use in production.**
 
@@ -851,8 +851,8 @@ Generates and downloads a PDF report. POST body: full results JSON.
 ### Default seed accounts (development only, `FLASK_ENV != "production"`)
 | Username | Password | Role |
 |----------|----------|------|
-| `admin` | `admin123` | admin |
-| `doctor` | `doctor123` | doctor |
+| `admin` | `Admin@123!` | admin |
+| `doctor` | `Doctor@123` | doctor |
 
 ### Ownership-based Access Control
 - Doctors can only view/edit/delete **their own** patients (`created_by == current_user.id`)
@@ -1112,7 +1112,7 @@ No external migration tool (Alembic etc.) is used.
 ### Seed Data
 - Triggers only when DB is empty AND `FLASK_ENV != "production"` (or `SEED_DEMO_DATA=true`)
 - Seeded once, tracked via `app_meta` keys `users_seeded_at` and `patients_seeded_at`
-- Default users: `admin` / `admin123`, `doctor` / `doctor123`
+- Default users: `admin` / `Admin@123!`, `doctor` / `Doctor@123`
 - Default patients: 10 sample Indian names across all 4 dementia stages
 
 ---

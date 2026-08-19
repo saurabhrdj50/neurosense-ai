@@ -164,7 +164,7 @@ frontend/
 
 ## 3. Folder Structure Explanation
 
-- **`src/config/`**: Central configuration files. `api.js` resolves the HTTP backend URL dynamically from `import.meta.env.VITE_API_URL` or defaults to `http://localhost:10000`.
+- **`src/config/`**: Central configuration files. `api.js` resolves the HTTP backend URL dynamically from `import.meta.env.VITE_API_URL` or defaults to `http://localhost:5000`.
 - **`src/context/`**: Global state containers independent of React components. `ResultsStore.js` retains diagnostic payloads across page transitions without relying on URL parameters.
 - **`src/providers/`**: Top-level application providers. `QueryProvider.jsx` sets up React Query client options.
 - **`src/components/layout/`**: Core shell components. `AppLayout.jsx` orchestrates responsive layout, collapsible `Sidebar.jsx`, and sticky `TopBar.jsx`.
@@ -599,7 +599,7 @@ graph TD
 
 ## 26. Utility Helpers & Configs
 
-- **`src/config/api.js`**: Dynamically resolves API base URL (`VITE_API_URL` or `http://localhost:10000`).
+- **`src/config/api.js`**: Dynamically resolves API base URL (`VITE_API_URL` or `http://localhost:5000`).
 - **`formatTimeAgo(dateStr)`**: Converts ISO timestamps to human-readable time-ago strings (`"5m ago"`, `"2h ago"`).
 - **`getAnalysisStage(analysis)`**: Normalizes diagnostic stage string across varying backend API response formats.
 
@@ -609,7 +609,7 @@ graph TD
 
 | Variable Name | Default Value | Purpose |
 | :--- | :--- | :--- |
-| `VITE_API_URL` | `http://localhost:10000` | Specifies backend API base URL endpoint |
+| `VITE_API_URL` | `http://localhost:5000` | Specifies backend API base URL endpoint |
 
 ---
 

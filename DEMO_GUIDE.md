@@ -8,9 +8,9 @@ A complete 5-minute walkthrough of the NeuroSense AI platform from landing to lo
 
 | If running live backend | If using demo mode only |
 |------------------------|------------------------|
-| Backend running on `http://localhost:10000` | No setup required |
-| Frontend running on `http://localhost:3000` | No setup required |
-| Login: `doctor` / `doctor123` | Click **"Try Demo"** |
+| Backend running on `http://localhost:5000` | No setup required |
+| Frontend running on `http://localhost:5173` | No setup required |
+| Login: `doctor` / `Doctor@123` | Click **"Try Demo"** |
 
 ---
 
@@ -213,5 +213,5 @@ Walk through all 6 steps:
 
 | Role | Username | Password |
 |------|----------|----------|
-| Doctor | `doctor` | `doctor123` |
-| Admin | `admin` | `admin123` |
+| Doctor | `doctor` | `Doctor@123` |
+| Admin | `admin` | `Admin@123!` |

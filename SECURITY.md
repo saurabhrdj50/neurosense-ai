@@ -35,7 +35,7 @@ Sessions are stored in the Flask server's memory / SQLite file and are **not** i
 
 ### 2. Demo Credentials
 
-The default seeded credentials (`admin` / `admin123`, `doctor` / `doctor123`) are **for demonstration purposes only**. You must rotate all credentials before any production deployment.
+The default seeded credentials (`admin` / `Admin@123!`, `doctor` / `Doctor@123`) are **for demonstration purposes only**. You must rotate all credentials before any production deployment.
 
 ### 3. Rate Limiting
 

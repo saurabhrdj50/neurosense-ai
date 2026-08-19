@@ -221,10 +221,9 @@ cd neurosense-ai
 ### 2. Configure Environment
 
 ```bash
-cp .env.example .env
-# Open .env and set at minimum:
+# Open frontend/.env.development or backend/.env.example:
 #   SECRET_KEY      — strong random string (32+ chars)
-#   VITE_API_URL    — http://localhost:10000
+#   VITE_API_URL    — http://localhost:5000
 #   GEMINI_API_KEY  — optional, for AI chatbot
 ```
 
@@ -241,7 +240,7 @@ python -m venv venv && venv\Scripts\activate
 
 pip install -r requirements.txt
 python run.py
-# → API available at http://localhost:10000
+# → API available at http://localhost:5000
 ```
 
 ### 4. Run the Frontend
@@ -267,7 +266,7 @@ All configuration is environment-variable based. Copy `.env.example` to `.env` a
 | `FLASK_SECRET_KEY` | ✅ | Same as SECRET_KEY (alias) |
 | `FLASK_ENV` | ✅ | `development` or `production` |
 | `FLASK_HOST` | ❌ | Default: `0.0.0.0` |
-| `FLASK_PORT` | ❌ | Default: `10000` |
+| `FLASK_PORT` | ❌ | Default: `5000` |
 | `VITE_API_URL` | ✅ | Backend API base URL from browser |
 | `GEMINI_API_KEY` | ❌ | Google Gemini API key for chatbot |
 | `GROQ_API_KEY` | ❌ | Groq alternative for chatbot |

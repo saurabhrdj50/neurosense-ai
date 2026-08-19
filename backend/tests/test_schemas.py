@@ -8,13 +8,13 @@ from app.api.schemas.patient import PatientSchema
 
 class TestLoginSchema:
     def test_validate_valid_login(self):
-        data = {'username': 'doctor', 'password': 'doctor123'}
+        data = {'username': 'doctor', 'password': 'Doctor@123'}
         result = LoginSchema.validate(data)
         assert result['username'] == 'doctor'
-        assert result['password'] == 'doctor123'
+        assert result['password'] == 'Doctor@123'
     
     def test_validate_missing_username(self):
-        data = {'password': 'doctor123'}
+        data = {'password': 'Doctor@123'}
         with pytest.raises(ValueError) as exc_info:
             LoginSchema.validate(data)
         assert 'username' in str(exc_info.value)

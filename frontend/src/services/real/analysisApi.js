@@ -89,7 +89,10 @@ export const analysisApi = {
   getPastAnalyses: async () => {
     try {
       const res = await fetch(`${API_URL}/api/analysis/history`, { credentials: 'include' });
-      if (res.ok) return await res.json();
+      if (res.ok) {
+        const data = await res.json();
+        return Array.isArray(data) ? data : (data.analyses || data.history || []);
+      }
     } catch (err) {}
     const cached = localStorage.getItem('neurosense_analysis_history');
     return cached ? JSON.parse(cached) : [];

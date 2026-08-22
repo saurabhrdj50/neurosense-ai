@@ -67,6 +67,6 @@ def authenticated_client(client):
     """A test client that is already logged in as doctor."""
     client.post('/api/auth/login', json={
         'username': 'doctor',
-        'password': 'Doctor@123!',
+        'password': 'Doctor@123',
     })
     return client

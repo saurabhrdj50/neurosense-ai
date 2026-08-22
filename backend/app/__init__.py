@@ -142,9 +142,23 @@ def create_app():
     
     # Configure CORS with credentials support for frontend integration
     if HAS_CORS and CORS is not None:
-        allowed_origins = os.environ.get('CORS_ORIGINS', 'http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:4000,http://127.0.0.1:3000,http://127.0.0.1:3001,http://127.0.0.1:3002,http://127.0.0.1:4000,http://localhost:5173').split(',')
-        CORS(app, supports_credentials=True, origins=allowed_origins, expose_headers=['Content-Length', 'Content-Type', 'X-Request-ID'])
-        logger.info("CORS enabled for origins: %s", allowed_origins)
+        import re
+        raw_origins = os.environ.get('CORS_ORIGINS', '').split(',')
+        allowed_origins = [o.strip() for o in raw_origins if o.strip()]
+        
+        defaults = [
+            'http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002',
+            'http://localhost:4000', 'http://localhost:5173', 'http://127.0.0.1:3000',
+            'http://127.0.0.1:5173', 'http://127.0.0.1:4000'
+        ]
+        for d in defaults:
+            if d not in allowed_origins:
+                allowed_origins.append(d)
+        
+        # Support all Vercel deployment URLs (production & preview branches) automatically
+        origin_patterns = [re.compile(r"^https:\/\/.*\.vercel\.app$")] + allowed_origins
+        CORS(app, supports_credentials=True, origins=origin_patterns, expose_headers=['Content-Length', 'Content-Type', 'X-Request-ID'])
+        logger.info("CORS enabled for origins: %s (including all *.vercel.app domains)", allowed_origins)
     
     # Configure rate limiting
     global _limiter

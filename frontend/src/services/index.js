@@ -1,8 +1,8 @@
 import realServices from './real';
 import demoServices from './demo';
 
-// Enable Demo Mode if VITE_DEMO_MODE is true or in production build without backend
-export const isDemoMode = import.meta.env.VITE_DEMO_MODE === 'true' || (import.meta.env.VITE_DEMO_MODE !== 'false' && import.meta.env.MODE === 'production');
+// Enable Demo Mode only if VITE_DEMO_MODE is explicitly set to 'true'
+export const isDemoMode = import.meta.env.VITE_DEMO_MODE === 'true';
 
 const activeServices = isDemoMode ? demoServices : realServices;
 

@@ -362,8 +362,11 @@ def create_app():
         else:
             return jsonify(metrics.get_all_metrics())
     
-    from app.services.analysis_service import AnalysisOrchestrator
-    AnalysisOrchestrator().warmup_async()
+    if os.environ.get('ENABLE_EAGER_WARMUP', 'false').lower() == 'true':
+        from app.services.analysis_service import AnalysisOrchestrator
+        AnalysisOrchestrator().warmup_async()
+    else:
+        logger.info("Eager ML warmup disabled (lazy model loading active to conserve RAM)")
     
     logger.info("NeuroSense app created successfully")
     return app

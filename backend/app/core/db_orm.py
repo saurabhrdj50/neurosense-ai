@@ -6,6 +6,9 @@ from app.core.config import Config
 
 def get_engine():
     db_url = os.environ.get("DATABASE_URL")
+    if db_url and db_url.startswith("postgres://"):
+        db_url = db_url.replace("postgres://", "postgresql://", 1)
+        
     if not db_url:
         db_url = f"sqlite:///{Config.DB_PATH}?check_same_thread=False"
     

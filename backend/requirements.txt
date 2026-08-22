@@ -16,7 +16,8 @@ flask-limiter>=3.5.0,<4.0.0
 # ─────────────────────────────────────────────
 python-dotenv>=1.0.0
 requests>=2.28.0,<3.0.0
-python-magic-bin>=0.4.14       # Windows file-type detection (use python-magic on Linux/Mac)
+python-magic-bin>=0.4.14; sys_platform == 'win32'  # Windows DLL binary version
+python-magic>=0.4.27; sys_platform != 'win32'      # Linux/macOS standard version
 SQLAlchemy>=2.0.0
 psycopg2-binary>=2.9.0         # PostgreSQL adapter (production DB)
 

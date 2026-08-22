@@ -124,6 +124,7 @@ backend/Alzheimer_Project/Training_Outputs/
 backend/Alzheimer_Project/Models/
 backend/app/models/*.pt
 backend/app/models/*.pth
+!backend/app/models/alzheimer_model.pth
 
 # Test & PDF outputs
 *.pdf

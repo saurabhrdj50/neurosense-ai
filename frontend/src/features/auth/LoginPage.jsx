@@ -10,6 +10,7 @@ import { useAuth } from './AuthProvider';
 import { useTheme } from '../../context/ThemeProvider';
 import { getAuthThemeConfig } from './config/AuthThemeConfig';
 import BrainCanvas from './components/BrainCanvas';
+import API_URL from '../../config/api';
 
 // Custom Sleek Tailwind Input Component (Linear / Vercel Style)
 function CustomInput({ label, icon: Icon, type = 'text', value, onChange, placeholder, error, required, ...props }) {
@@ -66,8 +67,38 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(true);
   const [forgotMode, setForgotMode] = useState(false);
   const [forgotStep, setForgotStep] = useState(1);
-  const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [serverStatus, setServerStatus] = useState('checking'); // 'checking' | 'online' | 'offline'
+
+  React.useEffect(() => {
+    let isMounted = true;
+    let attempts = 0;
+
+    const checkBackendHealth = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/health`, { method: 'GET' });
+        if (res.ok && isMounted) {
+          setServerStatus('online');
+          return;
+        }
+      } catch {
+        // Render server cold start warmup in progress
+      }
+
+      if (isMounted) {
+        attempts++;
+        if (attempts < 12) {
+          setTimeout(checkBackendHealth, 3000);
+        } else {
+          setServerStatus('offline');
+        }
+      }
+    };
+
+    checkBackendHealth();
+    return () => { isMounted = false; };
+  }, []);
 
   // Form states
   const [form, setForm] = useState({
@@ -346,6 +377,45 @@ export default function LoginPage() {
                         >
                           Switch to {selectedRole === 'doctor' ? 'Admin' : 'Doctor'}
                         </button>
+                      </div>
+                    )}
+
+                    {/* SERVER CONNECTION STATUS PILL */}
+                    {!forgotMode && (
+                      <div className="mt-2.5 p-2.5 px-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-950/40 flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2 font-medium">
+                          {serverStatus === 'online' ? (
+                            <>
+                              <span className="relative flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                              </span>
+                              <span className="text-emerald-700 dark:text-emerald-400 font-semibold text-[11px]">Backend Connected</span>
+                            </>
+                          ) : serverStatus === 'checking' ? (
+                            <>
+                              <span className="relative flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+                              </span>
+                              <span className="text-amber-700 dark:text-amber-400 font-semibold text-[11px]">Connecting to backend...</span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="h-2 w-2 rounded-full bg-rose-500" />
+                              <span className="text-rose-600 dark:text-rose-400 font-semibold text-[11px]">Backend Unreachable</span>
+                            </>
+                          )}
+                        </div>
+                        {serverStatus === 'offline' && (
+                          <button
+                            type="button"
+                            onClick={() => setServerStatus('checking')}
+                            className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
+                          >
+                            Retry
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>

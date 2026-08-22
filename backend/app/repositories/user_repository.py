@@ -27,9 +27,6 @@ class UserRepository(BaseRepository):
         self._ensure_seed_data()
 
     def _ensure_seed_data(self) -> None:
-        if not self._should_seed_demo_users():
-            return
-
         with SessionLocal() as db:
             count = db.query(User).count()
             if count == 0:

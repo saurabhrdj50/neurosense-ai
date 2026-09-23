@@ -1,0 +1,80 @@
+# NeuroSense AI - Backend Dependencies
+# Updated — September 2026
+# Install with: pip install -r requirements.txt
+# Generated from a codebase-wide import audit: only packages imported by backend/app modules are listed.
+
+# ─────────────────────────────────────────────
+# CORE API
+# ─────────────────────────────────────────────
+Flask>=3.0.0,<4.0.0
+Werkzeug>=3.0.0,<4.0.0
+flask-cors>=4.0.0,<5.0.0
+flask-login>=0.6.0,<1.0.0
+flask-limiter>=3.5.0,<4.0.0
+
+# ─────────────────────────────────────────────
+# UTILITIES & DATABASE
+# ─────────────────────────────────────────────
+python-dotenv>=1.0.0
+requests>=2.28.0,<3.0.0
+python-magic-bin>=0.4.14; sys_platform == 'win32'  # Windows DLL binary version
+python-magic>=0.4.27; sys_platform != 'win32'      # Linux/macOS standard version
+SQLAlchemy>=2.0.0
+# psycopg2-binary>=2.9.0          # Only required if DATABASE_URL points to PostgreSQL; app defaults to SQLite
+cryptography>=41.0.0             # Fernet encryption (app/core/security.py)
+
+# ─────────────────────────────────────────────
+# ML / AI — DEEP LEARNING & NUMERICS
+# ─────────────────────────────────────────────
+torch>=2.0.0
+torchvision>=0.15.0
+timm>=1.0.0                    # Vision model zoo (Swin, ConvNeXt, EfficientNet)
+numpy>=1.24.0
+scipy>=1.11.0
+pandas>=2.0.0
+
+# ─────────────────────────────────────────────
+# COMPUTER VISION & MEDICAL IMAGING
+# ─────────────────────────────────────────────
+Pillow>=10.0.0
+nibabel>=5.0.0                # NIfTI volume loader (3D MRI uploads)
+matplotlib>=3.7.0,<4.0.0      # Grad-CAM visualization (app/modules/mri/gradcam.py)
+
+# ─────────────────────────────────────────────
+# NLP
+# ─────────────────────────────────────────────
+textblob>=0.18.0               # Pulls in nltk automatically
+transformers>=4.36.0,<6.0.0    # ClinicalBERT sentiment (app/modules/nlp/sentiment.py)
+
+# ─────────────────────────────────────────────
+# SPEECH
+# ─────────────────────────────────────────────
+SpeechRecognition>=3.10.0
+openai-whisper>=20231117        # OpenAI Whisper transcriber (app/modules/speech/transcriber.py)
+librosa>=0.10.0,<2.0.0          # Acoustic biomarker extraction (F0, jitter, pause ratio)
+
+# ─────────────────────────────────────────────
+# AI / LLM
+# ─────────────────────────────────────────────
+google-genai>=1.0.0            # Google Gemini API (app/modules/recommendation/chatbot.py)
+
+# ─────────────────────────────────────────────
+# REPORTS
+# ─────────────────────────────────────────────
+reportlab>=4.0.0,<5.0.0
+
+# ─────────────────────────────────────────────
+# MONITORING
+# ─────────────────────────────────────────────
+sentry-sdk>=2.0.0
+
+# ─────────────────────────────────────────────
+# TESTING
+# ─────────────────────────────────────────────
+pytest>=7.0.0,<9.0.0
+pytest-cov>=4.0.0              # Coverage runs: pytest --cov=app
+
+# ─────────────────────────────────────────────
+# WSGI SERVER (production)
+# ─────────────────────────────────────────────
+gunicorn>=21.0.0,<23.0.0

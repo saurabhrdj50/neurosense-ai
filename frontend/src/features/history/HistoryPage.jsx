@@ -1,15 +1,15 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Clock, Brain, Download, TrendingUp, TrendingDown, Minus } from 'lucide-react'
+import { ArrowLeft, Clock, Brain, Download, TrendingUp, TrendingDown, Minus, AlertTriangle, RefreshCw } from 'lucide-react'
 import toast from 'react-hot-toast'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts'
-import Button from '../../components/ui/Button'
-import Badge from '../../components/ui/Badge'
-import Card from '../../components/ui/Card'
-import { SectionSkeleton } from '../../components/ui/Skeleton'
-import { historyApi } from '../../services'
+import Button from '../../shared/components/ui/Button'
+import Badge from '../../shared/components/ui/Badge'
+import Card from '../../shared/components/ui/Card'
+import { SectionSkeleton } from '../../shared/components/ui/Skeleton'
+import { historyApi } from './api/historyApi'
 import LongitudinalTimeline from './components/LongitudinalTimeline'
 
 const STAGE_BADGE = {
@@ -50,13 +50,25 @@ export default function HistoryPage() {
   const navigate = useNavigate()
   const [data, setData]       = useState(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError]     = useState(null)
+  const [retryTick, setRetryTick] = useState(0)
 
   useEffect(() => {
+    let active = true
     historyApi.getPatientHistory(patientId)
-      .then(d => setData(d))
-      .catch(() => toast.error('Failed to load history'))
-      .finally(() => setLoading(false))
-  }, [patientId])
+      .then(d => {
+        if (active) { setData(d); setError(null) }
+      })
+      .catch((e) => {
+        if (!active) return
+        setError(e.message || 'Failed to load history')
+        toast.error('Failed to load history')
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+    return () => { active = false }
+  }, [patientId, retryTick])
 
   const history = data?.history || []
 
@@ -119,6 +131,35 @@ export default function HistoryPage() {
       {loading ? (
         <div className="bg-surface border border-border rounded-2xl p-6">
           <SectionSkeleton rows={6} />
+        </div>
+      ) : error ? (
+        <div
+          role="alert"
+          className="bg-card border border-rose-500/30 rounded-2xl py-12 px-4 flex flex-col items-center justify-center text-center gap-3 shadow-xs"
+        >
+          <div className="w-14 h-14 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-500 flex items-center justify-center">
+            <AlertTriangle size={28} />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-foreground">Could Not Load History</h3>
+            <p className="text-sm text-foreground-muted max-w-sm mt-1 font-medium">
+              An error occurred while fetching assessment records for patient <span className="font-mono font-bold">{patientId}</span>: {error}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              size="md"
+              variant="outline"
+              icon={RefreshCw}
+              onClick={() => { setLoading(true); setRetryTick(t => t + 1) }}
+              className="min-h-[40px] text-sm font-semibold"
+            >
+              Retry
+            </Button>
+            <Button size="md" onClick={() => navigate('/patients')} className="min-h-[40px] text-sm font-semibold">
+              Back to Patients
+            </Button>
+          </div>
         </div>
       ) : history.length === 0 ? (
         <div className="bg-card border border-border rounded-2xl py-16 px-4 flex flex-col items-center justify-center text-center gap-3 shadow-xs">

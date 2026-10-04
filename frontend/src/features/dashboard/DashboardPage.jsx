@@ -4,24 +4,27 @@ import {
   AlertTriangle, ArrowRight, Plus, RefreshCw, ChevronRight, CheckCircle2,
   ArrowUpDown, ChevronUp, ChevronDown
 } from 'lucide-react';
-import { patientsApi, historyApi } from '../../services';
+import { patientsApi } from '../patients/api/patientsApi';
+import { historyApi } from '../history/api/historyApi';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell,
 } from 'recharts';
-import Button from '../../components/ui/Button';
-import Badge from '../../components/ui/Badge';
-import { useTheme } from '../../context/ThemeProvider';
-import { useAuth } from '../../features/auth/AuthProvider';
+import Button from '../../shared/components/ui/Button';
+import Badge from '../../shared/components/ui/Badge';
+import { useTheme } from '../../providers/ThemeProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import {
   RISK_COLORS,
   getRiskLevel,
   getAnalysisStage,
   getAnalysisConfidence,
   formatTimeAgo
-} from '../../utils/clinicalMappers';
+} from '../../shared/utils/clinicalMappers';
 
 /* ── High-Contrast Clinical Tooltip ──────────────────────────────────────── */
+const UNKNOWN_RISK_COLOR = '#94A3B8';
+
 function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
@@ -62,38 +65,52 @@ export default function DashboardPage() {
   const [recentAnalyses, setRecentAnalyses] = useState([]);
   const [priorityAnalyses, setPriorityAnalyses] = useState([]);
   const [trendData, setTrendData] = useState([]);
+  const [fetchError, setFetchError] = useState(null);
 
   const fetchDashboardData = useCallback(async () => {
     setRefreshing(true);
+    setFetchError(null);
     try {
-      const [patientsData, analysesData] = await Promise.all([
-        patientsApi.getAll().catch(() => ({ patients: [] })),
-        historyApi.getAllAnalyses().catch(() => ({ analyses: [] })),
+      const [patientsResult, analysesResult] = await Promise.allSettled([
+        patientsApi.getAll(),
+        historyApi.getAllAnalyses(),
       ]);
 
-      const patients = patientsData.patients || [];
-      const analyses = analysesData.analyses || [];
+      const failed = [patientsResult, analysesResult].filter((r) => r.status === 'rejected');
+      if (failed.length) {
+        console.error('Failed to fetch dashboard data:', failed.map((r) => r.reason?.message || r.reason));
+        setFetchError(
+          failed.length === 2
+            ? 'Could not load dashboard data (patients and analyses).'
+            : 'Some dashboard data failed to load.'
+        );
+      }
 
-      const riskCounts = { Normal: 0, Mild: 0, Moderate: 0, High: 0 };
+      const patients = patientsResult.status === 'fulfilled' ? (patientsResult.value.patients || []) : [];
+      const analyses = analysesResult.status === 'fulfilled' ? (analysesResult.value.analyses || []) : [];
+
+      const riskCounts = { Normal: 0, Mild: 0, Moderate: 0, High: 0, Unknown: 0 };
       analyses.forEach((a) => {
         const stage = getAnalysisStage(a);
         if (stage.includes('Non') || stage.includes('Very Mild')) riskCounts.Normal++;
         else if (stage.includes('Mild')) riskCounts.Mild++;
         else if (stage.includes('Moderate')) riskCounts.Moderate++;
-        else riskCounts.High++;
+        else if (getRiskLevel(stage) === 'High') riskCounts.High++;
+        else riskCounts.Unknown++;
       });
 
-      const totalRisk = riskCounts.Normal + riskCounts.Mild + riskCounts.Moderate + riskCounts.High;
+      const totalRisk = riskCounts.Normal + riskCounts.Mild + riskCounts.Moderate + riskCounts.High + riskCounts.Unknown;
       const distribution = totalRisk > 0 ? [
         { name: 'Normal', value: Math.round((riskCounts.Normal / totalRisk) * 100), count: riskCounts.Normal, color: RISK_COLORS.Normal },
         { name: 'Mild (MCI)', value: Math.round((riskCounts.Mild / totalRisk) * 100), count: riskCounts.Mild, color: RISK_COLORS.Mild },
         { name: 'Moderate', value: Math.round((riskCounts.Moderate / totalRisk) * 100), count: riskCounts.Moderate, color: RISK_COLORS.Moderate },
         { name: 'Severe AD', value: Math.round((riskCounts.High / totalRisk) * 100), count: riskCounts.High, color: RISK_COLORS.High },
+        ...(riskCounts.Unknown > 0 ? [{ name: 'Unknown', value: Math.round((riskCounts.Unknown / totalRisk) * 100), count: riskCounts.Unknown, color: UNKNOWN_RISK_COLOR }] : []),
       ] : [];
 
-      const recent = analyses.slice(0, 6).map((a) => ({
-        id: a.id || a.analysis_id || a.patient_info?.patient_id || a.patient_id || 'P-0000',
-        patientId: a.patient_info?.patient_id || a.patient_id || 'P-0000',
+      const toRow = (a) => ({
+        id: a.id || a.analysis_id || a.session_id || `${a.patient_info?.patient_id || a.patient_id || 'P'}-${a.created_at || ''}`,
+        patientId: a.patient_info?.patient_id || a.patient_id || null,
         name: a.patient_info?.name || a.patient_name || a.name || 'Unknown Patient',
         stage: getAnalysisStage(a),
         risk: getRiskLevel(getAnalysisStage(a)),
@@ -101,21 +118,14 @@ export default function DashboardPage() {
         timestamp: a.created_at ? new Date(a.created_at).getTime() : 0,
         date: a.created_at ? new Date(a.created_at).toLocaleDateString() : 'Today',
         conf: Math.round(getAnalysisConfidence(a)),
-      }));
+      });
+
+      const recent = analyses.slice(0, 6).map(toRow);
 
       const priority = analyses
         .filter((a) => getRiskLevel(getAnalysisStage(a)) === 'High')
         .slice(0, 5)
-        .map((a) => ({
-          id: a.id || a.analysis_id || a.patient_info?.patient_id || a.patient_id || 'P-0000',
-          patientId: a.patient_info?.patient_id || a.patient_id || 'P-0000',
-          name: a.patient_info?.name || a.patient_name || a.name || 'Unknown Patient',
-          stage: getAnalysisStage(a),
-          time: formatTimeAgo(a.created_at),
-          timestamp: a.created_at ? new Date(a.created_at).getTime() : 0,
-          date: a.created_at ? new Date(a.created_at).toLocaleDateString() : 'Today',
-          conf: Math.round(getAnalysisConfidence(a)),
-        }));
+        .map(toRow);
 
       const monthKeys = Array.from({ length: 6 }, (_, i) => {
         const date = new Date();
@@ -153,8 +163,6 @@ export default function DashboardPage() {
       setPriorityAnalyses(priority);
       setTrendData(hasTrendData ? monthlyData : []);
       setLastRefreshed(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-    } catch (err) {
-      console.error('Failed to fetch dashboard data:', err);
     } finally {
       setReady(true);
       setRefreshing(false);
@@ -245,6 +253,24 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* ── Data Load Error Banner ───────────────────────────────────────── */}
+      {fetchError && (
+        <div
+          role="alert"
+          className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl border border-rose-500/30 bg-rose-500/10"
+        >
+          <div className="flex items-center gap-2.5">
+            <AlertTriangle size={18} className="text-rose-500 dark:text-rose-400 shrink-0" />
+            <p className="text-sm font-semibold text-foreground">
+              {fetchError} Values shown below may be incomplete.
+            </p>
+          </div>
+          <Button variant="outline" size="sm" icon={RefreshCw} onClick={fetchDashboardData} disabled={refreshing}>
+            Retry
+          </Button>
+        </div>
+      )}
+
       {/* ── PRIMARY FOCUS: High-Risk Urgent Triage Section ──────────────── */}
       <section 
         aria-label="Urgent Clinical Triage" 
@@ -321,11 +347,11 @@ export default function DashboardPage() {
                     key={item.id}
                     tabIndex={0}
                     role="button"
-                    onClick={() => navigate(`/history/${item.id}`)}
+                    onClick={() => { if (item.patientId) navigate(`/history/${item.patientId}`) }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault()
-                        navigate(`/history/${item.id}`)
+                        if (item.patientId) navigate(`/history/${item.patientId}`)
                       }
                     }}
                     className="hover:bg-rose-500/5 dark:hover:bg-rose-500/10 cursor-pointer transition-colors focus:outline-none focus:bg-rose-500/10"
@@ -534,11 +560,11 @@ export default function DashboardPage() {
                     key={item.id}
                     tabIndex={0}
                     role="button"
-                    onClick={() => navigate(`/history/${item.id}`)}
+                    onClick={() => { if (item.patientId) navigate(`/history/${item.patientId}`) }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault()
-                        navigate(`/history/${item.id}`)
+                        if (item.patientId) navigate(`/history/${item.patientId}`)
                       }
                     }}
                     className="hover:bg-surface-hover/80 cursor-pointer transition-colors focus:outline-none focus:bg-surface-hover"

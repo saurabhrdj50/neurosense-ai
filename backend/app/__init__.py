@@ -8,10 +8,10 @@ os.environ.setdefault('TF_CPP_MIN_LOG_LEVEL', '2')
 
 from flask import Flask, jsonify, session, request, g, redirect, url_for
 
-from app.core.config import Config
-from app.core.database import Database
-from app.core.logging_config import setup_logging, audit_logger
-from app.core.metrics import metrics
+from app.config.settings import Config
+from app.shared.database import Database
+from app.shared.logging_config import setup_logging, audit_logger
+from app.shared.metrics import metrics
 
 _sentry_initialized = False
 try:
@@ -75,7 +75,7 @@ def _init_database(db_path):
     db.init_schema()
     
     # Ensure default users exist via UserRepository (triggers seed if empty)
-    from app.repositories.user_repository import UserRepository
+    from app.features.auth.repository import UserRepository
     UserRepository()
     
     logger.info("Database initialized at %s", db_path)
@@ -90,7 +90,7 @@ def get_limiter():
 
 def _get_rate_limit_key():
     """Get rate limit key including authenticated user if available."""
-    from app.core.security import get_current_user_id
+    from app.shared.security import get_current_user_id
     user_id = get_current_user_id()
     if user_id:
         return f"user_{user_id}"
@@ -99,26 +99,34 @@ def _get_rate_limit_key():
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
-    
-    # Configure CORS with credentials support for frontend integration
+
+    # Trust X-Forwarded-For/X-Forwarded-Proto only when explicitly deployed
+    # behind a reverse proxy; otherwise clients could spoof their IP and
+    # bypass per-IP rate limits.
+    if Config.TRUST_PROXY:
+        from werkzeug.middleware.proxy_fix import ProxyFix
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
+        logger.info("ProxyFix enabled (TRUST_PROXY=1)")
+
+    # Configure CORS with credentials support for frontend integration.
+    # Strict allowlist: CORS_ORIGINS env plus localhost dev defaults only —
+    # never a wildcard subdomain pattern.
     if HAS_CORS and CORS is not None:
-        import re
         raw_origins = os.environ.get('CORS_ORIGINS', '').split(',')
         allowed_origins = [o.strip() for o in raw_origins if o.strip()]
-        
-        defaults = [
-            'http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002',
-            'http://localhost:4000', 'http://localhost:5173', 'http://127.0.0.1:3000',
-            'http://127.0.0.1:5173', 'http://127.0.0.1:4000'
-        ]
-        for d in defaults:
-            if d not in allowed_origins:
-                allowed_origins.append(d)
-        
-        # Support all Vercel deployment URLs (production & preview branches) automatically
-        origin_patterns = [re.compile(r"^https:\/\/.*\.vercel\.app$")] + allowed_origins
-        CORS(app, supports_credentials=True, origins=origin_patterns, expose_headers=['Content-Length', 'Content-Type', 'X-Request-ID'])
-        logger.info("CORS enabled for origins: %s (including all *.vercel.app domains)", allowed_origins)
+
+        if not Config.IS_PRODUCTION:
+            defaults = [
+                'http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002',
+                'http://localhost:4000', 'http://localhost:5173', 'http://127.0.0.1:3000',
+                'http://127.0.0.1:5173', 'http://127.0.0.1:4000'
+            ]
+            for d in defaults:
+                if d not in allowed_origins:
+                    allowed_origins.append(d)
+
+        CORS(app, supports_credentials=True, origins=allowed_origins, expose_headers=['Content-Length', 'Content-Type', 'X-Request-ID'])
+        logger.info("CORS enabled for origins: %s", allowed_origins)
     
     # Configure rate limiting
     global _limiter
@@ -161,7 +169,7 @@ def create_app():
         
         @login_manager.user_loader
         def load_user(user_id):
-            from app.repositories.user_repository import UserRepository
+            from app.features.auth.repository import UserRepository
             repo = UserRepository()
             return repo.get_by_id(int(user_id))
     
@@ -176,6 +184,7 @@ def create_app():
         import uuid
         g.request_id = str(uuid.uuid4())[:8]
         g.start_time = time.time()
+        g._counted_active = True
         metrics.increment_active_requests()
         logger.info(
             "[%s] %s %s started",
@@ -192,21 +201,27 @@ def create_app():
     
     @app.after_request
     def after_request(response):
-        from app.core.metrics import metrics
+        from app.shared.metrics import metrics
         
         if hasattr(g, 'request_id'):
             response.headers['X-Request-ID'] = g.request_id
-        
+
+        # before_request does not run for unmatched routes (404), so only
+        # decrement when this request actually incremented the gauge.
+        if getattr(g, '_counted_active', False):
+            metrics.decrement_active_requests()
+
         if hasattr(g, 'start_time'):
             duration_ms = (time.time() - g.start_time) * 1000
+            # Use the routing rule (not the raw path) so IDs don't grow the
+            # per-endpoint metric dict without bound.
+            metric_path = request.url_rule.rule if request.url_rule else '<unmatched>'
             metrics.record_request(
-                path=request.path,
+                path=metric_path,
                 method=request.method,
                 status_code=response.status_code,
                 duration_ms=duration_ms
             )
-            metrics.decrement_active_requests()
-            
             logger.info(
                 "[%s] %s %s completed - %d in %.2fms",
                 g.request_id, request.method, request.path,
@@ -222,56 +237,54 @@ def create_app():
         return response
     
     # Global error handlers
-    from app.core.middleware import ErrorHandler, NeuroSenseError
-    
+    from app.shared.middleware import ErrorHandler, NeuroSenseError
+
     @app.errorhandler(NeuroSenseError)
     def handle_neurosense_error(e):
         return ErrorHandler.handle(e)
-    
+
     @app.errorhandler(413)
     def too_large(e):
-        return jsonify({'success': False, 'error': 'File too large. Maximum size is 16 MB.'}), 413
-    
-    @app.errorhandler(404)
-    def not_found(e):
-        return jsonify({'success': False, 'error': 'Endpoint not found.'}), 404
-    
-    @app.errorhandler(500)
-    def server_error(e):
-        logger.exception("Unhandled server error")
-        if sentry_sdk and _sentry_initialized:
-            sentry_sdk.capture_exception(e)
-        return jsonify({'success': False, 'error': 'Internal server error.'}), 500
-    
-    from app.core.errors import register_error_handlers
+        return jsonify({'success': False, 'error': 'File too large. Maximum size is 100 MB.'}), 413
+
+    from app.shared.errors import register_error_handlers
     register_error_handlers(app)
     
     init_sentry()
     
     # Register blueprints
-    from app.api.routes import auth, analysis, patients, utilities, analyses
-    from app.api.routes.admin import admin_bp
-    
+    from app.features.auth import routes as auth
+    from app.features.analysis import routes as analysis
+    from app.features.patients import routes as patients
+    from app.features.history import routes as analyses
+    from app.features.admin.routes import admin_bp
+
     app.register_blueprint(auth.auth_bp)
     app.register_blueprint(analysis.analysis_bp)
     app.register_blueprint(analyses.analyses_bp)
     app.register_blueprint(patients.patient_bp)
-    app.register_blueprint(utilities.utility_bp)
     app.register_blueprint(admin_bp)
 
     # Route-specific security limits (brute-force / enumeration protection)
     if _limiter is not None:
         route_limits = {
             'auth.login': ["10 per minute"],
-            'auth.forgot-password': ["5 per hour"],
-            'auth.reset-password': ["10 per hour"],
+            'auth.forgot_password': ["5 per hour"],
+            'auth.reset_password': ["10 per hour"],
+            'auth.register': ["10 per hour"],
         }
         for endpoint, limits in route_limits.items():
             view = app.view_functions.get(endpoint)
-            if view is not None:
-                for limit in limits:
-                    view = _limiter.limit(limit)(view)
-                app.view_functions[endpoint] = view
+            # A missing endpoint here means a route was renamed and the
+            # protection silently vanished — fail loudly instead.
+            if view is None:
+                raise RuntimeError(
+                    f"route_limits references unknown endpoint '{endpoint}'. "
+                    "Update the keys to match the registered blueprint endpoints."
+                )
+            for limit in limits:
+                view = _limiter.limit(limit)(view)
+            app.view_functions[endpoint] = view
     
     @app.route('/')
     def index():
@@ -282,15 +295,13 @@ def create_app():
                 'auth': '/api/auth',
                 'patients': '/api/patients',
                 'analysis': '/api/analysis',
-                'utils': '/api/utils',
-                'health': '/api/health',
-                'metrics': '/api/metrics'
+                'health': '/api/health'
             }
         })
-    
+
     @app.route('/api/health')
     def health_check():
-        from app.core.config import Config
+        from app.config.settings import Config
         model_path = Config.MODEL_PATH
         model_loaded = model_path.exists()
         database_status = 'connected'
@@ -299,10 +310,10 @@ def create_app():
         except Exception:
             database_status = 'error'
 
-        status = 'healthy' if model_loaded and database_status == 'connected' else 'degraded'
+        healthy = model_loaded and database_status == 'connected'
 
         return jsonify({
-            'status': status,
+            'status': 'healthy' if healthy else 'degraded',
             'version': '1.0.0',
             'services': {
                 'database': database_status,
@@ -312,16 +323,15 @@ def create_app():
             'models': {
                 'MRI Classification Model': {
                     'loaded': model_loaded,
-                    'path': str(model_path),
                     'status': 'Loaded' if model_loaded else 'Missing trained model file',
                 }
             },
-        })
+        }), (200 if healthy else 503)
     
     
 
     if os.environ.get('ENABLE_EAGER_WARMUP', 'false').lower() == 'true':
-        from app.services.analysis_service import AnalysisOrchestrator
+        from app.features.analysis.service import AnalysisOrchestrator
         AnalysisOrchestrator().warmup_async()
     else:
         logger.info("Eager ML warmup disabled (lazy model loading active to conserve RAM)")

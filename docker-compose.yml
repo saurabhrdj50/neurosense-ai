@@ -1,0 +1,50 @@
+# NeuroSense local stack: Flask API + built frontend preview.
+# Usage: cp backend/.env.example backend/.env  (then edit SECRET_KEY)
+#        docker compose up --build
+# API at http://localhost:10000, UI at http://localhost:3000.
+services:
+  api:
+    build: ./backend
+    ports:
+      - "10000:10000"
+    env_file:
+      - ./backend/.env
+    environment:
+      # Single environment block — YAML last-wins silently dropped earlier
+      # keys when this was split in two.
+      PORT: 10000
+      SQLITE_PATH: /app/data/patient_data.db
+      ENABLE_EAGER_WARMUP: ${ENABLE_EAGER_WARMUP:-false}
+    volumes:
+      # Trained checkpoint (read-only; never baked into the image).
+      - ./backend/app/models:/app/app/models:ro
+      # SQLite DB, uploads, and Whisper cache persist across restarts.
+      - neuro_data:/app/data
+      - neuro_uploads:/app/app/uploads
+      - neuro_whisper:/home/neuro/.cache/whisper
+    user: "10001:10001"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:10000/api/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  web:
+    image: node:20-slim
+    working_dir: /app
+    command: sh -c "npm ci && npm run build && npx vite preview --host 0.0.0.0 --port 3000"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+    environment:
+      VITE_API_URL: http://localhost:10000
+    depends_on:
+      api:
+        condition: service_started
+
+volumes:
+  neuro_data:
+  neuro_uploads:
+  neuro_whisper:

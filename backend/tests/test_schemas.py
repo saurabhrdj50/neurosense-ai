@@ -2,8 +2,8 @@
 Tests for the API schemas and validation.
 """
 import pytest
-from app.api.schemas.auth import LoginSchema, RegisterSchema
-from app.api.schemas.patient import PatientSchema
+from app.features.auth.schemas import LoginSchema, RegisterSchema
+from app.features.patients.schemas import PatientSchema
 
 
 class TestLoginSchema:
@@ -111,17 +111,20 @@ class TestRegisterSchema:
             RegisterSchema.validate(data)
         assert 'date_of_birth' in str(exc_info.value)
     
-    def test_validate_invalid_role(self):
+    def test_role_is_ignored(self):
+        # Role must never be accepted from client input: self-service
+        # registration always creates a doctor account, so attempting to
+        # register with role='superadmin' must neither error nor persist a role.
         data = {
             'username': 'newdoctor',
             'email': 'test@test.com',
-            'password': 'password123',
+            'password': 'Password123!',
             'role': 'superadmin',
             'date_of_birth': '1980-01-01'
         }
-        with pytest.raises(ValueError) as exc_info:
-            RegisterSchema.validate(data)
-        assert 'role' in str(exc_info.value)
+        validated = RegisterSchema.validate(data)
+        assert 'role' not in validated
+        assert validated['username'] == 'newdoctor'
 
 
 class TestPatientSchema:

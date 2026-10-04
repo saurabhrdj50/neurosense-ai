@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+venv/
+.env
+uploads/
+patient_data.db
+pytest_cache/

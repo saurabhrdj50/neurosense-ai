@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   User, Brain, MessageSquare, Mic, HeartPulse,
@@ -7,18 +7,18 @@ import {
   Save, Check, ArrowLeft, FileSpreadsheet, Zap, X, AlertCircle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import Button from '../../components/ui/Button';
-import Modal from '../../components/ui/Modal';
+import Button from '../../shared/components/ui/Button';
+import Modal from '../../shared/components/ui/Modal';
 import { setAnalysisResults } from '../../context/ResultsStore';
-import { PatientStep } from './components/PatientStep';
-import { MRIStep } from './components/MRIStep';
-import { CognitiveStep } from './components/CognitiveStep';
-import { SpeechStep } from './components/SpeechStep';
-import { RiskStep } from './components/RiskStep';
-import { ReviewStep } from './components/ReviewStep';
+import { PatientStep } from './patient/PatientStep';
+import { MRIStep } from './mri/MRIStep';
+import { CognitiveStep } from './cognitive/CognitiveStep';
+import { SpeechStep } from './speech/SpeechStep';
+import { RiskStep } from './risk/RiskStep';
+import { ReviewStep } from './review/ReviewStep';
 import { analysisApi } from './api/analysisApi';
-import { patientsApi } from '../../services';
-import { AnalysisLoader, useAnalysisProgress } from './components/AnalysisLoader';
+import { patientsApi } from '../patients/api/patientsApi';
+import { AnalysisLoader, useAnalysisProgress } from './AnalysisLoader';
 
 const STEPS = [
   { id: 'patient',   label: 'Patient Details',  icon: User,          required: true },
@@ -29,12 +29,16 @@ const STEPS = [
   { id: 'review',    label: 'Ready for Analysis',icon: ShieldCheck,   required: true },
 ];
 
+const DRAFT_STORAGE_KEY = 'neurosense_analysis_draft';
+const perPatientDraftKey = (patientId) => `${DRAFT_STORAGE_KEY}_${patientId}`;
+
 export default function AnalysisPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
-  const { isAnalyzing, currentStep, startAnalysis, stopAnalysis } = useAnalysisProgress();
+  const loadingRef = useRef(false);
+  const { isAnalyzing, startAnalysis, stopAnalysis } = useAnalysisProgress();
 
   const [patients, setPatients] = useState([]);
   const [selectedPatient, setSelectedPatient] = useState(null);
@@ -79,35 +83,45 @@ export default function AnalysisPage() {
       .catch(() => setPatientsLoading(false));
   }, []);
 
-  /* ── Load draft from localStorage ──────────────────────────────────── */
+  /* ── Load draft from localStorage (keyed by patient when one is selected) ──
+     When a patient arrives via location.state, only a draft belonging to that
+     same patient_id may be restored — a stale draft from another patient must
+     never silently attach to a newly selected patient. The prefilled registry
+     demographics always take precedence over draft demographics. */
   useEffect(() => {
     try {
-      const savedDraft = localStorage.getItem('neurosense_analysis_draft');
-      if (savedDraft) {
-        const parsed = JSON.parse(savedDraft);
-        if (parsed.patient?.patient_id || parsed.patient?.name) {
-          setPatient(parsed.patient || {});
-          setPatientText(parsed.patientText || '');
-          setCognData(parsed.cognData || {});
-          setSpeechText(parsed.speechText || '');
-          setRisk(parsed.risk || {});
-          if (parsed.savedAt) setLastSavedTime(parsed.savedAt);
-        }
+      const prefill = location.state?.patient_info || location.state?.prefillPatient;
+      const draftKey = prefill?.patient_id ? perPatientDraftKey(prefill.patient_id) : DRAFT_STORAGE_KEY;
+      const savedDraft = localStorage.getItem(draftKey) || (prefill ? localStorage.getItem(DRAFT_STORAGE_KEY) : null);
+      if (!savedDraft) return;
+      const parsed = JSON.parse(savedDraft);
+      const draftBelongsToOtherPatient =
+        prefill?.patient_id && parsed.patient?.patient_id && parsed.patient.patient_id !== prefill.patient_id;
+      if (draftBelongsToOtherPatient) return;
+
+      if (!prefill && (parsed.patient?.patient_id || parsed.patient?.name)) {
+        setPatient(parsed.patient || {});
       }
-    } catch (e) {
+      setPatientText(parsed.patientText || '');
+      setCognData(parsed.cognData || {});
+      setSpeechText(parsed.speechText || '');
+      setRisk(parsed.risk || {});
+      if (parsed.savedAt) setLastSavedTime(parsed.savedAt);
+    } catch {
       // Ignore draft parse errors
     }
-  }, []);
+  }, [location.state]);
 
-  /* ── Auto-save draft ────────────────────────────────────────────────── */
+  /* ── Auto-save draft (per-patient key when a patient is selected) ──────── */
   const saveDraft = useCallback((quiet = false) => {
     try {
       const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
       const draft = { patient, patientText, cognData, speechText, risk, savedAt: nowStr };
-      localStorage.setItem('neurosense_analysis_draft', JSON.stringify(draft));
+      const draftKey = patient.patient_id ? perPatientDraftKey(patient.patient_id) : DRAFT_STORAGE_KEY;
+      localStorage.setItem(draftKey, JSON.stringify(draft));
       setLastSavedTime(nowStr);
       if (!quiet) toast.success(`Draft saved at ${nowStr}`);
-    } catch (e) {
+    } catch {
       if (!quiet) toast.error('Failed to save draft');
     }
   }, [patient, patientText, cognData, speechText, risk]);
@@ -153,18 +167,15 @@ export default function AnalysisPage() {
   const handleSubmit = useCallback(async () => {
     let currentPatient = { ...patient };
     if (!currentPatient.patient_id || !currentPatient.name) {
-      const fallbackId = `PAT-${Math.floor(1000 + Math.random() * 9000)}`;
-      currentPatient = {
-        name: currentPatient.name || 'Eleanor Vance',
-        patient_id: currentPatient.patient_id || fallbackId,
-        age: currentPatient.age || '72',
-        sex: currentPatient.sex || 'F',
-        education_years: currentPatient.education_years || '16',
-      };
-      setPatient(currentPatient);
-      toast.success(`Assigned patient profile: ${currentPatient.name} (${currentPatient.patient_id})`);
+      toast.error('Patient name and patient ID are required before analysis.');
+      return;
     }
-    
+
+    // Re-entrancy guard: keyboard shortcut + button can fire while a request
+    // is already in flight — never submit twice.
+    if (loadingRef.current) return;
+    loadingRef.current = true;
+
     setLoading(true);
     startAnalysis();
     const tid = toast.loading('Executing Clinical Analysis…');
@@ -184,16 +195,20 @@ export default function AnalysisPage() {
       if (Object.keys(cognData).length) fd.append('cognitive_tests', JSON.stringify(cognData));
       if (audioFile) fd.append('audio_file', audioFile);
       else if (speechText) fd.append('audio_text', speechText);
-      if (Object.keys(risk).length) fd.append('risk_factors', JSON.stringify(risk));
+      // Unticked risk factors are stored as `false` — only serialize the
+      // factors actually asserted (true / non-empty values)
+      const activeRiskFactors = Object.fromEntries(
+        Object.entries(risk).filter(([, v]) => v !== false && v !== null && v !== undefined)
+      );
+      if (Object.keys(activeRiskFactors).length) fd.append('risk_factors', JSON.stringify(activeRiskFactors));
 
       const data = await analysisApi.runFullAnalysis(fd);
       setAnalysisResults(data);
-      
-      // Allow multi-stage loader animation to complete smoothly (~1.2s delay)
-      await new Promise((resolve) => setTimeout(resolve, 1200));
 
       stopAnalysis();
-      localStorage.removeItem('neurosense_analysis_draft');
+      // Clear the completed assessment's draft (per-patient + legacy generic key)
+      localStorage.removeItem(perPatientDraftKey(currentPatient.patient_id));
+      localStorage.removeItem(DRAFT_STORAGE_KEY);
       toast.dismiss(tid);
       toast.success('Diagnostic evaluation complete!');
       navigate('/results', { state: { autoView: true, fromAssessment: true, results: data } });
@@ -203,6 +218,7 @@ export default function AnalysisPage() {
       toast.error('Analysis failed: ' + err.message);
     } finally {
       setLoading(false);
+      loadingRef.current = false;
     }
   }, [patient, patientText, mriFile, cognData, audioFile, speechText, risk, startAnalysis, stopAnalysis, navigate]);
 
@@ -213,6 +229,7 @@ export default function AnalysisPage() {
 
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
         e.preventDefault();
+        if (loadingRef.current) return; // ignore shortcut while submitting
         if (step < STEPS.length - 1) {
           setStep(s => s + 1);
         } else {
@@ -246,7 +263,15 @@ export default function AnalysisPage() {
       ethnicity: 'Caucasian / European'
     });
     setPatientText('Patient presents with mild short-term memory complaints and occasional word-finding pauses. Independent in activities of daily living.');
-    setCognData({ mmse: 24, moca: 22, memory_recall: 5, clock_draw: 4 });
+    setCognData({
+      screening_breakdown: {
+        orient_date: 1, orient_place: 1, register_3words: 3, delay_recall: 1,
+        digit_span_fwd: 3, serial_7: 2, animal_fluency: 2, object_naming: 3,
+        sentence_compreh: 1, multi_step_cmd: 2, logical_reason: 0, abstraction: 1,
+        months_reverse: 1, problem_solve: 2, auto_memory: 1,
+      },
+      questions_completed: 15
+    });
     setSpeechText('I spent the morning walking through the botanical garden with my daughter. We noticed the hydrangeas were beginning to bloom.');
     setRisk({ hypertension: true, family_history: true, physical_activity: 'moderate', sleep_hours: 6 });
     toast.success('Loaded Clinical Evaluation Sample Case!');
@@ -294,7 +319,7 @@ export default function AnalysisPage() {
           />
         );
       case 1: return <MRIStep mriFile={mriFile} setMriFile={setMriFile} />;
-      case 2: return <CognitiveStep cognData={cognData} setCognData={setCognData} patient={patient} />;
+      case 2: return <CognitiveStep cognData={cognData} setCognData={setCognData} />;
       case 3: return <SpeechStep speechText={speechText} setSpeechText={setSpeechText} audioFile={audioFile} setAudioFile={setAudioFile} />;
       case 4: return <RiskStep risk={risk} setRisk={setRisk} />;
       case 5:
@@ -329,7 +354,6 @@ export default function AnalysisPage() {
     <>
       <AnalysisLoader
         isLoading={isAnalyzing}
-        currentStep={currentStep}
         patientName={activePatientName || 'current patient'}
         modalities={selectedModalities}
       />
@@ -515,7 +539,7 @@ export default function AnalysisPage() {
               
               {/* Dynamic Step View */}
               <AnimatePresence mode="wait">
-                <motion.div
+                <Motion.div
                   key={step}
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -523,7 +547,7 @@ export default function AnalysisPage() {
                   transition={{ duration: 0.15 }}
                 >
                   {renderStep()}
-                </motion.div>
+                </Motion.div>
               </AnimatePresence>
             </div>
           </main>

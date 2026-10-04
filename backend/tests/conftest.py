@@ -17,12 +17,19 @@ def app(tmp_path):
     os.environ['SECRET_KEY'] = 'test-secret-key'
     os.environ['TESTING'] = 'true'  # disables rate-limiter in test mode
     os.environ['SEED_DEMO_DATA'] = 'true'  # ensure seed users/patients are created
+    os.environ['EXPOSE_RESET_TOKEN'] = 'true'  # no email delivery channel in tests
     os.environ['FLASK_ENV'] = 'development'
 
+    # Config flag attrs are computed once at first import (before the env vars
+    # above existed), so patch them directly for deterministic test isolation.
+    from app.config.settings import Config
+    original_expose_reset_token = Config.EXPOSE_RESET_TOKEN
+    Config.EXPOSE_RESET_TOKEN = True
+
     # Patch the DB path BEFORE modules are loaded
-    from app.core.database import Database
+    from app.shared.database import Database
     
-    from app.core.config import Config
+    from app.config.settings import Config
     original_config_db = Config.DB_PATH
     Config.DB_PATH = tmp_db
 
@@ -37,12 +44,12 @@ def app(tmp_path):
     flask_app.config['TESTING'] = True
     flask_app.config['WTF_CSRF_ENABLED'] = False
 
-    from app.core.db_orm import Base, get_engine
+    from app.shared.db_orm import Base, get_engine
     Base.metadata.drop_all(bind=get_engine())
     Base.metadata.create_all(bind=get_engine())
-    from app.repositories.user_repository import UserRepository
+    from app.features.auth.repository import UserRepository
     UserRepository()
-    from app.repositories.patient_repository import PatientRepository
+    from app.features.patients.repository import PatientRepository
     PatientRepository()
 
     with flask_app.app_context():
@@ -51,8 +58,10 @@ def app(tmp_path):
     # Restore original DB paths and clear modules
     Database._instance = None
     Config.DB_PATH = original_config_db
+    Config.EXPOSE_RESET_TOKEN = original_expose_reset_token
     os.environ.pop('TESTING', None)
     os.environ.pop('SEED_DEMO_DATA', None)
+    os.environ.pop('EXPOSE_RESET_TOKEN', None)
     os.environ.pop('FLASK_ENV', None)
 
 

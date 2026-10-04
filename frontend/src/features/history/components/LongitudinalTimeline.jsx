@@ -4,10 +4,9 @@ import {
   Brain, FileText, Clock, User, ChevronDown, ChevronUp,
   Search, Calendar, Download, Sparkles, Activity, MessageSquare, HeartPulse
 } from 'lucide-react'
-import Badge from '../../../components/ui/Badge'
-import Button from '../../../components/ui/Button'
-import ProgressBar from '../../../components/ui/ProgressBar'
-import API_URL from '../../../config/api'
+import Badge from '../../../shared/components/ui/Badge'
+import Button from '../../../shared/components/ui/Button'
+import ProgressBar from '../../../shared/components/ui/ProgressBar'
 
 const STAGE_CONFIG = {
   'Non-Demented':       { label: 'Normal / Healthy', variant: 'success', color: '#10B981' },
@@ -151,7 +150,7 @@ export default function LongitudinalTimeline({ history, patientId }) {
                       <Sparkles size={13} className="text-amber-500" /> Memory Score
                     </span>
                     <p className="font-extrabold text-foreground text-sm">
-                      {cog.composite_score ? `${cog.composite_score}/100` : (cog.mmse ? `MMSE: ${cog.mmse}/30` : '85/100')}
+                      {cog.composite_score != null ? `${cog.composite_score}/100` : 'Not assessed'}
                     </p>
                   </div>
 
@@ -160,7 +159,7 @@ export default function LongitudinalTimeline({ history, patientId }) {
                       <MessageSquare size={13} className="text-cyan-500" /> Speech Pattern
                     </span>
                     <p className="font-extrabold text-foreground text-sm">
-                      {speech.risk === 'High' ? 'Pauses Detected' : 'Normal Speed'}
+                      {speech.pause_frequency && speech.pause_frequency !== 'Not available' ? `Pauses: ${speech.pause_frequency}` : (speech.clinical_summary ? 'Transcript available' : 'Not assessed')}
                     </p>
                   </div>
 
@@ -169,7 +168,7 @@ export default function LongitudinalTimeline({ history, patientId }) {
                       <HeartPulse size={13} className="text-rose-500" /> Health Risk
                     </span>
                     <p className="font-extrabold text-foreground text-sm">
-                      {risk.risk_category || (risk.overall_risk_score > 60 ? 'Moderate' : 'Low Risk')}
+                      {risk.risk_category || (risk.overall_risk_score != null ? (risk.overall_risk_score > 60 ? 'Moderate' : 'Low Risk') : 'Not Assessed')}
                     </p>
                   </div>
                 </div>
@@ -181,19 +180,19 @@ export default function LongitudinalTimeline({ history, patientId }) {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-foreground-muted">
                       <div className="flex justify-between py-1.5 border-b border-border/50">
                         <span>Memory Center (Hippocampus):</span>
-                        <strong className="text-foreground">{mri.hippocampalVolume ? `${mri.hippocampalVolume} cm³` : '2.82 cm³'}</strong>
+                        <strong className="text-foreground">{mri.hippocampalVolume ? `${mri.hippocampalVolume} cm³` : 'Not measured'}</strong>
                       </div>
                       <div className="flex justify-between py-1.5 border-b border-border/50">
                         <span>Total Brain Volume:</span>
-                        <strong className="text-foreground">{mri.brainVolume ? `${mri.brainVolume} cm³` : '1,120 cm³'}</strong>
+                        <strong className="text-foreground">{mri.brainVolume ? `${mri.brainVolume} cm³` : 'Not measured'}</strong>
                       </div>
                       <div className="flex justify-between py-1.5 border-b border-border/50">
                         <span>Cognitive Recall Score:</span>
-                        <strong className="text-foreground">{cog.recall ? `${cog.recall}/3` : '2/3'}</strong>
+                        <strong className="text-foreground">{cog.memory_recall != null ? `${cog.memory_recall}` : (cog.recall ? `${cog.recall}/3` : 'Not assessed')}</strong>
                       </div>
                       <div className="flex justify-between py-1.5 border-b border-border/50">
                         <span>ApoE4 Genetic Indicator:</span>
-                        <strong className="text-foreground">{risk.genetics?.apoe4 ? 'Present (e3/e4)' : 'Not Detected'}</strong>
+                        <strong className="text-foreground">{risk.genetics?.apoe4 ? 'Present (e3/e4)' : 'Unknown'}</strong>
                       </div>
                     </div>
                   </div>

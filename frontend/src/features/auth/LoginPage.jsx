@@ -6,9 +6,9 @@ import {
   Brain, Mail, Lock, User, Shield, Stethoscope, ArrowLeft, Building2,
   AlertCircle, LockKeyhole, Sun, Moon, Eye, EyeOff, CalendarDays
 } from 'lucide-react';
-import { useAuth } from './AuthProvider';
-import { useTheme } from '../../context/ThemeProvider';
-import { getAuthThemeConfig } from './config/AuthThemeConfig';
+import { useAuth } from '../../providers/AuthProvider';
+import { useTheme } from '../../providers/ThemeProvider';
+import { getAuthThemeConfig } from './AuthThemeConfig';
 import BrainCanvas from './components/BrainCanvas';
 import API_URL from '../../config/api';
 
@@ -64,7 +64,6 @@ export default function LoginPage() {
 
   const [selectedRole, setSelectedRole] = useState('doctor'); // 'doctor' | 'admin'
   const [mode, setMode] = useState('login'); // 'login' | 'register'
-  const [rememberMe, setRememberMe] = useState(true);
   const [forgotMode, setForgotMode] = useState(false);
   const [forgotStep, setForgotStep] = useState(1);
   const [errors, setErrors] = useState({});
@@ -107,6 +106,9 @@ export default function LoginPage() {
     password: '',
     full_name: '',
     institution: '',
+    date_of_birth: '',
+    license_number: '',
+    department: '',
     acceptTerms: false
   });
 
@@ -139,6 +141,19 @@ export default function LoginPage() {
 
       if (!form.institution.trim()) newErrors.institution = 'Hospital or Institution name is required';
 
+      if (!form.date_of_birth) {
+        newErrors.date_of_birth = 'Date of birth is required';
+      } else {
+        const dob = new Date(form.date_of_birth);
+        if (Number.isNaN(dob.getTime()) || dob >= new Date()) {
+          newErrors.date_of_birth = 'Date of birth must be a valid past date (YYYY-MM-DD)';
+        }
+      }
+
+      if (!form.license_number.trim()) newErrors.license_number = 'Medical license number is required';
+
+      if (!form.department.trim()) newErrors.department = 'Department is required';
+
       if (!form.password) {
         newErrors.password = 'Password is required';
       } else if (form.password.length < 6) {
@@ -163,7 +178,10 @@ export default function LoginPage() {
       if (mode === 'login') {
         const result = await login(form.username, form.password);
         if (result.success) {
-          if (result.role === 'admin' || selectedRole === 'admin') {
+          // Navigate strictly by the role the backend returned — never by the
+          // selected tab, so a doctor choosing the Admin tab is not sent to an
+          // admin route they would just be bounced from.
+          if (result.role === 'admin') {
             navigate('/admin/dashboard', { replace: true });
           } else {
             navigate('/dashboard', { replace: true });
@@ -178,9 +196,9 @@ export default function LoginPage() {
           password: form.password,
           full_name: form.full_name,
           institution: form.institution,
-          department: 'General Medicine',
-          date_of_birth: '1990-01-01',
-          license_number: 'N/A'
+          department: form.department.trim(),
+          date_of_birth: form.date_of_birth,
+          license_number: form.license_number.trim()
         };
         const res = await register(payload);
         const isSuccess = typeof res === 'boolean' ? res : res?.success;
@@ -541,6 +559,34 @@ export default function LoginPage() {
                             onChange={setField('institution')}
                             error={errors.institution}
                           />
+
+                          <CustomInput
+                            label="Date of Birth"
+                            icon={CalendarDays}
+                            type="date"
+                            placeholder="YYYY-MM-DD"
+                            value={form.date_of_birth}
+                            onChange={setField('date_of_birth')}
+                            error={errors.date_of_birth}
+                          />
+
+                          <CustomInput
+                            label="Medical License Number"
+                            icon={Shield}
+                            placeholder="e.g. MD-8849201"
+                            value={form.license_number}
+                            onChange={setField('license_number')}
+                            error={errors.license_number}
+                          />
+
+                          <CustomInput
+                            label="Department"
+                            icon={Stethoscope}
+                            placeholder="e.g. Neurology"
+                            value={form.department}
+                            onChange={setField('department')}
+                            error={errors.department}
+                          />
                         </>
                       )}
 
@@ -567,17 +613,10 @@ export default function LoginPage() {
                         error={errors.password}
                       />
 
-                      {/* REMEMBER ME & FORGOT PASSWORD */}
+                      {/* FORGOT PASSWORD (backend flask-login "remember me" is
+                          decided server-side, so no client remember flag) */}
                       {mode === 'login' && (
-                        <div className="flex items-center justify-between text-xs pt-1">
-                          <Checkbox
-                            checked={rememberMe}
-                            onChange={e => setRememberMe(e.target.checked)}
-                          >
-                            <span className="text-slate-700 dark:text-slate-300 font-medium">
-                              Remember Me
-                            </span>
-                          </Checkbox>
+                        <div className="flex items-center justify-end text-xs pt-1">
                           <button
                             type="button"
                             onClick={() => { setForgotMode(true); setForgotStep(1); setErrors({}); }}

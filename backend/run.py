@@ -17,8 +17,8 @@ logger = logging.getLogger(__name__)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-os.makedirs(os.path.join(BASE_DIR, 'uploads'), exist_ok=True)
-os.makedirs(os.path.join(BASE_DIR, 'models'), exist_ok=True)
+os.makedirs(os.path.join(BASE_DIR, 'app', 'uploads'), exist_ok=True)
+os.makedirs(os.path.join(BASE_DIR, 'app', 'models'), exist_ok=True)
 
 app = create_app()
 

@@ -6,10 +6,10 @@ import pytest
 import io
 import csv
 import zipfile
-from app.repositories.user_repository import UserRepository
-from app.repositories.patient_repository import PatientRepository
-from app.repositories.session_repository import SessionRepository
-from app.services.storage_manager import StorageManager
+from app.features.auth.repository import UserRepository
+from app.features.patients.repository import PatientRepository
+from app.features.history.repository import SessionRepository
+from app.shared.storage import StorageManager
 
 
 @pytest.fixture

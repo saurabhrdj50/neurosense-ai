@@ -154,3 +154,5 @@ backend/venv*/
 node_modules/
 frontend/node_modules/
 backend/__pycache__/
+# Serialized model artifacts (loaded at runtime, never versioned)
+backend/app/models/alzheimer_model/

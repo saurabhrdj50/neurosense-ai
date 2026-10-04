@@ -38,25 +38,19 @@ pandas>=2.0.0
 # ─────────────────────────────────────────────
 Pillow>=10.0.0
 nibabel>=5.0.0                # NIfTI volume loader (3D MRI uploads)
-matplotlib>=3.7.0,<4.0.0      # Grad-CAM visualization (app/modules/mri/gradcam.py)
+matplotlib>=3.7.0,<4.0.0      # Grad-CAM visualization (app/ml/mri/gradcam.py)
 
 # ─────────────────────────────────────────────
 # NLP
 # ─────────────────────────────────────────────
 textblob>=0.18.0               # Pulls in nltk automatically
-transformers>=4.36.0,<6.0.0    # ClinicalBERT sentiment (app/modules/nlp/sentiment.py)
 
 # ─────────────────────────────────────────────
 # SPEECH
 # ─────────────────────────────────────────────
 SpeechRecognition>=3.10.0
-openai-whisper>=20231117        # OpenAI Whisper transcriber (app/modules/speech/transcriber.py)
+openai-whisper>=20231117        # OpenAI Whisper transcriber (app/ml/speech/transcriber.py)
 librosa>=0.10.0,<2.0.0          # Acoustic biomarker extraction (F0, jitter, pause ratio)
-
-# ─────────────────────────────────────────────
-# AI / LLM
-# ─────────────────────────────────────────────
-google-genai>=1.0.0            # Google Gemini API (app/modules/recommendation/chatbot.py)
 
 # ─────────────────────────────────────────────
 # REPORTS

@@ -2,11 +2,11 @@ import pytest
 import io
 import base64
 from pathlib import Path
-from app.services.storage_manager import StorageManager
-from app.repositories.patient_repository import PatientRepository
-from app.repositories.user_repository import UserRepository
-from app.models.patient import Patient
-from app.core.config import Config
+from app.shared.storage import StorageManager
+from app.features.patients.repository import PatientRepository
+from app.features.auth.repository import UserRepository
+from app.shared.models.patient import Patient
+from app.config.settings import Config
 
 def test_storage_manager_paths():
     """Verify clean directory resolution for doctor and patient IDs."""
@@ -57,16 +57,27 @@ def test_persist_raw_file(tmp_path):
         Config.UPLOAD_FOLDER = original_upload_folder
 
 def test_patient_repository_create_with_base64(app, tmp_path):
-    """Verify that PatientRepository automatically intercepts base64 avatars and persists physical files."""
+    """Verify avatar data-URLs are converted to stored files via PatientService.
+
+    The repository stores photo values opaquely; conversion lives in the
+    service layer (app/services/patients.py) to keep repositories free of
+    storage dependencies.
+    """
+    from app.features.patients.service import PatientService
+
     original_upload_folder = Config.UPLOAD_FOLDER
     Config.UPLOAD_FOLDER = tmp_path
-    
+
     try:
-        patient_repo = PatientRepository()
-        
+        service = PatientService()
+
         base64_img = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
-        
+
         patient_id = "PAT-REPO-TEST"
+        stored = service.store_avatar(1, patient_id, base64_img, patient_name="Test Storage Patient")
+        assert stored and stored.startswith('doctors/')
+
+        patient_repo = PatientRepository()
         result = patient_repo.create(
             patient_id=patient_id,
             name="Test Storage Patient",
@@ -74,14 +85,14 @@ def test_patient_repository_create_with_base64(app, tmp_path):
             sex="M",
             education_years=12,
             created_by=1,
-            photo=base64_img
+            photo=stored
         )
-        
+
         assert result["success"] is True
-        
+
         patient_data = patient_repo.get_by_patient_id(patient_id)
         assert patient_data["photo"] == "/api/patients/photo/PAT-REPO-TEST"
-        
+
         full_path = tmp_path / "doctors/1_admin/patients/PAT-REPO-TEST_test_storage_patient/profile/avatar.png"
         assert full_path.exists()
     finally:
@@ -224,7 +235,7 @@ def test_serve_report_access_control(app, client, tmp_path):
         assert res["success"] is True
         
         # Save a session to DB
-        from app.repositories.session_repository import SessionRepository
+        from app.features.history.repository import SessionRepository
         session_repo = SessionRepository()
         session_id = session_repo.save(
             patient_id=patient_id,
@@ -278,3 +289,20 @@ def test_serve_report_access_control(app, client, tmp_path):
         Config.UPLOAD_FOLDER = original_upload_folder
 
 
+
+def test_delete_doctor_directory_removes_only_target(tmp_path):
+    """Regression: deleting a doctor must not touch other doctors' files."""
+    original_upload_folder = Config.UPLOAD_FOLDER
+    Config.UPLOAD_FOLDER = tmp_path
+    try:
+        doctors_root = tmp_path / 'doctors'
+        keep = doctors_root / '2_keep'
+        target = doctors_root / '1_gone'
+        (keep / 'patients').mkdir(parents=True)
+        (target / 'patients').mkdir(parents=True)
+        (keep / 'patients' / 'x.txt').write_text('keep me')
+        assert StorageManager.delete_doctor_directory(1) is True
+        assert not target.exists()
+        assert (keep / 'patients' / 'x.txt').read_text() == 'keep me'
+    finally:
+        Config.UPLOAD_FOLDER = original_upload_folder

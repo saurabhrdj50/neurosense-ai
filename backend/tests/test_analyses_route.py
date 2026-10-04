@@ -1,6 +1,6 @@
-from app.repositories.patient_repository import PatientRepository
-from app.repositories.session_repository import SessionRepository
-from app.repositories.user_repository import UserRepository
+from app.features.patients.repository import PatientRepository
+from app.features.history.repository import SessionRepository
+from app.features.auth.repository import UserRepository
 
 
 def test_doctor_can_list_own_analyses(app, client):

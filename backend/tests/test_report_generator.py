@@ -1,7 +1,7 @@
 import pytest
-from app.modules.reporting.report_generator import ClinicalReportGenerator, generate_clinical_report
-from app.services.report_service import ReportOrchestrator
-from app.services.explanation_service import ExplanationService
+from app.ml.reporting.report_generator import ClinicalReportGenerator, generate_clinical_report
+from app.features.analysis.reporting import ReportOrchestrator
+from app.ml.explainability.explanation import ExplanationService
 
 def test_generate_pdf_report_with_explanation_attribution():
     """Verify PDF report builds cleanly when feature_attribution is a dict from ExplanationService."""
@@ -58,41 +58,6 @@ def test_generate_pdf_report_with_explanation_attribution():
     orchestrator = ReportOrchestrator()
     pdf_bytes = orchestrator.generate_report(raw_results, patient_info, format_type='pdf')
     
-    assert pdf_bytes is not None
-    assert len(pdf_bytes) > 1000
-    assert pdf_bytes[:4] == b'%PDF'
-
-def test_generate_comparison_pdf_report():
-    """Verify comparison PDF report generates valid PDF bytes."""
-    generator = ClinicalReportGenerator()
-    patient_a = {'patient_id': 'PAT-001', 'name': 'Arthur Pendelton', 'age': 74, 'gender': 'Male'}
-    patient_b = {'patient_id': 'PAT-002', 'name': 'Eleanor Vance', 'age': 68, 'gender': 'Female'}
-    
-    history_a = [
-        {
-            'timestamp': '2026-09-01T10:00:00Z',
-            'results': {
-                'final_stage': {'stage': 'Very Mild Demented', 'confidence': 82.0},
-                'cognitive': {'composite_score': 75.0},
-                'risk_profile': {'overall_risk_score': 45.0},
-                'speech': {'speech_fluency': 'Normal'}
-            }
-        }
-    ]
-    
-    history_b = [
-        {
-            'timestamp': '2026-09-02T11:00:00Z',
-            'results': {
-                'final_stage': {'stage': 'Mild Demented', 'confidence': 89.0},
-                'cognitive': {'composite_score': 55.0},
-                'risk_profile': {'overall_risk_score': 65.0},
-                'speech': {'speech_fluency': 'Impaired'}
-            }
-        }
-    ]
-    
-    pdf_bytes = generator.generate_comparison_pdf_report(patient_a, history_a, patient_b, history_b)
     assert pdf_bytes is not None
     assert len(pdf_bytes) > 1000
     assert pdf_bytes[:4] == b'%PDF'

@@ -1,5 +1,5 @@
 import pytest
-from app.repositories.audit_repository import AuditRepository
+from app.features.admin.repository import AuditRepository
 
 
 def test_audit_repository_log_and_get(app):

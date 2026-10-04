@@ -1,94 +1,10 @@
-import React, { Suspense, lazy } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import React from 'react'
+import { BrowserRouter } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
-import { AnimatePresence, motion } from 'framer-motion'
-import { AuthProvider, useAuth } from './features/auth'
-import { ThemeProvider } from './context/ThemeProvider'
-import AnimatedBg from './components/AnimatedBg'
-import AppLayout from './components/layout/AppLayout'
-import PageLoader from './components/ui/PageLoader'
-
-const LandingPage     = lazy(() => import('./features/landing/LandingPage'))
-const LoginPage       = lazy(() => import('./features/auth/LoginPage'))
-const DashboardPage   = lazy(() => import('./features/dashboard/DashboardPage'))
-const AnalysisPage    = lazy(() => import('./features/analysis/AnalysisPage'))
-const PatientsPage    = lazy(() => import('./features/patients/PatientsPage'))
-const ComparePatients = lazy(() => import('./features/patients/ComparePatients'))
-const HistoryPage     = lazy(() => import('./features/history/HistoryPage'))
-const ResultsPage     = lazy(() => import('./features/results/ResultsPage'))
-const AdminDashboard  = lazy(() => import('./features/admin/AdminDashboard'))
-const AdminPanel      = lazy(() => import('./features/admin/AdminPanel'))
-
-function PageTransition({ children }) {
-  const location = useLocation()
-  return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={location.pathname}
-        initial={{ opacity: 0, y: 12, filter: 'blur(6px)' }}
-        animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-        exit={{ opacity: 0, y: -8, filter: 'blur(4px)' }}
-        transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
-        className="h-full w-full flex flex-col flex-1"
-      >
-        {children}
-      </motion.div>
-    </AnimatePresence>
-  )
-}
-
-function ProtectedRoute({ children }) {
-  const { user, loading } = useAuth()
-  if (loading) return <PageLoader />
-  if (!user) return <Navigate to="/login" replace />
-  return children
-}
-
-function AdminRoute({ children }) {
-  const { user, loading, isAdmin } = useAuth()
-  if (loading) return <PageLoader />
-  if (!user) return <Navigate to="/login" replace />
-  if (!isAdmin) return <Navigate to="/dashboard" replace />
-  return children
-}
-
-function AppRoutes() {
-  return (
-    <Suspense fallback={<PageLoader />}>
-      <Routes>
-        <Route path="/" element={<PageTransition><LandingPage /></PageTransition>} />
-        <Route path="/login" element={<PageTransition><LoginPage /></PageTransition>} />
-        <Route
-          path="/admin"
-          element={
-            <AdminRoute>
-              <AppLayout />
-            </AdminRoute>
-          }
-        >
-          <Route index element={<Navigate to="/admin/dashboard" replace />} />
-          <Route path="dashboard" element={<PageTransition><AdminDashboard /></PageTransition>} />
-          <Route path="panel" element={<PageTransition><AdminPanel /></PageTransition>} />
-        </Route>
-        <Route
-          element={
-            <ProtectedRoute>
-              <AppLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route path="/dashboard" element={<PageTransition><DashboardPage /></PageTransition>} />
-          <Route path="/analysis"  element={<PageTransition><AnalysisPage /></PageTransition>} />
-          <Route path="/patients"  element={<PageTransition><PatientsPage /></PageTransition>} />
-          <Route path="/compare"   element={<PageTransition><ComparePatients /></PageTransition>} />
-          <Route path="/history/:patientId" element={<PageTransition><HistoryPage /></PageTransition>} />
-          <Route path="/results"   element={<PageTransition><ResultsPage /></PageTransition>} />
-        </Route>
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Suspense>
-  )
-}
+import { AuthProvider } from './providers/AuthProvider'
+import { ThemeProvider } from './providers/ThemeProvider'
+import AnimatedBg from './shared/components/AnimatedBg'
+import AppRoutes from './app/routes'
 
 export default function App() {
   return (

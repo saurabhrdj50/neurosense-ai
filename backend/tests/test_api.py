@@ -5,61 +5,26 @@ API endpoint integration tests.
 import pytest
 
 
-class TestSentimentEndpoint:
-    def test_analyze_sentiment_success(self, authenticated_client):
-        """POST /api/analysis/sentiment with valid text should return results."""
-        resp = authenticated_client.post('/api/analysis/sentiment', json={
-            'text': 'I am feeling very worried and confused today. I forgot where I put my keys.'
-        })
-        assert resp.status_code == 200
-        data = resp.get_json()
-        assert 'sentiment_label' in data
-        assert 'cognitive_risk_score' in data
-        assert data['word_count'] > 0
+class TestRemovedSingleModalityEndpoints:
+    @pytest.mark.parametrize("path", [
+        '/api/analysis/mri',
+        '/api/analysis/sentiment',
+        '/api/analysis/cognitive',
+        '/api/analysis/risk',
+        '/api/analysis/transcribe',
+    ])
+    def test_deprecated_endpoints_gone(self, authenticated_client, path):
+        """Deprecated single-modality endpoints were removed; full analysis is via /analyze."""
+        resp = authenticated_client.post(path, json={'text': 'hello'})
+        assert resp.status_code == 404
 
-    def test_analyze_sentiment_empty(self, authenticated_client):
-        """POST /api/analysis/sentiment with empty text should return 400."""
-        resp = authenticated_client.post('/api/analysis/sentiment', json={'text': ''})
-        assert resp.status_code == 400
-
-    def test_analyze_sentiment_requires_auth(self, client):
-        """POST /api/analysis/sentiment without login should return 401."""
-        resp = client.post('/api/analysis/sentiment', json={
-            'text': 'Unauthenticated request'
-        })
+    def test_analyze_requires_auth(self, client):
+        resp = client.post('/api/analysis/analyze')
         assert resp.status_code == 401
 
-
-class TestCognitiveEndpoint:
-    def test_cognitive_test(self, authenticated_client):
-        """POST /api/analysis/cognitive with valid data should return scores."""
-        resp = authenticated_client.post('/api/analysis/cognitive', json={
-            'mini_cog': 3,
-            'serial_7s': 4,
-            'orientation': 8,
-        })
-        assert resp.status_code == 200
-        data = resp.get_json()
-        assert 'composite_score' in data
-
-    def test_cognitive_test_empty(self, authenticated_client):
-        """POST /api/analysis/cognitive with no data should return 400."""
-        resp = authenticated_client.post('/api/analysis/cognitive', json={})
-        assert resp.status_code == 400
-
-
-class TestRiskProfileEndpoint:
-    def test_risk_profile(self, authenticated_client):
-        """POST /api/analysis/risk with risk factors should return score."""
-        resp = authenticated_client.post('/api/analysis/risk', json={
-            'age': 75,
-            'family_history': True,
-            'education_years': 8,
-            'physical_activity': 'low',
-        })
-        assert resp.status_code == 200
-        data = resp.get_json()
-        assert 'overall_risk_score' in data
+    def test_mri_preview_requires_auth(self, client):
+        resp = client.post('/api/analysis/mri/preview')
+        assert resp.status_code == 401
 
 
 class TestPatients:
@@ -78,26 +43,4 @@ class TestRootRoute:
         resp = client.get('/')
         assert resp.status_code == 200
         assert 'NeuroSense AI' in resp.get_json()['message']
-
-
-class TestCDSRecommendations:
-    def test_get_cds_recommendations_with_stage_string(self):
-        from app.services.analysis_service import AnalysisOrchestrator
-        orchestrator = AnalysisOrchestrator()
-        res = orchestrator.get_cds_recommendations(
-            stage='Mild Demented',
-            patient_info={'age': 75, 'patient_id': 'P100'},
-            risk_factors={'comorbidities': ['diabetes']}
-        )
-        assert 'treatment_plan' in res
-        assert 'prognosis' in res
-        assert 'patient_summary' in res
-        assert res['patient_summary']['stage'] == 2
-
-    def test_get_cds_recommendations_with_stage_int(self):
-        from app.services.analysis_service import AnalysisOrchestrator
-        orchestrator = AnalysisOrchestrator()
-        res = orchestrator.get_cds_recommendations(stage=1)
-        assert 'treatment_plan' in res
-        assert res['patient_summary']['stage'] == 1
 

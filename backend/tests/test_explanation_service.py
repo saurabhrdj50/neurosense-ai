@@ -1,4 +1,4 @@
-from app.services.explanation_service import ExplanationService
+from app.ml.explainability.explanation import ExplanationService
 
 
 class TestExplanationService:
@@ -28,7 +28,7 @@ class TestExplanationService:
         assert explanation['mri_explanation']['heatmap_explanation'] == results['mri']['heatmap_explanation']
         assert 'Grad-CAM heatmap' in explanation['overall_explanation']
 
-    def test_feature_attribution_ranks_top_risk_drivers(self):
+    def test_feature_attribution_is_not_returned(self):
         service = ExplanationService()
 
         results = {
@@ -70,9 +70,4 @@ class TestExplanationService:
         }
 
         explanation = service.generate_explanation(results)
-        attribution = explanation['feature_attribution']
-
-        assert attribution['method'] == 'Deterministic SHAP-style local attribution'
-        assert len(attribution['factors']) > 0
-        assert attribution['factors'][0]['importance'] >= attribution['factors'][-1]['importance']
-        assert any(factor['feature'] == 'Mini-Cog' for factor in attribution['factors'])
+        assert 'feature_attribution' not in explanation

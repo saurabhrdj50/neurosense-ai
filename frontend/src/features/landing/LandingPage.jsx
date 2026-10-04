@@ -6,9 +6,9 @@ import {
   TestTube, Mic, PenTool, Lock, Zap, CheckCircle2, Hospital, Stethoscope,
   BarChart3, Users, UserCheck, FileText, ChevronRight, HelpCircle, Building2, Eye, X, Send
 } from 'lucide-react'
-import Button from '../../components/ui/Button'
-import GlassCard from '../../components/ui/GlassCard'
-import ThemeToggle from '../../components/ThemeToggle'
+import Button from '../../shared/components/ui/Button'
+import GlassCard from '../../shared/components/ui/GlassCard'
+import ThemeToggle from '../../shared/components/ThemeToggle'
 
 export default function LandingPage() {
   const navigate = useNavigate()
@@ -106,7 +106,7 @@ export default function LandingPage() {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="mt-6 text-base sm:text-lg text-foreground-muted max-w-3xl mx-auto leading-relaxed"
           >
-            Empowering neurologists and healthcare institutions with unified deep learning analysis across 3D MRI Neuroimaging, Cognitive Batteries, Acoustic Speech Signals, Clinical Risk Profiling, and Transparent Explainable AI (SHAP).
+            Empowering neurologists and healthcare institutions with unified deep learning analysis across MRI neuroimaging, cognitive questionnaires, acoustic speech summaries, clinical risk-factor scoring, and Grad-CAM visual explanations.
           </motion.p>
 
           <motion.div
@@ -133,13 +133,13 @@ export default function LandingPage() {
               <span className="text-xs font-bold uppercase tracking-widest text-indigo-500 dark:text-indigo-400">Platform Vision & Mission</span>
               <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground mt-2 mb-6">Why Early Alzheimer's Detection Matters</h2>
               <p className="text-foreground-muted text-sm leading-relaxed mb-4">
-                Alzheimer's pathology develops decades before clinical symptoms appear. Traditional diagnosis relies heavily on late-stage cognitive decline observations. NeuroSense AI changes this paradigm by fusing subtle digital biomarkers into an actionable, clinical-grade verdict.
+                Alzheimer's pathology develops decades before clinical symptoms appear. Traditional diagnosis relies heavily on late-stage cognitive decline observations. NeuroSense AI combines MRI classifier outputs, questionnaire scores, speech summaries, and risk-factor scores into a decision-support summary that a clinician must confirm. No test accuracy is claimed: the MRI checkpoint has no held-out test evaluation.
               </p>
               <div className="space-y-3 mt-6">
                 {[
                   { title: 'Human-in-the-Loop AI', desc: 'Designed to assist and amplify physician judgment, not replace clinical diagnosis.' },
-                  { title: 'SHAP Feature Attributions', desc: 'Transparent decision-making showing exact regional and biomarker weights driving predictive scores.' },
-                  { title: 'Multimodal Fusion Engine', desc: 'Cross-verifies structural MRI imaging with cognitive tests, speech acoustic pauses, and clinical risk factors.' },
+                  { title: 'Grad-CAM Visual Explanations', desc: 'MRI attention overlays showing which image regions most influenced the classifier output. Not proof of clinical relevance.' },
+                  { title: 'Multimodal Fusion Engine', desc: 'Combines MRI, cognitive, and risk evidence with rule-based weights. Speech summaries are displayed separately and do not change fusion.' },
                 ].map((item, idx) => (
                   <div key={idx} className="flex items-start gap-3 p-3.5 rounded-xl bg-surface border border-border shadow-sm">
                     <CheckCircle2 size={18} className="text-emerald-500 shrink-0 mt-0.5" />
@@ -158,8 +158,8 @@ export default function LandingPage() {
               </div>
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <div className="p-3 bg-background rounded-lg border border-border">
-                  <span className="text-indigo-600 dark:text-indigo-400 font-bold block">3D MRI Scans</span>
-                  <span className="text-foreground-muted text-[11px]">Hippocampal Volumetrics</span>
+                  <span className="text-indigo-600 dark:text-indigo-400 font-bold block">MRI Classification</span>
+                  <span className="text-foreground-muted text-[11px]">CN · MCI · AD classifier output</span>
                 </div>
                 <div className="p-3 bg-background rounded-lg border border-border">
                   <span className="text-sky-600 dark:text-sky-400 font-bold block">Speech Acoustics</span>
@@ -176,7 +176,7 @@ export default function LandingPage() {
               </div>
               <div className="mt-4 p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-center">
                 <span className="text-xs font-bold text-foreground uppercase tracking-wider">NeuroSense AI Fusion Matrix</span>
-                <p className="text-[11px] text-foreground-muted mt-1">Cross-attention neural network synthesizes unified staging & certainty meter</p>
+                <p className="text-[11px] text-foreground-muted mt-1">Rule-based weighted fusion combines modality outputs; reported scores are uncalibrated</p>
               </div>
             </GlassCard>
           </div>
@@ -193,12 +193,12 @@ export default function LandingPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
-              { title: '🧠 MRI Analysis', desc: 'Volumetric 3D structural segmentation identifying hippocampal volume reduction and cortical thickness.', color: '#6366F1' },
-              { title: '📊 Cognitive Assessment', desc: 'Standardized sub-score analysis normalizing MMSE/MoCA orientation, executive function, and recall.', color: '#10B981' },
-              { title: '🎤 Speech Analysis', desc: 'Natural language processing capturing pause duration, hesitation cadence, and vocal fundamental tremor.', color: '#38BDF8' },
-              { title: '📋 Clinical Risk Profile', desc: 'Lancet dementia risk score assessment modeling vascular health and familial history factors.', color: '#F59E0B' },
+              { title: '🧠 MRI Analysis', desc: 'ResNet18 image classifier (CN / MCI / AD) over MRI slices with Grad-CAM overlays. No volumetric segmentation is performed.', color: '#6366F1' },
+              { title: '📊 Cognitive Assessment', desc: 'Rule-based questionnaire composite (0–100). This workflow does not administer MMSE or MoCA.', color: '#10B981' },
+              { title: '🎤 Speech Analysis', desc: 'Transcription with pause-category, pitch-variation, and lexical statistics. Speech is displayed separately and excluded from fusion.', color: '#38BDF8' },
+              { title: '📋 Clinical Risk Profile', desc: 'Local rule-based risk-factor score (0–100). Not a validated clinical instrument.', color: '#F59E0B' },
               { title: '👤 Patient Demographics', desc: 'Age, education level, and baseline clinical history correlation for tailored risk indexing.', color: '#EC4899' },
-              { title: '🤖 Explainable AI (SHAP)', desc: 'Transparent attribution heatmaps explaining the exact neural feature weights driving risk scores.', color: '#A855F7' },
+              { title: '🤖 Explainable AI (Grad-CAM)', desc: 'Attention heatmaps highlighting image regions behind the MRI classification. Not proof of clinical relevance.', color: '#A855F7' },
             ].map((f, i) => (
               <GlassCard key={i} className="p-6 hover:border-indigo-500/50 hover:shadow-lg hover:shadow-indigo-500/10 transition-all duration-200 cursor-pointer group">
                 <h3 className="text-lg font-bold text-foreground mb-2 group-hover:text-indigo-500 dark:group-hover:text-indigo-300 transition-colors">{f.title}</h3>
@@ -222,7 +222,7 @@ export default function LandingPage() {
               { step: '01', title: 'Patient Registration', desc: 'Enter demographic data and assign clinical IDs.' },
               { step: '02', title: 'Clinical Intake', desc: 'Gather cognitive tests, speech audio, and DICOM MRI.' },
               { step: '03', title: 'AI Fusion Engine', desc: 'Deep learning models process multi-modal signals.' },
-              { step: '04', title: 'Clinical Decision Support', desc: 'Review AI verdict, SHAP attributions, and PDF report.' },
+              { step: '04', title: 'Clinical Decision Support', desc: 'Review AI output, Grad-CAM overlays, and PDF report.' },
             ].map((w, i) => (
               <div key={i} className="p-5 rounded-2xl bg-surface border border-border hover:border-emerald-500/40 transition-all duration-200 relative group shadow-sm">
                 <span className="text-3xl font-mono font-bold text-indigo-500/40 group-hover:text-emerald-500 transition-colors block mb-2">{w.step}</span>
@@ -237,16 +237,16 @@ export default function LandingPage() {
       {/* ── SECTION 5: WHY CHOOSE NEUROSENSE AI ────────────────────────────── */}
       <section className="py-20 relative border-b border-border">
         <div className="max-w-7xl mx-auto px-6 text-center">
-          <span className="text-xs font-bold uppercase tracking-widest text-indigo-500 dark:text-indigo-400">Proven Performance</span>
+          <span className="text-xs font-bold uppercase tracking-widest text-indigo-500 dark:text-indigo-400">Project Capabilities</span>
           <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground mt-2 mb-12">Why Choose NeuroSense AI</h2>
 
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             {[
-              { val: '94.8%', label: 'Diagnostic Accuracy', sub: 'OASIS & ADNI benchmarked' },
-              { val: '5+', label: 'AI Modalities', sub: 'Unified in single engine' },
-              { val: '< 30 sec', label: 'Analysis Time', sub: 'Instant staging' },
-              { val: 'SHAP AI', label: 'Explainable', sub: 'Sub-regional attributions' },
-              { val: 'Clinical Grade', label: 'Decision Support', sub: 'Human-in-the-loop' },
+              { val: '3-Class', label: 'MRI Classifier', sub: 'CN · MCI · AD outputs' },
+              { val: '4', label: 'Evidence Streams', sub: 'MRI · cognition · speech · risk' },
+              { val: 'Rule-Based', label: 'Fusion Method', sub: 'Uncalibrated scores' },
+              { val: 'Grad-CAM', label: 'Explainable', sub: 'MRI attention overlays' },
+              { val: 'Human Review', label: 'Decision Support', sub: 'Not a diagnosis' },
             ].map((s, i) => (
               <GlassCard key={i} className="p-4 text-center hover:border-indigo-500/50 transition-all duration-200">
                 <p className="text-2xl sm:text-3xl font-extrabold text-foreground">{s.val}</p>

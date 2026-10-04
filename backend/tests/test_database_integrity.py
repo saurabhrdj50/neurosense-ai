@@ -1,7 +1,7 @@
-from app.core.database import Database
-from app.repositories.patient_repository import PatientRepository
-from app.repositories.session_repository import SessionRepository
-from app.repositories.user_repository import UserRepository
+from app.shared.database import Database
+from app.features.patients.repository import PatientRepository
+from app.features.history.repository import SessionRepository
+from app.features.auth.repository import UserRepository
 
 
 def reset_db_singleton():
@@ -13,7 +13,7 @@ class TestDatabaseIntegrity:
         monkeypatch.setenv('FLASK_ENV', 'development')
         monkeypatch.setenv('SEED_DEMO_DATA', 'true')
 
-        from app.core.config import Config
+        from app.config.settings import Config
         from app import create_app
         db_path = tmp_path / 'patient_data.db'
         monkeypatch.setattr(Config, 'DB_PATH', str(db_path))
@@ -40,7 +40,7 @@ class TestDatabaseIntegrity:
         monkeypatch.setenv('FLASK_ENV', 'development')
         monkeypatch.delenv('SEED_DEMO_DATA', raising=False)
 
-        from app.core.config import Config
+        from app.config.settings import Config
         from app import create_app
         db_path = tmp_path / 'patient_data.db'
         monkeypatch.setattr(Config, 'DB_PATH', str(db_path))
@@ -84,7 +84,7 @@ class TestDatabaseIntegrity:
         monkeypatch.setenv('FLASK_ENV', 'development')
         monkeypatch.delenv('SEED_DEMO_DATA', raising=False)
 
-        from app.core.config import Config
+        from app.config.settings import Config
         from app import create_app
         db_path = tmp_path / 'patient_data_cascade.db'
         monkeypatch.setattr(Config, 'DB_PATH', str(db_path))

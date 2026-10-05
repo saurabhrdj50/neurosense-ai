@@ -35,6 +35,8 @@ export default function CommandPalette({ isOpen, onClose }) {
   // Load favorites & recents on mount/open
   useEffect(() => {
     if (isOpen) {
+      // Reset-on-open is intentional.
+       
       setQuery('')
       setSelectedIndex(0)
       
@@ -152,6 +154,8 @@ export default function CommandPalette({ isOpen, onClose }) {
         if (!a.isFavorite && b.isFavorite) return 1
         return 0
       })
+    // COMMANDS is a stable module-level constant.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, patients, favorites])
 
   // Handle select execution

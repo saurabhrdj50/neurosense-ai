@@ -59,7 +59,7 @@ function CustomInput({ label, icon: Icon, type = 'text', value, onChange, placeh
 
 export default function LoginPage() {
   const { login, register, verifyIdentity, resetPassword } = useAuth();
-  const { isDark, toggleTheme } = useTheme();
+  const { isDark } = useTheme();
   const navigate = useNavigate();
 
   const [selectedRole, setSelectedRole] = useState('doctor'); // 'doctor' | 'admin'
@@ -135,7 +135,7 @@ export default function LoginPage() {
 
       if (!form.email.trim()) {
         newErrors.email = 'Email is required';
-      } else if (!/^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(form.email.trim())) {
+      } else if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(form.email.trim())) {
         newErrors.email = 'Please enter a valid email address';
       }
 

@@ -31,11 +31,22 @@ except ImportError:
 
 class SpeechTranscriber:
     """
-    Research-grade Speech Analysis Module using OpenAI Whisper Large-v3 / Turbo.
+    Research-grade Speech Analysis Module using OpenAI Whisper.
     Extracts transcript, speech rate, pause frequency, pitch variation, and acoustic biomarkers.
     """
-    def __init__(self, model_size: str = 'turbo') -> None:
+    def __init__(self, model_size: str = None) -> None:
         self.whisper_model = None
+        # Whisper-turbo on CPU burns minutes per clip and blew through the
+        # request timeout; pick the model by accelerator unless the operator
+        # pins one via WHISPER_MODEL.
+        if model_size is None:
+            model_size = os.environ.get('WHISPER_MODEL')
+        if not model_size:
+            try:
+                import torch
+                model_size = 'turbo' if torch.cuda.is_available() else 'base'
+            except ImportError:
+                model_size = 'base'
         self.model_size = model_size
 
         if HAS_WHISPER and whisper is not None:
@@ -78,22 +89,18 @@ class SpeechTranscriber:
                 logger.warning("ffmpeg conversion failed for '%s': %s", audio_path, conv_e)
                 raise
 
-    def _extract_acoustic_biomarkers(self, audio_path: str) -> dict:
-        """Extract raw acoustic summaries when audio decoding and librosa succeed."""
+    def _extract_acoustic_from(self, y, sr_rate) -> dict:
+        """Extract raw acoustic summaries from an already-decoded signal."""
         features = {}
-
-        if not HAS_LIBROSA or librosa is None:
+        if not HAS_LIBROSA or librosa is None or y is None or sr_rate is None:
             return features
-
-        converted_path = None
         try:
-            y, sr_rate, converted_path = self._try_load_audio(audio_path)
             duration = max(len(y) / sr_rate, 0.1)
 
             # Pitch (F0) extraction
             f0, voiced_flag, voiced_probs = librosa.pyin(y, fmin=librosa.note_to_hz('C2'), fmax=librosa.note_to_hz('C6'))
             valid_f0 = f0[~np.isnan(f0)] if f0 is not None else np.array([])
-            
+
             if len(valid_f0) > 5:
                 f0_std = float(np.std(valid_f0))
                 features['f0_std_hz'] = round(f0_std, 2)
@@ -111,6 +118,20 @@ class SpeechTranscriber:
             features['mfcc_mean'] = round(float(np.mean(librosa.feature.mfcc(y=y, sr=sr_rate))), 2)
         except Exception as e:
             logger.warning("Librosa acoustic extraction warning: %s", e)
+        return features
+
+    def _extract_acoustic_biomarkers(self, audio_path: str) -> dict:
+        """Extract acoustic summaries for an audio file path (decodes via librosa/ffmpeg)."""
+        features = {}
+        if not HAS_LIBROSA or librosa is None:
+            return features
+
+        converted_path = None
+        try:
+            y, sr_rate, converted_path = self._try_load_audio(audio_path)
+            features = self._extract_acoustic_from(y, sr_rate)
+        except Exception as e:
+            logger.warning("Librosa acoustic extraction warning: %s", e)
         finally:
             if converted_path:
                 try:
@@ -119,6 +140,25 @@ class SpeechTranscriber:
                     pass
 
         return features
+
+    @staticmethod
+    def _voiced_ratio(y, sr_rate) -> float:
+        """Fraction of the clip that is non-silent (energy above top_db=25)."""
+        if y is None or sr_rate is None or len(y) == 0:
+            return 0.0
+        try:
+            peak = float(np.max(librosa.feature.rms(y=y)))
+            # Absolute floor: digital silence or bare room tone has a peak far
+            # below speech level. librosa's relative split alone treats pure
+            # silence as "voiced" (0 dB vs 0 dB) — which is exactly the input
+            # Whisper hallucinates on.
+            if peak < 0.003:  # ≈ -50 dBFS
+                return 0.0
+            intervals = librosa.effects.split(y, top_db=25)
+            voiced = sum((end - start) for start, end in intervals) / sr_rate
+            return voiced / max(len(y) / sr_rate, 1e-6)
+        except Exception:
+            return 1.0  # cannot measure — never block transcription on this
 
 
     def transcribe_file(self, audio_path: str, language: str = 'en-US') -> dict:
@@ -132,12 +172,66 @@ class SpeechTranscriber:
 
         # Try Whisper first if available
         if self.whisper_model is not None:
+            y = None
+            sr_rate = None
+            converted_path = None
             try:
-                res = self.whisper_model.transcribe(audio_path)
-                text = res.get('text', '').strip()
+                # Decode once up front: it powers the speech-presence gate,
+                # the duration cap, and the acoustic features.
+                if HAS_LIBROSA and librosa is not None:
+                    try:
+                        y, sr_rate, converted_path = self._try_load_audio(audio_path)
+                    except Exception as e:
+                        logger.warning("Audio decode failed before transcription: %s", e)
+
+                if y is not None and self._voiced_ratio(y, sr_rate) < 0.02:
+                    # Whisper hallucinates fluent text ("…") on silence — a
+                    # fabricated transcript on a clinical report is worse than
+                    # no transcript. Fail loudly instead.
+                    result.update({
+                        'text': '',
+                        'method': f'whisper_{self.model_size}',
+                        'error': 'No speech detected in the recording.',
+                        'acoustic_features': self._extract_acoustic_from(y, sr_rate),
+                    })
+                    return result
+
+                # Whisper accepts a 16 kHz float array; cap duration so a long
+                # recording cannot monopolize a CPU worker past the timeout.
+                whisper_input = audio_path
+                if y is not None:
+                    try:
+                        max_sec = float(os.environ.get('WHISPER_MAX_AUDIO_SEC', '120') or 120)
+                    except ValueError:
+                        max_sec = 120.0
+                    if len(y) > max_sec * sr_rate:
+                        whisper_input = y[:int(max_sec * sr_rate)]
+                        logger.info("Trimming audio to %.0fs for transcription.", max_sec)
+
+                res = self.whisper_model.transcribe(whisper_input)
+                # Drop segments Whisper itself flagged as probable silence —
+                # their text is hallucination, not the patient's speech.
+                segments = res.get('segments') or []
+                kept = [s for s in segments
+                        if float(s.get('no_speech_prob', 0.0)) < 0.6]
+                if segments and not kept:
+                    result.update({
+                        'text': '',
+                        'method': f'whisper_{self.model_size}',
+                        'error': 'No clear speech detected in the recording.',
+                        'acoustic_features': (self._extract_acoustic_from(y, sr_rate)
+                                              if y is not None
+                                              else self._extract_acoustic_biomarkers(audio_path)),
+                    })
+                    return result
+                text = (''.join(s.get('text', '') for s in kept) if kept
+                        else res.get('text', '')).strip()
+
                 words = text.split()
                 linguistic = self._extract_linguistic_biomarkers(text, words)
-                acoustic = self._extract_acoustic_biomarkers(audio_path)
+                acoustic = (self._extract_acoustic_from(y, sr_rate)
+                            if y is not None
+                            else self._extract_acoustic_biomarkers(audio_path))
 
                 return {
                     'text': text,
@@ -148,6 +242,12 @@ class SpeechTranscriber:
                 }
             except Exception as e:
                 logger.error("Whisper transcription error: %s", e)
+            finally:
+                if converted_path:
+                    try:
+                        os.remove(converted_path)
+                    except OSError:
+                        pass
 
 
         if not HAS_SR:

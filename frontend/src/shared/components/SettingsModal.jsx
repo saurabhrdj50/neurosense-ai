@@ -16,7 +16,7 @@ const TABS = [
 ]
 
 export default function SettingsModal({ isOpen, onClose }) {
-  const { theme, setTheme, fontSize, setFontSize, motion: motionPref, setMotion } = useTheme()
+  const { fontSize, setFontSize, motion: motionPref, setMotion } = useTheme()
   const { user } = useAuth()
   const [activeTab, setActiveTab] = useState('general')
 
@@ -52,10 +52,6 @@ export default function SettingsModal({ isOpen, onClose }) {
     .slice(0, 2)
     .join('')
     .toUpperCase() || 'U'
-
-  const [security, setSecurity] = useState({
-    sessionTimeout: '30 mins',
-  })
 
   if (!isOpen) return null
 

@@ -19,10 +19,8 @@ import { patientsApi } from '../api/patientsApi'
 import { historyApi } from '../../history/api/historyApi'
 import LongitudinalTimeline from '../../history/components/LongitudinalTimeline'
 import {
-  stageToBadgeVariant,
   getAnalysisStage,
   getAnalysisConfidence,
-  formatTimeAgo
 } from '../../../shared/utils/clinicalMappers'
 
 const STAGE_CONFIG = {

@@ -280,8 +280,7 @@ export function CognitiveStep({ cognData, setCognData }) {
     // cognData object while calling setCognData inside caused an infinite
     // render loop (stage object identity never matched), freezing the UI
     // so points could not be selected.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cognData.screening_breakdown, setCognData])
+    }, [cognData.screening_breakdown, setCognData])
 
   const currentQ = GUIDED_QUESTIONS[currentQIndex]
   const isCurrentAnswered = Object.prototype.hasOwnProperty.call(breakdown, currentQ.id)

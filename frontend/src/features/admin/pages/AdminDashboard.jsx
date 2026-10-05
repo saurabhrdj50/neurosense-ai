@@ -10,6 +10,7 @@ import Badge from '../../../shared/components/ui/Badge'
 import { useAuth } from '../../../providers/AuthProvider'
 import { SectionSkeleton } from '../../../shared/components/ui/Skeleton'
 import { adminApi } from '../api/adminApi'
+import { doctorDisplayName } from '../../../shared/utils/clinicalMappers'
 
 // ── Stage → design token mapping ─────────────────────────────────────────
 const STAGE_BADGE_VARIANT = {
@@ -332,7 +333,7 @@ export default function AdminDashboard() {
                     </div>
                     <div className="truncate">
                       <h3 className="text-sm font-bold text-foreground leading-tight truncate">
-                        Dr. {doc.full_name || doc.username}
+                        {doctorDisplayName(doc.full_name || doc.username)}
                       </h3>
                       <span className="text-xs text-foreground-subtle font-mono block mt-0.5 truncate">{doc.email}</span>
                     </div>
@@ -399,7 +400,7 @@ export default function AdminDashboard() {
                     Patient Assignment Roster
                   </h2>
                   <p className="text-sm text-foreground-muted font-semibold mt-0.5">
-                    Dr. {selectedDoctor.full_name || selectedDoctor.username} · {selectedDoctor.department}
+                    {doctorDisplayName(selectedDoctor.full_name || selectedDoctor.username)} · {selectedDoctor.department}
                   </p>
                   <p className="text-xs text-foreground-subtle mt-0.5">
                     {selectedDoctor.institution} (ID: {selectedDoctor.id})

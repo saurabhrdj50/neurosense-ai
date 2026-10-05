@@ -15,6 +15,7 @@ from app.ml.contracts import (
     RiskResult,
     TranscriptionResult,
 )
+from app.shared.time_utils import utc_now_iso
 
 logger = logging.getLogger(__name__)
 
@@ -252,6 +253,9 @@ class AnalysisOrchestrator:
                 pid, results, patient_info.get('name', 'Anonymous'), created_by=doctor_id
             )
             results['session_id'] = sid
+            # The freshly saved session's timestamp — the results page reads
+            # this so a brand-new report never shows "Date not recorded".
+            results['created_at'] = utc_now_iso()
 
             try:
                 from app.features.analysis.reporting import ReportOrchestrator

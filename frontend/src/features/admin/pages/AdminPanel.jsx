@@ -8,6 +8,8 @@ import DataTable from '../../../shared/components/ui/DataTable'
 import { SectionSkeleton } from '../../../shared/components/ui/Skeleton'
 import Card from '../../../shared/components/ui/Card'
 import { adminApi } from '../api/adminApi'
+import { Modal } from 'antd'
+import { doctorDisplayName } from '../../../shared/utils/clinicalMappers'
 import { patientsApi } from '../../patients/api/patientsApi'
 import API_URL from '../../../config/api'
 
@@ -91,26 +93,42 @@ export default function AdminPanel() {
     }
   }, [loadData])
 
-  const handleDeletePatient = useCallback(async (id) => {
-    if (!confirm('Delete this patient and all their records?')) return
-    try {
-      await adminApi.deletePatient(id)
-      toast.success('Patient deleted')
-      loadData()
-    } catch (err) {
-      toast.error(err.message)
-    }
+  const handleDeletePatient = useCallback((id) => {
+    Modal.confirm({
+      title: 'Delete this patient?',
+      content: 'All clinical records and session histories for this patient will be permanently removed.',
+      okText: 'Delete',
+      okButtonProps: { danger: true },
+      cancelText: 'Cancel',
+      onOk: async () => {
+        try {
+          await adminApi.deletePatient(id)
+          toast.success('Patient deleted')
+          loadData()
+        } catch (err) {
+          toast.error(err.message)
+        }
+      },
+    })
   }, [loadData])
 
-  const handleDeleteSession = useCallback(async (id) => {
-    if (!confirm('Delete this analysis session? This cannot be undone.')) return
-    try {
-      await adminApi.deleteSession(id)
-      toast.success('Session deleted')
-      loadData()
-    } catch (err) {
-      toast.error(err.message)
-    }
+  const handleDeleteSession = useCallback((id) => {
+    Modal.confirm({
+      title: 'Delete this analysis session?',
+      content: 'This assessment record and its files cannot be recovered.',
+      okText: 'Delete',
+      okButtonProps: { danger: true },
+      cancelText: 'Cancel',
+      onOk: async () => {
+        try {
+          await adminApi.deleteSession(id)
+          toast.success('Session deleted')
+          loadData()
+        } catch (err) {
+          toast.error(err.message)
+        }
+      },
+    })
   }, [loadData])
 
   const filteredPatients = useMemo(() => {
@@ -283,7 +301,7 @@ export default function AdminPanel() {
       width: 140,
       render: (val, row) => (
         <span className="text-xs text-foreground-muted">
-          {val ? `Dr. ${val}` : row.created_by ? `ID ${row.created_by}` : '—'}
+          {val ? doctorDisplayName(val) : row.created_by ? `ID ${row.created_by}` : '—'}
         </span>
       )
     },
@@ -569,7 +587,7 @@ export default function AdminPanel() {
                           </div>
                           <div>
                             <h3 className="font-bold text-foreground text-sm group-hover:text-primary transition-colors">
-                              Dr. {doc.full_name || doc.username}
+                              {doctorDisplayName(doc.full_name || doc.username)}
                             </h3>
                             <span className="text-xs text-foreground-subtle font-mono block mt-0.5">{doc.email}</span>
                           </div>
@@ -627,7 +645,7 @@ export default function AdminPanel() {
             {selectedDoctorId && (
               <div className="flex items-center justify-between px-4 py-2.5 bg-primary-subtle border border-primary/20 rounded-xl text-xs text-primary font-medium">
                 <span>
-                  Filtering patients managed by: <strong className="font-bold text-foreground text-sm">Dr. {selectedDoctorName}</strong>
+                  Filtering patients managed by: <strong className="font-bold text-foreground text-sm">{doctorDisplayName(selectedDoctorName)}</strong>
                 </span>
                 <button
                   type="button"
@@ -730,7 +748,7 @@ export default function AdminPanel() {
 
                           <div className="mt-4 pt-3 border-t border-border flex items-center justify-between" onClick={e => e.stopPropagation()}>
                             <span className="text-xs text-foreground-subtle font-mono font-medium truncate max-w-[130px]">
-                              {pat.doctor_username ? `Dr. ${pat.doctor_username}` : `ID: ${pat.created_by ?? '—'}`}
+                              {pat.doctor_username ? doctorDisplayName(pat.doctor_username) : `ID: ${pat.created_by ?? '—'}`}
                             </span>
                             <div className="flex items-center gap-1">
                               <button

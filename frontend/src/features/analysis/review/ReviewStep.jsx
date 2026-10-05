@@ -6,14 +6,14 @@ import {
 
 export function ReviewStep({
   patient,
-  patientText,
+  _patientText,
   mriFile,
   cognData,
   speechText,
   audioFile,
   risk,
   onGoToStep,
-  onSubmit
+  _onSubmit
 }) {
   /* Compute individual section completion & readiness status */
   const isPatientComplete = !!(patient.name && patient.patient_id && patient.age)

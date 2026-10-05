@@ -166,6 +166,9 @@ export function SpeechStep({ speechText, setSpeechText, audioFile, setAudioFile 
         setPatientModalText(currentTask)
       }
     }
+    // Runs on task change only: reacting to patientModalText identity would
+    // re-trigger on the very state this effect sets.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTaskId])
 
   const stopAllTTS = () => {
@@ -229,11 +232,13 @@ export function SpeechStep({ speechText, setSpeechText, audioFile, setAudioFile 
     setAudioFile(null)
   }
 
-  // Stop TTS ONLY when modal is closed (use ID primitive to prevent re-render loops)
+  // Stop TTS ONLY when modal is closed
   useEffect(() => {
     if (!patientModalText) {
       stopAllTTS()
     }
+    // Primitive id dep is deliberate — identity changes must not restart TTS.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [patientModalText?.id, selectedLanguage])
 
   const startMediaRecorder = async () => {

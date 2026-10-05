@@ -171,3 +171,22 @@ export function formatTimeAgo(dateStr) {
   if (hours < 24) return `${hours}h ago`;
   return `${days}d ago`;
 }
+
+/**
+ * Display name for a clinician: prepends the "Dr." honorific unless the name
+ * already carries it (demo seed full_name is "Dr. Gupta" — naive templates
+ * produced "Dr. Dr. Gupta").
+ */
+export function doctorDisplayName(name) {
+  if (!name) return '—'
+  const n = String(name).trim()
+  return /^dr\.?\s/i.test(n) ? n : `Dr. ${n}`
+}
+
+/** Human-readable biological sex for stored codes M/F/Other. */
+export function formatSex(sex) {
+  if (sex === 'M' || sex === 'male') return 'Male'
+  if (sex === 'F' || sex === 'female') return 'Female'
+  if (!sex) return '—'
+  return sex.charAt(0).toUpperCase() + sex.slice(1)
+}

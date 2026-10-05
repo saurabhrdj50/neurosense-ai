@@ -15,7 +15,7 @@ import Modal from '../../shared/components/ui/Modal';
 import { ResultsPageSkeleton } from '../../shared/components/ui/Skeleton';
 import { analysisApi } from '../analysis/api/analysisApi';
 import ErrorBoundary from '../../shared/components/common/ErrorBoundary';
-import { STAGE_CONFIG, getRiskLevel, SIMPLE_STAGE_INFO, getSimpleStageKey, SIMPLE_MODALITY_NAMES } from '../../shared/utils/clinicalMappers';
+import { STAGE_CONFIG, getRiskLevel, SIMPLE_STAGE_INFO, getSimpleStageKey, SIMPLE_MODALITY_NAMES, formatSex } from '../../shared/utils/clinicalMappers';
 
 /* Lazy load secondary detailed components */
 const MRIResults = lazy(() => import('./mri/MRIResults').then((m) => ({ default: m.MRIResults })));
@@ -593,7 +593,7 @@ export default function ResultsPage() {
               )}
             </div>
             <p className="text-sm font-medium text-foreground-muted mt-0.5 truncate">
-              {patient.age ? `${patient.age} yrs` : 'Age N/A'} {patient.sex ? `· ${patient.sex}` : ''} • {results.created_at ? `Evaluated on ${analysisDate}` : analysisDate}
+              {patient.age ? `${patient.age} yrs` : 'Age N/A'} {patient.sex ? `· ${formatSex(patient.sex)}` : ''} • {results.created_at ? `Evaluated on ${analysisDate}` : analysisDate}
             </p>
           </div>
         </div>
@@ -1054,7 +1054,9 @@ export default function ResultsPage() {
                             {audioTx.linguistic_biomarkers && Object.keys(audioTx.linguistic_biomarkers).length > 0 && (
                               <div className="p-3.5 rounded-xl bg-background border border-border/80 space-y-2">
                                 <span className="text-[10px] font-bold text-foreground-muted uppercase tracking-wider block">Word-use measurements</span>
-                                {Object.entries(audioTx.linguistic_biomarkers).slice(0, 8).map(([k, v]) => (
+                                {Object.entries(audioTx.linguistic_biomarkers)
+                                  .filter(([, v]) => v == null || ['string', 'number', 'boolean'].includes(typeof v))
+                                  .slice(0, 8).map(([k, v]) => (
                                   <div key={k} className="flex items-center justify-between text-xs gap-2">
                                     <span className="font-medium text-foreground-muted truncate">{k.replace(/_/g, ' ')}</span>
                                     <span className="font-mono font-bold text-foreground shrink-0">{typeof v === 'number' ? v.toFixed(2) : String(v).slice(0, 40)}</span>

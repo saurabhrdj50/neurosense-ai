@@ -24,13 +24,12 @@ export function ThemeProvider({ children }) {
   // Theme locked to 'light' for high-contrast clinical workstation readability
   const theme = 'light'
   const effectiveTheme = 'light'
-  const isDark = false
 
   // FontSize: 'compact' | 'comfortable' | 'large'
   const [fontSize, setFontSize] = useState(() => {
     try {
       return localStorage.getItem('neurosense_fontsize') || 'comfortable'
-    } catch (e) {
+    } catch {
       return 'comfortable'
     }
   })
@@ -39,7 +38,7 @@ export function ThemeProvider({ children }) {
   const [motion, setMotion] = useState(() => {
     try {
       return localStorage.getItem('neurosense_motion') || 'full'
-    } catch (e) {
+    } catch {
       return 'full'
     }
   })
@@ -52,7 +51,7 @@ export function ThemeProvider({ children }) {
     root.style.colorScheme = 'light'
     try {
       localStorage.setItem('neurosense_theme', 'light')
-    } catch (e) {
+    } catch {
       // ignore
     }
   }, [])
@@ -62,7 +61,7 @@ export function ThemeProvider({ children }) {
     root.setAttribute('data-fontsize', fontSize)
     try {
       localStorage.setItem('neurosense_fontsize', fontSize)
-    } catch (e) {
+    } catch {
       // ignore
     }
   }, [fontSize])
@@ -76,7 +75,7 @@ export function ThemeProvider({ children }) {
     }
     try {
       localStorage.setItem('neurosense_motion', motion)
-    } catch (e) {
+    } catch {
       // ignore
     }
   }, [motion])

@@ -22,8 +22,9 @@ export default function AppLayout() {
   const location = useLocation()
   const { isAdmin } = useAuth()
 
-  // Close mobile drawer on route change
+  // Close mobile drawer on route change (intentional state reset)
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMobileDrawerOpen(false)
   }, [location.pathname])
 

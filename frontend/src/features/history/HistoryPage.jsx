@@ -72,7 +72,7 @@ export default function HistoryPage() {
 
   const history = data?.history || []
 
-  const chartData = history.map((s, idx) => {
+  const chartData = history.map((s) => {
     const stage = s.results?.final_stage?.stage || s.results?.mri?.stage || 'Unknown'
     return {
       date:       new Date(s.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),

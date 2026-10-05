@@ -21,7 +21,7 @@ export default function GlassCard({
   className = '',
   style = {},
   hover = false,
-  glow = false,
+  glow: _glow = false,
   onClick,
   onKeyDown,
   children,

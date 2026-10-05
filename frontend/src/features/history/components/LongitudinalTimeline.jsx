@@ -18,7 +18,7 @@ const STAGE_CONFIG = {
   'Unknown':            { label: 'Pending Assessment', variant: 'neutral', color: '#94A3B8' },
 }
 
-export default function LongitudinalTimeline({ history, patientId }) {
+export default function LongitudinalTimeline({ history }) {
   const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
   const [expandedSessions, setExpandedSessions] = useState({})

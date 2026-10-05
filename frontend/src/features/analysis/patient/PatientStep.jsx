@@ -70,8 +70,6 @@ const CLINICAL_PRESETS = [
 export function PatientStep({ patient, setPatient, patientText, setPatientText, onSelectRoster, onLoadSample }) {
   const { user } = useAuth()
   const patSet = (k) => (e) => setPatient(p => ({ ...p, [k]: e.target.value }))
-  const fileInputRef = useRef(null)
-  const jsonImportRef = useRef(null)
   const [isListening, setIsListening] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)
   const recognitionRef = useRef(null)
@@ -82,54 +80,6 @@ export function PatientStep({ patient, setPatient, patientText, setPatientText, 
     const randomNum = Math.floor(1000 + Math.random() * 9000)
     const newId = `${docPrefix}-PAT-${randomNum}`
     setPatient(p => ({ ...p, patient_id: newId }))
-  }
-
-  // 1-Tap Clinical Profile Pre-fill
-  const applyPreset = (preset) => {
-    setPatient(prev => ({
-      ...prev,
-      name: preset.data.name,
-      patient_id: preset.data.patient_id,
-      age: preset.data.age,
-      sex: preset.data.sex,
-      education_years: preset.data.education_years,
-      ethnicity: preset.data.ethnicity,
-      handedness: preset.data.handedness
-    }))
-    setPatientText(preset.data.notes)
-    toast.success(`Loaded profile: ${preset.data.name}`)
-  }
-
-  // FHIR / JSON Patient Import Handler
-  const handleJsonImport = (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      try {
-        const imported = JSON.parse(event.target.result)
-        const name = imported.name || imported.entry?.[0]?.resource?.name?.[0]?.text || ''
-        const id = imported.patient_id || imported.id || ''
-        const age = imported.age || ''
-        const sex = imported.sex || (imported.gender === 'female' ? 'F' : imported.gender === 'male' ? 'M' : 'M')
-        const edu = imported.education_years || imported.education || ''
-        const notes = imported.clinical_notes || imported.notes || ''
-
-        setPatient(prev => ({
-          ...prev,
-          name: name || prev.name,
-          patient_id: id ? `DOC-FHIR-${id.slice(0, 6)}` : prev.patient_id,
-          age: age?.toString() || prev.age,
-          sex: sex || prev.sex,
-          education_years: edu?.toString() || prev.education_years,
-        }))
-        if (notes) setPatientText(notes)
-        toast.success('Patient record imported')
-      } catch (err) {
-        toast.error('Invalid JSON/FHIR patient file')
-      }
-    }
-    reader.readAsText(file)
   }
 
   // Voice-to-Text Speech Recognition Dictation

@@ -221,3 +221,48 @@ class TestStorageSafety:
                                          content_type='multipart/form-data')
         assert resp.status_code == 400
         assert 'does not match' in resp.get_json()['message']
+
+
+# --------------------------------------------------------------------------- #
+# Speech: silence gate (Whisper hallucinates on silence)                       #
+# --------------------------------------------------------------------------- #
+
+class TestSpeechSilenceGate:
+    def _ratio(self, samples):
+        import numpy as np
+        import librosa
+        from app.ml.speech.transcriber import SpeechTranscriber
+        return SpeechTranscriber._voiced_ratio(
+            np.asarray(samples, dtype=np.float32), 16000
+        )
+
+    def test_digital_silence_is_gated(self):
+        import numpy as np
+        assert self._ratio(np.zeros((32000,))) == 0.0
+
+    def test_room_tone_is_gated(self):
+        import numpy as np
+        rng = np.random.default_rng(1)
+        assert self._ratio(0.0005 * rng.standard_normal(32000)) == 0.0
+
+    def test_speech_level_signal_is_not_gated(self):
+        import numpy as np
+        t = np.linspace(0, 2, 32000)
+        assert self._ratio(0.05 * np.sin(2 * np.pi * 200 * t)) > 0.5
+
+    def test_speech_with_pauses_is_not_gated(self):
+        import numpy as np
+        t = np.linspace(0, 2, 32000)
+        sig = np.concatenate([0.05 * np.sin(2 * np.pi * 200 * t),
+                              np.zeros(16000, dtype=np.float32)])
+        ratio = self._ratio(sig)
+        assert 0.3 < ratio < 1.0
+
+    def test_whisper_model_defaults_to_base_on_cpu(self, monkeypatch):
+        import torch
+        from app.ml.speech.transcriber import SpeechTranscriber
+        monkeypatch.delenv('WHISPER_MODEL', raising=False)
+        if torch.cuda.is_available():
+            pytest.skip('CUDA present; CPU default not applicable')
+        st = SpeechTranscriber()
+        assert st.model_size == 'base'

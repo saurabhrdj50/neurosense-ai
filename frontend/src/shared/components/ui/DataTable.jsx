@@ -76,16 +76,23 @@ export default function DataTable({
 
   useEffect(() => {
     setStoredPref('density', density);
+    // setStoredPref is a stable setter.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [density]);
 
   useEffect(() => {
     setStoredPref('sort', sortState);
+    // setStoredPref is a stable setter.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sortState]);
 
   useEffect(() => {
     setStoredPref('visible', visibleColumns);
+    // setStoredPref is a stable setter.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visibleColumns]);
 
+  // New filter results always reset pagination to page 1 (intentional).
   useEffect(() => {
     setCurrentPage(1);
   }, [filterQuery, data.length]);

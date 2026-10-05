@@ -288,7 +288,7 @@ export default function ResultsPage() {
                 onClick={() => setHistoryStageFilter(tab.id)}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap min-h-[36px] ${
                   historyStageFilter === tab.id
-                    ? 'bg-primary text-white shadow-xs'
+                    ? 'bg-primary text-primary-foreground shadow-xs'
                     : 'text-foreground-muted hover:text-foreground hover:bg-surface'
                 }`}
               >
@@ -1214,7 +1214,7 @@ export default function ResultsPage() {
                   onClick={() => setHistoryStageFilter(stg)}
                   className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-colors cursor-pointer ${
                     historyStageFilter === stg
-                      ? 'bg-primary text-white shadow-xs'
+                      ? 'bg-primary text-primary-foreground shadow-xs'
                       : 'text-foreground-muted hover:text-foreground'
                   }`}
                 >

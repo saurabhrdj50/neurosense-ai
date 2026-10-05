@@ -37,7 +37,7 @@ export default defineConfig([
   {
     // Providers intentionally export hooks/constants alongside their
     // component; HMR granularity loss is acceptable there.
-    files: ['src/providers/**', 'src/features/analysis/AnalysisLoader.jsx'],
+    files: ['src/providers/**', 'src/shared/motion/**', 'src/features/analysis/AnalysisLoader.jsx'],
     rules: {
       'react-refresh/only-export-components': 'off',
     },

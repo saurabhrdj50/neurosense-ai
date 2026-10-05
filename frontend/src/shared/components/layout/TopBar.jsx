@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../providers/AuthProvider'
+import ThemeToggle from '../ThemeToggle'
 import SettingsModal from '../SettingsModal'
 import CommandPalette from '../CommandPalette'
 import HelpCenterModal from '../HelpCenterModal'
@@ -102,6 +103,9 @@ export default function TopBar({ onMenuClick }) {
             </div>
           )}
 
+          {/* Theme Toggle */}
+          <ThemeToggle compact className="bg-surface-secondary hover:bg-surface-hover" />
+
           {/* Settings Trigger */}
           <button
             onClick={() => setSettingsOpen(true)}
@@ -120,7 +124,7 @@ export default function TopBar({ onMenuClick }) {
               aria-expanded={profileOpen}
               className="flex items-center gap-1.5 p-1 rounded-lg hover:bg-surface-hover transition-colors border border-transparent hover:border-border focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
             >
-              <div className="w-7 h-7 rounded-md bg-primary text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
+              <div className="w-7 h-7 rounded-md bg-primary text-primary-foreground flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
                 {(user?.full_name || user?.username || 'U')[0].toUpperCase()}
               </div>
               <ChevronDown size={14} className="text-foreground-subtle hidden sm:block" />

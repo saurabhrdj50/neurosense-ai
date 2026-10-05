@@ -499,7 +499,7 @@ export default function AdminDashboard() {
                   setSelectedDoctor(null)
                   navigate('/admin/panel', { state: statePayload })
                 }}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-primary hover:bg-primary-hover text-white shadow-xs transition-all border border-primary/20 min-h-[38px]"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-primary hover:bg-primary-hover text-primary-foreground shadow-xs transition-all border border-primary/20 min-h-[38px]"
               >
                 Manage Registry <ArrowRight size={13} />
               </button>

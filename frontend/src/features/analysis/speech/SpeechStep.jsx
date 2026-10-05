@@ -882,7 +882,7 @@ export function SpeechStep({ speechText, setSpeechText, audioFile, setAudioFile 
                       onClick={() => setActiveTaskId(t.id)}
                       className={`w-7 h-7 rounded-lg text-xs font-bold transition-all border flex items-center justify-center cursor-pointer ${
                         isActive
-                          ? 'bg-primary text-white border-primary shadow-2xs'
+                          ? 'bg-primary text-primary-foreground border-primary shadow-2xs'
                           : isDone
                           ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30'
                           : 'bg-background hover:bg-surface-hover text-foreground-muted border-border'
@@ -1059,7 +1059,7 @@ export function SpeechStep({ speechText, setSpeechText, audioFile, setAudioFile 
                     onClick={handlePlayAllTasks}
                     className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 border transition-all cursor-pointer ${
                       playingTaskId === 'all'
-                        ? 'bg-primary text-white border-primary animate-pulse'
+                        ? 'bg-primary text-primary-foreground border-primary animate-pulse'
                         : 'bg-primary/10 text-primary border-primary/30 hover:bg-primary/20'
                     }`}
                   >
@@ -1088,7 +1088,7 @@ export function SpeechStep({ speechText, setSpeechText, audioFile, setAudioFile 
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         <span className={`w-6 h-6 rounded-lg text-xs font-bold flex items-center justify-center shrink-0 ${
-                          isThisPlaying ? 'bg-primary text-white' : 'bg-emerald-500/15 text-emerald-500'
+                          isThisPlaying ? 'bg-primary text-primary-foreground' : 'bg-emerald-500/15 text-emerald-500'
                         }`}>
                           {t.id}
                         </span>
@@ -1102,7 +1102,7 @@ export function SpeechStep({ speechText, setSpeechText, audioFile, setAudioFile 
                         onClick={() => handlePlayTaskAudio(t.id)}
                         className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1 shrink-0 border transition-colors cursor-pointer ${
                           isThisPlaying
-                            ? 'bg-primary text-white border-primary'
+                            ? 'bg-primary text-primary-foreground border-primary'
                             : 'bg-surface border-border text-foreground hover:text-primary hover:border-primary/40'
                         }`}
                         title={isThisPlaying ? `Stop Task ${t.id}` : `Listen to Task ${t.id}`}

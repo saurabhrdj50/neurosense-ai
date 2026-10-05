@@ -6,6 +6,21 @@ import Sidebar from '../shared/components/layout/Sidebar'
 import TopBar from '../shared/components/layout/TopBar'
 import { useAuth } from '../providers/AuthProvider'
 
+const ROUTE_TITLES = {
+  '/dashboard': 'Dashboard',
+  '/patients': 'Patient List',
+  '/analysis': 'New Assessment',
+  '/results': 'Diagnostic Report',
+  '/admin/dashboard': 'Admin Dashboard',
+  '/admin/panel': 'Admin Panel',
+  '/login': 'Sign In',
+}
+
+function ROUTE_TITLE_DEFAULTS() {
+  if (window.location.pathname.startsWith('/history')) return 'Patient History'
+  return 'Clinical Workspace'
+}
+
 /**
  * AppLayout — Main dashboard shell wrapping all protected pages.
  *
@@ -26,6 +41,12 @@ export default function AppLayout() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMobileDrawerOpen(false)
+  }, [location.pathname])
+
+  // Scroll to top + document title on route change
+  useEffect(() => {
+    window.scrollTo(0, 0)
+    document.title = `${ROUTE_TITLES[location.pathname] || ROUTE_TITLE_DEFAULTS()} · NeuroSense AI`
   }, [location.pathname])
 
   // Close mobile drawer on Escape key
@@ -118,7 +139,7 @@ export default function AppLayout() {
           whileTap={{ scale: 0.95 }}
           aria-label="Start new analysis intake"
           onClick={() => navigate('/analysis')}
-          className="fixed bottom-5 right-5 z-30 lg:hidden w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center shadow-lg shadow-primary/30 border border-primary/20 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className="fixed bottom-5 right-5 z-30 lg:hidden w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg shadow-primary/30 border border-primary/20 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           <Plus size={22} strokeWidth={2.5} />
         </motion.button>

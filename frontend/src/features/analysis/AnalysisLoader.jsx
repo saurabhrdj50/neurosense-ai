@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Brain, Loader2 } from 'lucide-react'
 import GlassCard from '../../shared/components/ui/GlassCard'
+import { ANALYSIS_STAGE_LABELS } from './api/analysisApi'
 
 /**
  * Honest analysis loader.
@@ -12,8 +13,13 @@ import GlassCard from '../../shared/components/ui/GlassCard'
  * No artificial delays and no stage labels claiming work that has not happened.
  * The modality chips reflect the inputs the clinician actually submitted.
  */
-export function AnalysisLoader({ isLoading, patientName = 'Current patient', modalities = [] }) {
+export function AnalysisLoader({ isLoading, patientName = 'Current patient', modalities = [], job = null }) {
   const displayModalities = modalities.length ? modalities : ['Demographics', 'MRI', 'Cognition', 'Speech', 'Risk Factors']
+  // Real pipeline position from the background job (stage + 0-100). When the
+  // sync fallback is used there is no job — the bar falls back to easing.
+  const stageLabel = job?.stage ? (ANALYSIS_STAGE_LABELS[job.stage] || 'Processing') : null
+  const pct = typeof job?.progress === 'number' ? Math.min(job.progress, 99) : null
+  const headline = stageLabel || 'Analyzing data…'
 
   return (
     <AnimatePresence>
@@ -47,7 +53,7 @@ export function AnalysisLoader({ isLoading, patientName = 'Current patient', mod
                     <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-400">Analysis Engine</span>
                   </div>
                   <h2 className="text-xl font-bold tracking-tight text-white mt-0.5">
-                    Analyzing data…
+                    {headline}
                   </h2>
                   <p className="text-xs text-slate-400">
                     Processing examination for <span className="font-semibold text-white">{patientName}</span>
@@ -61,14 +67,22 @@ export function AnalysisLoader({ isLoading, patientName = 'Current patient', mod
                 <div className="flex justify-between items-center text-xs font-semibold">
                   <span className="text-slate-400">Analysis Progress</span>
                   <span className="text-indigo-400 font-mono font-bold flex items-center gap-1.5">
-                    <Loader2 size={11} className="animate-spin" /> in progress
+                    {pct !== null ? `${Math.round(pct)}%` : (
+                      <>
+                        <Loader2 size={11} className="animate-spin" /> in progress
+                      </>
+                    )}
                   </span>
                 </div>
                 <div className="h-3 bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-700">
                   <motion.div
                     initial={{ width: '0%' }}
-                    animate={{ width: isLoading ? '90%' : '100%' }}
-                    transition={isLoading ? { duration: 6, ease: 'easeOut' } : { duration: 0.3, ease: 'easeIn' }}
+                    animate={{
+                      // Real percentage when the job reports it; otherwise ease
+                      // to 90% and complete on the actual response.
+                      width: pct !== null ? `${pct}%` : (isLoading ? '90%' : '100%'),
+                    }}
+                    transition={pct !== null ? { duration: 0.4, ease: 'easeOut' } : (isLoading ? { duration: 6, ease: 'easeOut' } : { duration: 0.3, ease: 'easeIn' })}
                     className="h-full rounded-full bg-gradient-to-r from-indigo-500 via-cyan-500 to-emerald-500"
                   />
                 </div>

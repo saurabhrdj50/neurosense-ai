@@ -706,7 +706,7 @@ export function CognitiveStep({ cognData, setCognData }) {
                 aria-label={`Question ${index + 1}: ${question.label}${answered ? ', scored' : ', not scored'}`}
                 className={`w-8 h-8 rounded-lg text-xs font-extrabold border transition-colors ${
                   currentQIndex === index
-                    ? 'bg-primary text-white border-primary'
+                    ? 'bg-primary text-primary-foreground border-primary'
                     : answered
                     ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
                     : 'bg-background text-foreground-muted border-border hover:bg-surface-hover'
@@ -839,7 +839,7 @@ export function CognitiveStep({ cognData, setCognData }) {
                         aria-pressed={active}
                         className={`min-h-[44px] min-w-[44px] px-3 rounded-xl text-sm font-extrabold border transition-colors cursor-pointer ${
                           active
-                            ? 'bg-primary text-white border-primary shadow-sm'
+                            ? 'bg-primary text-primary-foreground border-primary shadow-sm'
                             : 'bg-background text-foreground border-border hover:border-primary hover:text-primary'
                         }`}
                       >

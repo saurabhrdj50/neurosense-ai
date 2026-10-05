@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { CountUp, StaggerGrid, StaggerCell } from '../../shared/motion';
 import { useNavigate } from 'react-router-dom';
 import {
   AlertTriangle, ArrowRight, Plus, RefreshCw, ChevronRight, CheckCircle2,
@@ -47,49 +49,55 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const { isDark } = useTheme();
   const { user } = useAuth();
-  const [ready, setReady] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [lastRefreshed, setLastRefreshed] = useState(new Date().toLocaleTimeString());
+  // Server state via TanStack Query; derived metrics are a pure computation
+  // over the two cached datasets.
+  const patientsQuery = useQuery({
+    queryKey: ['patients'],
+    queryFn: async () => {
+      const res = await patientsApi.getAll().catch(() => null);
+      return res?.patients || null;
+    },
+  });
+  const analysesQuery = useQuery({
+    queryKey: ['analyses'],
+    queryFn: async () => {
+      const res = await historyApi.getAllAnalyses().catch(() => null);
+      return res?.analyses || null;
+    },
+  });
+  const patients = useMemo(() => patientsQuery.data || [], [patientsQuery.data]);
+  const analyses = useMemo(() => analysesQuery.data || [], [analysesQuery.data]);
+  const refreshing = patientsQuery.isFetching || analysesQuery.isFetching;
+  const ready = !patientsQuery.isLoading && !analysesQuery.isLoading;
+  const lastRefreshed = useMemo(() => {
+    const ts = Math.max(patientsQuery.dataUpdatedAt || 0, analysesQuery.dataUpdatedAt || 0);
+    return ts ? new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }, [patientsQuery.dataUpdatedAt, analysesQuery.dataUpdatedAt]);
+  const fetchDashboardData = useMemo(() => {
+    return () => {
+      patientsQuery.refetch();
+      analysesQuery.refetch();
+    };
+  }, [patientsQuery, analysesQuery]);
   
   /* Sort States for Clinical Tables */
   const [recentSort, setRecentSort] = useState({ key: 'time', dir: 'desc' });
   const [prioritySort, setPrioritySort] = useState({ key: 'conf', dir: 'desc' });
 
-  const [stats, setStats] = useState({
-    totalPatients: 0,
-    totalAnalyses: 0,
-    highRiskCount: 0,
-    recentActivity: 0,
-  });
-  const [riskDistribution, setRiskDistribution] = useState([]);
-  const [recentAnalyses, setRecentAnalyses] = useState([]);
-  const [priorityAnalyses, setPriorityAnalyses] = useState([]);
-  const [trendData, setTrendData] = useState([]);
   const [fetchError, setFetchError] = useState(null);
 
-  const fetchDashboardData = useCallback(async () => {
-    setRefreshing(true);
-    setFetchError(null);
-    try {
-      const [patientsResult, analysesResult] = await Promise.allSettled([
-        patientsApi.getAll(),
-        historyApi.getAllAnalyses(),
-      ]);
+  // Derive a visible error from query failures (both failed → hard error).
+  useEffect(() => {
+    const failed = [patientsQuery.error, analysesQuery.error].filter(Boolean);
+    if (failed.length === 2) setFetchError('Could not load dashboard data (patients and analyses).');
+    else if (failed.length === 1) setFetchError('Some dashboard data failed to load.');
+    else setFetchError(null);
+  }, [patientsQuery.error, analysesQuery.error]);
 
-      const failed = [patientsResult, analysesResult].filter((r) => r.status === 'rejected');
-      if (failed.length) {
-        console.error('Failed to fetch dashboard data:', failed.map((r) => r.reason?.message || r.reason));
-        setFetchError(
-          failed.length === 2
-            ? 'Could not load dashboard data (patients and analyses).'
-            : 'Some dashboard data failed to load.'
-        );
-      }
-
-      const patients = patientsResult.status === 'fulfilled' ? (patientsResult.value.patients || []) : [];
-      const analyses = analysesResult.status === 'fulfilled' ? (analysesResult.value.analyses || []) : [];
-
-      const riskCounts = { Normal: 0, Mild: 0, Moderate: 0, High: 0, Unknown: 0 };
+  // Pure computation over the cached datasets — no fetching, no setState.
+  const derived = useMemo(() => {
+    const riskCounts = { Normal: 0, Mild: 0, Moderate: 0, High: 0, Unknown: 0 };
       analyses.forEach((a) => {
         const stage = getAnalysisStage(a);
         if (stage.includes('Non') || stage.includes('Very Mild')) riskCounts.Normal++;
@@ -127,8 +135,12 @@ export default function DashboardPage() {
         .slice(0, 5)
         .map(toRow);
 
+      // Wall-clock-relative by design: the trend window and 24h KPI are
+      // anchored to "now" and recompute whenever the data refreshes.
+      // eslint-disable-next-line react-hooks/purity
+      const nowTs = Date.now();
       const monthKeys = Array.from({ length: 6 }, (_, i) => {
-        const date = new Date();
+        const date = new Date(nowTs);
         date.setMonth(date.getMonth() - (5 - i));
         return {
           key: `${date.getFullYear()}-${date.getMonth()}`,
@@ -138,7 +150,7 @@ export default function DashboardPage() {
       const monthlyData = monthKeys.map(({ key, label }) => ({ key, month: label, normal: 0, mild: 0, moderate: 0 }));
       analyses.forEach((a) => {
         const stage = getAnalysisStage(a);
-        const date = new Date(a.created_at || Date.now());
+        const date = new Date(a.created_at || nowTs);
         const monthIdx = monthKeys.findIndex((m) => m.key === `${date.getFullYear()}-${date.getMonth()}`);
         if (monthIdx >= 0 && monthIdx < 6) {
           if (stage.includes('Non') || stage.includes('Very Mild')) monthlyData[monthIdx].normal++;
@@ -148,30 +160,25 @@ export default function DashboardPage() {
       });
       const hasTrendData = monthlyData.some((m) => m.normal > 0 || m.mild > 0 || m.moderate > 0);
 
-      setStats({
-        totalPatients: patients.length,
-        totalAnalyses: analyses.length,
-        highRiskCount: riskCounts.High,
-        recentActivity: analyses.filter((a) => {
-          const created = new Date(a.created_at);
-          const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-          return created > dayAgo;
-        }).length,
-      });
-      setRiskDistribution(distribution);
-      setRecentAnalyses(recent);
-      setPriorityAnalyses(priority);
-      setTrendData(hasTrendData ? monthlyData : []);
-      setLastRefreshed(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-    } finally {
-      setReady(true);
-      setRefreshing(false);
-    }
-  }, []);
+      return {
+        stats: {
+          totalPatients: patients.length,
+          totalAnalyses: analyses.length,
+          highRiskCount: riskCounts.High,
+          recentActivity: analyses.filter((a) => {
+            const created = new Date(a.created_at);
+            const dayAgo = new Date(nowTs - 24 * 60 * 60 * 1000);
+            return created > dayAgo;
+          }).length,
+        },
+        riskDistribution: distribution,
+        recentAnalyses: recent,
+        priorityAnalyses: priority,
+        trendData: hasTrendData ? monthlyData : [],
+      };
+  }, [patients, analyses]);
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, [fetchDashboardData]);
+  const { stats, riskDistribution, recentAnalyses, priorityAnalyses, trendData } = derived;
 
   /* Sorted Datasets */
   const sortedRecentAnalyses = useMemo(() => {
@@ -391,22 +398,22 @@ export default function DashboardPage() {
       </section>
 
       {/* ── Compact Information-Dense KPI Grid ───────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4.5">
+      <StaggerGrid className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4.5">
         {[
           { label: 'Total Patients', value: stats.totalPatients, sub: 'Active registry', color: 'text-foreground' },
           { label: 'Evaluations Run', value: stats.totalAnalyses, sub: 'Full assessments', color: 'text-foreground' },
           { label: 'High-Risk Alerts', value: stats.highRiskCount, sub: stats.highRiskCount > 0 ? 'Action required' : 'All clear', color: stats.highRiskCount > 0 ? 'text-rose-600 dark:text-rose-400 font-extrabold' : 'text-emerald-600 dark:text-emerald-400 font-bold' },
           { label: '24h New Cases', value: stats.recentActivity, sub: 'Recent evaluations', color: 'text-primary font-extrabold' },
         ].map((kpi, idx) => (
-          <div key={idx} className="p-6 rounded-2xl bg-card border border-border space-y-3 shadow-xs hover:border-border-strong transition-all duration-150">
+          <StaggerCell key={idx} className="p-6 rounded-2xl bg-card border border-border space-y-3 shadow-xs hover:border-border-strong transition-all duration-150">
             <span className="text-lg font-bold text-foreground block truncate">{kpi.label}</span>
             <div className="flex items-baseline justify-between gap-2">
-              <span className={`text-3xl sm:text-4xl font-extrabold font-mono tracking-tight ${kpi.color}`}>{ready ? kpi.value : '...'}</span>
+              <span className={`text-3xl sm:text-4xl font-extrabold font-mono tracking-tight ${kpi.color}`}>{ready ? <CountUp value={kpi.value} /> : '...'}</span>
               <span className="text-[15px] font-semibold text-foreground-muted shrink-0">{kpi.sub}</span>
             </div>
-          </div>
+          </StaggerCell>
         ))}
-      </div>
+      </StaggerGrid>
 
       {/* ── Compact Analytics Charts ─────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

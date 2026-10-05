@@ -4,154 +4,168 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── Enterprise Clinical Design Tokens (EHR Light Workstation Default) ─── */
-:root, [data-theme="light"], .light {
-  --background:           #F8FAFC; /* Clean Slate Light Workspace */
-  --bg-canvas:            #F8FAFC;
-  --bg-shell:             #FFFFFF; /* Pure White Shell */
-  --surface:              #FFFFFF;
-  --surface-card:         #FFFFFF; /* Pure White Panel */
-  --surface-secondary:    #F1F5F9;
-  --surface-elevated:     #FFFFFF;
-  --surface-hover:        #F1F5F9; /* Slate-100 Hover */
-  --surface-active:       #E2E8F0; /* Slate-200 Active */
-  
-  --foreground:           #0F172A; /* Slate-900 Primary Text */
-  --foreground-muted:     #334155; /* Slate-700 Secondary */
-  --foreground-subtle:    #64748B; /* Slate-500 Muted */
-  --foreground-inverse:   #FFFFFF;
-  
-  --border:               #E2E8F0; /* Slate-200 Border */
-  --border-subtle:        #F1F5F9;
-  --border-strong:        #CBD5E1;
-  --border-brand:         #2563EB;
-  --border-focus:         #2563EB;
+/* ─────────────────────────────────────────────────────────────────────────────
+   NeuroSense AI Design Tokens
+   Colors are stored as RGB channel triplets ("R G B") so Tailwind can compose
+   alpha variants via `rgb(var(--token) / <alpha-value>)` and raw CSS can use
+   `rgb(var(--token))`. Tokens that are not plain colors (gradients, rgba tints,
+   shadows) stay as full CSS values.
+   ───────────────────────────────────────────────────────────────────────────── */
 
-  --primary:              #1E40AF; /* Enterprise Blue */
-  --primary-hover:        #1E3A8A;
+/* ─── Light Theme (Enterprise EHR Workstation Default) ───────────────────── */
+:root, [data-theme="light"], .light {
+  --background:           248 250 252; /* #F8FAFC Clean Slate Light Workspace */
+  --bg-canvas:            248 250 252;
+  --bg-shell:             255 255 255; /* Pure White Shell */
+  --surface:              255 255 255;
+  --surface-card:         255 255 255; /* Pure White Panel */
+  --surface-secondary:    241 245 249;
+  --surface-elevated:     255 255 255;
+  --surface-hover:        241 245 249; /* Slate-100 Hover */
+  --surface-active:       226 232 240; /* Slate-200 Active */
+
+  --foreground:           15 23 42;    /* #0F172A Slate-900 Primary Text */
+  --foreground-muted:     51 65 85;    /* #334155 Slate-700 Secondary */
+  --foreground-subtle:    100 116 139; /* #64748B Slate-500 Muted */
+  --foreground-inverse:   255 255 255;
+
+  --border:               226 232 240; /* #E2E8F0 Slate-200 Border */
+  --border-subtle:        241 245 249;
+  --border-strong:        203 213 225;
+  --border-brand:         37 99 235;
+  --border-focus:         37 99 235;
+
+  --primary:              30 64 175;   /* #1E40AF Enterprise Blue */
+  --primary-hover:        30 58 138;   /* #1E3A8A */
   --primary-soft:         rgba(30, 64, 175, 0.06);
-  --primary-foreground:   #FFFFFF;
+  --primary-foreground:   255 255 255;
   --primary-glow:         rgba(30, 64, 175, 0.08);
 
-  --secondary:            #64748B;
-  --accent:               #2563EB;
+  --secondary:            100 116 139;
+  --accent:               37 99 235;
 
-  --success:              #16A34A;
-  --success-foreground:   #FFFFFF;
-  --warning:              #D97706;
-  --warning-foreground:   #FFFFFF;
-  --danger:               #DC2626;
-  --danger-foreground:    #FFFFFF;
-  --info:                 #1D4ED8;
+  --success:              22 163 74;
+  --success-foreground:   255 255 255;
+  --warning:              217 119 6;
+  --warning-foreground:   255 255 255;
+  --danger:               220 38 38;
+  --danger-foreground:    255 255 255;
+  --info:                 29 78 216;
 
   /* Clinical Risk States (Light Mode) */
   --risk-low-bg:          rgba(22, 163, 74, 0.08);
-  --risk-low-text:        #15803D;
+  --risk-low-text:        21 128 61;   /* #15803D */
   --risk-low-border:      rgba(22, 163, 74, 0.2);
   --risk-moderate-bg:     rgba(217, 119, 6, 0.08);
-  --risk-moderate-text:   #B45309;
+  --risk-moderate-text:   180 83 9;    /* #B45309 */
   --risk-moderate-border: rgba(217, 119, 6, 0.2);
   --risk-high-bg:         rgba(220, 38, 38, 0.08);
-  --risk-high-text:       #B91C1C;
+  --risk-high-text:       185 28 28;   /* #B91C1C */
   --risk-high-border:     rgba(220, 38, 38, 0.2);
   --risk-critical-bg:     rgba(147, 51, 234, 0.08);
-  --risk-critical-text:   #7E22CE;
+  --risk-critical-text:   126 34 206;  /* #7E22CE */
   --risk-critical-border: rgba(147, 51, 234, 0.2);
 
-  --text-primary:         #0F172A;
-  --text-secondary:       #334155;
-  --text-muted:           #64748B;
-  --text-dimmed:          #94A3B8;
-  
+  --text-primary:         15 23 42;
+  --text-secondary:       51 65 85;
+  --text-muted:           100 116 139;
+  --text-dimmed:          148 163 184;
+
   /* Precision Light Shadows */
   --shadow-xs:            0 1px 2px 0 rgba(0, 0, 0, 0.04);
   --shadow:               0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
   --shadow-md:            0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
   --shadow-lg:            0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
 
-  --glass-bg:             #FFFFFF;
-  --glass-strong-bg:      #FFFFFF;
-  --input-bg:             #FFFFFF;
-  --input-border:         #CBD5E1;
+  --glass-bg:             255 255 255;
+  --glass-strong-bg:      255 255 255;
+  --input-bg:             255 255 255;
+  --input-border:         203 213 225;
 
-  --table-header-bg:      #F8FAFC;
-  --table-row-even:       #F8FAFC;
-  --table-row-hover:      #F1F5F9;
+  --table-header-bg:      248 250 252;
+  --table-row-even:       248 250 252;
+  --table-row-hover:      241 245 249;
 }
 
-/* ─── LIGHT MODE OVERRIDES (Enterprise EHR Light) ────────────────────────── */
-[data-theme="light"], .light {
-  --background:           #F8FAFC; /* Clean Slate Light Workspace */
-  --bg-canvas:            #F8FAFC;
-  --bg-shell:             #FFFFFF; /* Pure White Shell */
-  --surface:              #FFFFFF;
-  --surface-card:         #FFFFFF; /* Pure White Panel */
-  --surface-secondary:    #F1F5F9;
-  --surface-elevated:     #FFFFFF;
-  --surface-hover:        #F1F5F9; /* Slate-100 Hover */
-  --surface-active:       #E2E8F0; /* Slate-200 Active */
-  
-  --foreground:           #0F172A; /* Slate-900 Primary Text */
-  --foreground-muted:     #334155; /* Slate-700 Secondary */
-  --foreground-subtle:    #64748B; /* Slate-500 Muted */
-  --foreground-inverse:   #FFFFFF;
-  
-  --border:               #E2E8F0; /* Slate-200 Border */
-  --border-subtle:        #F1F5F9;
-  --border-strong:        #CBD5E1;
-  --border-brand:         #2563EB;
-  --border-focus:         #2563EB;
+/* ─── Dark Theme (Clinical Night Shift) ──────────────────────────────────────
+   Near-black slate workspace with elevated slate-800 surfaces, slate-700
+   borders, and the indigo primary family. Indigo-400 (#818CF8) is the primary
+   token in dark mode so `text-primary` clears WCAG AA on both --background
+   (#0B1120, 6.3:1) and --surface-card (#1E293B, 4.8:1); --primary-foreground
+   flips to near-black so solid primary buttons/avatars stay AA (6.3:1). */
+.dark, [data-theme="dark"] {
+  --background:           11 17 32;    /* #0B1120 Near-Black Slate */
+  --bg-canvas:            11 17 32;
+  --bg-shell:             15 23 42;    /* #0F172A Sidebar Shell */
+  --surface:              15 23 42;
+  --surface-card:         30 41 59;    /* #1E293B Elevated Surface */
+  --surface-secondary:    22 32 51;    /* Subtle Inset Panel */
+  --surface-elevated:     30 41 59;
+  --surface-hover:        39 50 70;    /* Hover Raise */
+  --surface-active:       51 65 85;    /* #334155 Active Press */
 
-  --primary:              #1E40AF; /* Enterprise Blue */
-  --primary-hover:        #1E3A8A;
-  --primary-soft:         rgba(30, 64, 175, 0.06);
-  --primary-foreground:   #FFFFFF;
-  --primary-glow:         rgba(30, 64, 175, 0.08);
+  --foreground:           241 245 249; /* #F1F5F9 Primary Text */
+  --foreground-muted:     203 213 225; /* #CBD5E1 Secondary — AA on card */
+  --foreground-subtle:    148 163 184; /* #94A3B8 Muted */
+  --foreground-inverse:   15 23 42;
 
-  --secondary:            #64748B;
-  --accent:               #2563EB;
+  --border:               51 65 85;    /* #334155 Slate-700 Border */
+  --border-subtle:        30 41 59;
+  --border-strong:        71 85 105;   /* #475569 */
+  --border-brand:         129 140 248;
+  --border-focus:         129 140 248;
 
-  --success:              #16A34A;
-  --success-foreground:   #FFFFFF;
-  --warning:              #D97706;
-  --warning-foreground:   #FFFFFF;
-  --danger:               #DC2626;
-  --danger-foreground:    #FFFFFF;
-  --info:                 #1D4ED8;
+  --primary:              129 140 248; /* #818CF8 Indigo-400 */
+  --primary-hover:        99 102 241;  /* #6366F1 Indigo-500 */
+  --primary-soft:         rgba(99, 102, 241, 0.14);
+  --primary-foreground:   15 23 42;    /* Dark text on solid primary buttons */
+  --primary-glow:         rgba(99, 102, 241, 0.25);
 
-  /* Clinical Risk States (Light Mode) */
-  --risk-low-bg:          rgba(22, 163, 74, 0.08);
-  --risk-low-text:        #15803D;
-  --risk-low-border:      rgba(22, 163, 74, 0.2);
-  --risk-moderate-bg:     rgba(217, 119, 6, 0.08);
-  --risk-moderate-text:   #B45309;
-  --risk-moderate-border: rgba(217, 119, 6, 0.2);
-  --risk-high-bg:         rgba(220, 38, 38, 0.08);
-  --risk-high-text:       #B91C1C;
-  --risk-high-border:     rgba(220, 38, 38, 0.2);
-  --risk-critical-bg:     rgba(147, 51, 234, 0.08);
-  --risk-critical-text:   #7E22CE;
-  --risk-critical-border: rgba(147, 51, 234, 0.2);
+  --secondary:            148 163 184;
+  --accent:               129 140 248;
 
-  --text-primary:         #0F172A;
-  --text-secondary:       #334155;
-  --text-muted:           #64748B;
-  --text-dimmed:          #94A3B8;
-  
-  /* Precision Light Shadows */
-  --shadow-xs:            0 1px 2px 0 rgba(0, 0, 0, 0.04);
-  --shadow:               0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
-  --shadow-md:            0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
-  --shadow-lg:            0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+  /* Status colors stay saturated so white-label buttons keep contrast */
+  --success:              22 163 74;
+  --success-foreground:   255 255 255;
+  --warning:              217 119 6;
+  --warning-foreground:   255 255 255;
+  --danger:               220 38 38;
+  --danger-foreground:    255 255 255;
+  --info:                 29 78 216;
 
-  --glass-bg:             #FFFFFF;
-  --glass-strong-bg:      #FFFFFF;
-  --input-bg:             #FFFFFF;
-  --input-border:         #CBD5E1;
+  /* Clinical Risk States (Dark Mode) — lighter text steps for AA */
+  --risk-low-bg:          rgba(34, 197, 94, 0.12);
+  --risk-low-text:        74 222 128;  /* #4ADE80 */
+  --risk-low-border:      rgba(34, 197, 94, 0.3);
+  --risk-moderate-bg:     rgba(245, 158, 11, 0.12);
+  --risk-moderate-text:   251 191 36;  /* #FBBF24 */
+  --risk-moderate-border: rgba(245, 158, 11, 0.3);
+  --risk-high-bg:         rgba(239, 68, 68, 0.12);
+  --risk-high-text:       248 113 113; /* #F87171 */
+  --risk-high-border:     rgba(239, 68, 68, 0.3);
+  --risk-critical-bg:     rgba(192, 132, 252, 0.12);
+  --risk-critical-text:   192 132 252; /* #C084FC */
+  --risk-critical-border: rgba(192, 132, 252, 0.3);
 
-  --table-header-bg:      #F8FAFC;
-  --table-row-even:       #F8FAFC;
-  --table-row-hover:      #F1F5F9;
+  --text-primary:         241 245 249;
+  --text-secondary:       203 213 225;
+  --text-muted:           148 163 184;
+  --text-dimmed:          100 116 139;
+
+  /* Deep Night Shadows */
+  --shadow-xs:            0 1px 2px 0 rgba(0, 0, 0, 0.4);
+  --shadow:               0 1px 3px 0 rgba(0, 0, 0, 0.5), 0 1px 2px -1px rgba(0, 0, 0, 0.4);
+  --shadow-md:            0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
+  --shadow-lg:            0 10px 15px -3px rgba(0, 0, 0, 0.6), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
+
+  --glass-bg:             15 23 42;
+  --glass-strong-bg:      30 41 59;
+  --input-bg:             15 23 42;
+  --input-border:         51 65 85;
+
+  --table-header-bg:      15 23 42;
+  --table-row-even:       15 23 42;
+  --table-row-hover:      30 41 59;
 }
 
 /* ─── Font Size Attributes ────────────────────────────────────────────── */
@@ -183,40 +197,32 @@ html {
 
 body {
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  background-color: var(--background);
-  color: var(--text-primary);
+  background-color: rgb(var(--background));
+  color: rgb(var(--text-primary));
   overflow-x: hidden;
   line-height: 1.5;
   letter-spacing: -0.01em;
 }
 
-[data-theme="dark"] body {
-  background-color: var(--background);
-}
-
-[data-theme="light"] body {
-  background-color: var(--background);
-}
-
 /* ─── Custom Scrollbar ───────────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+::-webkit-scrollbar-thumb { background: rgb(var(--border-strong)); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgb(var(--primary)); }
 
 /* ─── Selection ──────────────────────────────────────────────────────────── */
-::selection { background: rgba(37, 99, 235, 0.25); color: var(--text-primary); }
+::selection { background: rgba(99, 102, 241, 0.3); color: rgb(var(--text-primary)); }
 
 /* ─── Surface Utility Classes ───────────────────────────────────────────── */
 .glass {
-  background: var(--surface-card);
-  border: 1px solid var(--border);
+  background: rgb(var(--surface-card));
+  border: 1px solid rgb(var(--border));
   box-shadow: var(--shadow);
 }
 
 .glass-strong {
-  background: var(--surface-card);
-  border: 1px solid var(--border-strong);
+  background: rgb(var(--surface-card));
+  border: 1px solid rgb(var(--border-strong));
   box-shadow: var(--shadow);
 }
 
@@ -225,7 +231,7 @@ body {
 }
 
 .gradient-text-brand {
-  color: var(--text-primary) !important;
+  color: rgb(var(--text-primary)) !important;
 }
 
 /* ─── Shimmer / Skeleton (use Tailwind animate-pulse instead) ───────────── */
@@ -233,7 +239,7 @@ body {
   background: #E2E8F0; /* slate-200 */
   animation: shimmer 1.8s ease-in-out infinite;
 }
-[data-theme="dark"] .shimmer {
+[data-theme="dark"] .shimmer, .dark .shimmer {
   background: #1E293B; /* slate-800 */
 }
 
@@ -256,9 +262,9 @@ input, select, textarea {
 input:not([type="range"]):not([type="checkbox"]):not([type="radio"]),
 select,
 textarea {
-  background-color: var(--input-bg) !important;
-  border: 1px solid var(--input-border) !important;
-  color: var(--text-primary) !important;
+  background-color: rgb(var(--input-bg)) !important;
+  border: 1px solid rgb(var(--input-border)) !important;
+  color: rgb(var(--text-primary)) !important;
   border-radius: 6px; /* matches rounded-md (Tailwind standard) */
   transition: border-color 150ms ease, box-shadow 150ms ease;
   font-size: 13px;
@@ -268,20 +274,20 @@ input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):focus,
 select:focus,
 textarea:focus {
   outline: none !important;
-  border-color: var(--primary) !important;
+  border-color: rgb(var(--primary)) !important;
   box-shadow: 0 0 0 2px var(--primary-glow) !important;
-  background-color: var(--surface-card) !important;
+  background-color: rgb(var(--surface-card)) !important;
 }
 
 input::placeholder, textarea::placeholder {
-  color: var(--text-secondary) !important;
+  color: rgb(var(--text-secondary)) !important;
   font-weight: 400;
   opacity: 0.7;
 }
 
 select option {
-  background: var(--surface-card) !important;
-  color: var(--text-primary) !important;
+  background: rgb(var(--surface-card)) !important;
+  color: rgb(var(--text-primary)) !important;
 }
 
 /* ─── Risk Badges ────────────────────────────────────────────────────────── */
@@ -289,25 +295,25 @@ select option {
 .risk-medium { background: rgba(245,158,11,0.12); color: #d97706; border: 1px solid rgba(245,158,11,0.3); font-weight: 600; }
 .risk-high   { background: rgba(239,68,68,0.12);  color: #dc2626; border: 1px solid rgba(239,68,68,0.3); font-weight: 600; }
 
-[data-theme="dark"] .risk-low    { color: #4ade80; }
-[data-theme="dark"] .risk-medium { color: #fbbf24; }
-[data-theme="dark"] .risk-high   { color: #f87171; }
+[data-theme="dark"] .risk-low, .dark .risk-low      { color: #4ade80; }
+[data-theme="dark"] .risk-medium, .dark .risk-medium { color: #fbbf24; }
+[data-theme="dark"] .risk-high, .dark .risk-high     { color: #f87171; }
 
 /* ─── Drop Active State ──────────────────────────────────────────────────── */
 .drop-active {
-  border-color: var(--primary) !important;
+  border-color: rgb(var(--primary)) !important;
   background: var(--primary-glow) !important;
   box-shadow: 0 0 0 3px var(--primary-glow) !important;
 }
 
 /* ─── Grid Pattern Overlay ───────────────────────────────────────────────── */
-[data-theme="dark"] .grid-pattern {
+[data-theme="dark"] .grid-pattern, .dark .grid-pattern {
   background-image:
     linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
   background-size: 40px 40px;
 }
-[data-theme="light"] .grid-pattern {
+[data-theme="light"] .grid-pattern, .light .grid-pattern {
   background-image:
     linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px),
     linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px);
@@ -319,7 +325,7 @@ input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
   height: 5px;
-  background: var(--border-strong);
+  background: rgb(var(--border-strong));
   border-radius: 10px;
   outline: none;
 }
@@ -329,7 +335,7 @@ input[type="range"]::-webkit-slider-thumb {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: var(--primary);
+  background: rgb(var(--primary));
   cursor: pointer;
   box-shadow: 0 0 12px var(--primary-glow);
   transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
@@ -363,7 +369,7 @@ a:focus-visible,
 button:focus-visible,
 [role="button"]:focus-visible,
 [tabindex="0"]:focus-visible {
-  outline: 2px solid var(--border-focus) !important;
+  outline: 2px solid rgb(var(--border-focus)) !important;
   outline-offset: 2px !important;
 }
 

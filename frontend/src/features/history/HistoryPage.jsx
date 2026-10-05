@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Clock, Brain, Download, TrendingUp, TrendingDown, Minus, AlertTriangle, RefreshCw } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -48,27 +49,15 @@ function CustomTooltip({ active, payload, label }) {
 export default function HistoryPage() {
   const { patientId } = useParams()
   const navigate = useNavigate()
-  const [data, setData]       = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError]     = useState(null)
-  const [retryTick, setRetryTick] = useState(0)
+  const { data, isLoading: loading, error: queryError, refetch } = useQuery({
+    queryKey: ['patient-history', patientId],
+    queryFn: () => historyApi.getPatientHistory(patientId),
+  })
+  const error = queryError ? (queryError.message || 'Failed to load history') : null
 
   useEffect(() => {
-    let active = true
-    historyApi.getPatientHistory(patientId)
-      .then(d => {
-        if (active) { setData(d); setError(null) }
-      })
-      .catch((e) => {
-        if (!active) return
-        setError(e.message || 'Failed to load history')
-        toast.error('Failed to load history')
-      })
-      .finally(() => {
-        if (active) setLoading(false)
-      })
-    return () => { active = false }
-  }, [patientId, retryTick])
+    if (queryError) toast.error('Failed to load history')
+  }, [queryError])
 
   const history = data?.history || []
 
@@ -151,7 +140,7 @@ export default function HistoryPage() {
               size="md"
               variant="outline"
               icon={RefreshCw}
-              onClick={() => { setLoading(true); setRetryTick(t => t + 1) }}
+              onClick={() => refetch()}
               className="min-h-[40px] text-sm font-semibold"
             >
               Retry
@@ -217,9 +206,9 @@ export default function HistoryPage() {
                         <stop offset="95%" stopColor="#6366F1" stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                    <XAxis dataKey="date" tick={{ fill: 'var(--text-muted)', fontSize: 12, fontWeight: 500 }} axisLine={false} tickLine={false} />
-                    <YAxis domain={[0, 100]} tick={{ fill: 'var(--text-muted)', fontSize: 12, fontWeight: 500 }} axisLine={false} tickLine={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--border))" />
+                    <XAxis dataKey="date" tick={{ fill: 'rgb(var(--text-muted))', fontSize: 12, fontWeight: 500 }} axisLine={false} tickLine={false} />
+                    <YAxis domain={[0, 100]} tick={{ fill: 'rgb(var(--text-muted))', fontSize: 12, fontWeight: 500 }} axisLine={false} tickLine={false} />
                     <Tooltip content={<CustomTooltip />} />
                     <Area type="monotone" dataKey="stageScore" stroke="#6366F1" fill="url(#historyGrad)" strokeWidth={2.5} name="Stage Score" />
                   </AreaChart>

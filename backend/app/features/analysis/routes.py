@@ -51,9 +51,12 @@ def _valid_audio_upload(file_storage) -> bool:
     return sniff_content_category(file_storage, 'audio')
 
 
-@analysis_bp.route('/analyze', methods=['POST'])
-@login_required
-def analyze():
+def _parse_analyze_request():
+    """Shared request parsing/validation for sync and async analyze.
+
+    Returns (inputs, patient_info, input_errors) or (None, None, error_response)
+    where error_response is a (body, status) tuple ready to return.
+    """
     from app.shared.security import get_current_user_id
     current_user_id = get_current_user_id()
     current_user = get_current_user()
@@ -61,7 +64,7 @@ def analyze():
     try:
         patient_info = parse_patient_info(request.form)
     except ValueError as e:
-        return jsonify({'success': False, 'message': str(e)}), 400
+        return None, None, ({'success': False, 'message': str(e)}, 400)
 
     # Fail fast on cross-tenant writes: refuse to analyze (and persist) a
     # patient owned by a different clinician.
@@ -70,20 +73,20 @@ def analyze():
         existing = PatientRepository().get_by_patient_id(pid)
         existing_owner = existing.get('created_by') if existing else None
         if existing_owner is not None and existing_owner != current_user_id:
-            return jsonify({
+            return None, None, ({
                 'success': False,
                 'message': f"Patient '{pid}' belongs to another clinician."
-            }), 403
+            }, 403)
 
     mri_file = request.files.get('mri_image')
     if mri_file and mri_file.filename and _allowed_file(mri_file.filename) and not _valid_mri_upload(mri_file):
-        return jsonify({'success': False, 'message': 'MRI file content does not match its extension (rejected).'}), 400
+        return None, None, ({'success': False, 'message': 'MRI file content does not match its extension (rejected).'}, 400)
     if not (mri_file and mri_file.filename and _allowed_file(mri_file.filename)):
         mri_file = None
 
     audio_file = request.files.get('audio_file')
     if audio_file and audio_file.filename and _allowed_audio(audio_file.filename) and not _valid_audio_upload(audio_file):
-        return jsonify({'success': False, 'message': 'Audio file content does not match its extension (rejected).'}), 400
+        return None, None, ({'success': False, 'message': 'Audio file content does not match its extension (rejected).'}, 400)
     if not (audio_file and audio_file.filename and _allowed_audio(audio_file.filename)):
         audio_file = None
 
@@ -118,6 +121,19 @@ def analyze():
         'risk_data': risk_data,
         'gradcam': request.form.get('gradcam', 'true').lower() == 'true',
     }
+    return (inputs, patient_info, input_errors), None, None
+
+
+@analysis_bp.route('/analyze', methods=['POST'])
+@login_required
+def analyze():
+    from app.shared.security import get_current_user_id
+    current_user_id = get_current_user_id()
+
+    parsed, _, error = _parse_analyze_request()
+    if error is not None:
+        return jsonify(error[0]), error[1]
+    inputs, patient_info, input_errors = parsed
 
     results = _orchestrator.run_full_analysis(inputs, doctor_id=current_user_id)
     results.update(input_errors)
@@ -133,6 +149,52 @@ def analyze():
         }), 403
 
     return jsonify(results)
+
+
+@analysis_bp.route('/analyze-async', methods=['POST'])
+@login_required
+def analyze_async():
+    """Submit the analysis as a background job; returns 202 + a job id.
+
+    Long Whisper/MRI runs then cannot hold or time out an HTTP worker —
+    the client polls /api/analysis/jobs/<id> for real pipeline progress.
+    """
+    from app.shared.security import get_current_user_id
+    from app.shared.jobs import get_job_manager
+    current_user_id = get_current_user_id()
+
+    parsed, _, error = _parse_analyze_request()
+    if error is not None:
+        return jsonify(error[0]), error[1]
+    inputs, patient_info, input_errors = parsed
+
+    def work(progress):
+        results = _orchestrator.run_full_analysis(inputs, doctor_id=current_user_id, progress=progress)
+        results.update(input_errors)
+        return _orchestrator.persist_analysis(patient_info, results, doctor_id=current_user_id)
+
+    job_id = get_job_manager().submit(work, user_id=current_user_id, label='analysis')
+    return jsonify({
+        'job_id': job_id,
+        'status': 'queued',
+        'status_url': f'/api/analysis/jobs/{job_id}',
+    }), 202
+
+
+@analysis_bp.route('/jobs/<job_id>', methods=['GET'])
+@login_required
+def analysis_job_status(job_id):
+    from app.shared.security import get_current_user_id
+    from app.shared.jobs import get_job_manager
+    current_user = get_current_user()
+    job = get_job_manager().get(
+        job_id,
+        user_id=getattr(current_user, 'id', None),
+        is_admin=bool(current_user and current_user.is_admin),
+    )
+    if job is None:
+        return jsonify({'success': False, 'message': 'Job not found'}), 404
+    return jsonify(job)
 
 
 @analysis_bp.route('/mri/preview', methods=['POST'])

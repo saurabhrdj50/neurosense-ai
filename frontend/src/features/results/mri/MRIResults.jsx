@@ -47,9 +47,9 @@ export function MRIResults({ mri }) {
             <p className="text-xs font-bold text-foreground-muted uppercase tracking-wider mb-3">Class Probabilities</p>
             <ResponsiveContainer width="100%" height={160}>
               <BarChart data={Object.entries(mri.probabilities).map(([k, v]) => ({ name: k.replace(' Demented','').replace('Non','None'), val: parseFloat(Number(v).toFixed(1)) }))} layout="vertical" margin={{ left: 0, right: 10, top: 0, bottom: 0 }}>
-                <XAxis type="number" domain={[0,100]} tick={{ fill: 'var(--text-muted)', fontSize: 12 }} axisLine={false} tickLine={false} />
-                <YAxis type="category" dataKey="name" tick={{ fill: 'var(--text-muted)', fontSize: 12 }} axisLine={false} tickLine={false} width={65} />
-                <Tooltip formatter={v => [`${v}%`]} contentStyle={{ background: 'var(--surface-card)', border: '1px solid var(--border)', borderRadius: 10, color: 'var(--text-primary)', fontSize: 12 }} />
+                <XAxis type="number" domain={[0,100]} tick={{ fill: 'rgb(var(--text-muted))', fontSize: 12 }} axisLine={false} tickLine={false} />
+                <YAxis type="category" dataKey="name" tick={{ fill: 'rgb(var(--text-muted))', fontSize: 12 }} axisLine={false} tickLine={false} width={65} />
+                <Tooltip formatter={v => [`${v}%`]} contentStyle={{ background: 'rgb(var(--surface-card))', border: '1px solid rgb(var(--border))', borderRadius: 10, color: 'rgb(var(--text-primary))', fontSize: 12 }} />
                 <Bar dataKey="val" radius={[0,6,6,0]}>
                   {Object.keys(mri.probabilities).map((k, i) => <Cell key={k} fill={['#22c55e','#6366f1','#f59e0b','#ef4444'][i % 4]} />)}
                 </Bar>

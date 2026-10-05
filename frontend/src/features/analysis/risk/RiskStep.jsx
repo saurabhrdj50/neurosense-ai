@@ -130,7 +130,7 @@ export function RiskStep({ risk, setRisk }) {
               onClick={() => setActiveCategoryTab(cat.id)}
               className={`p-3 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-between gap-2 cursor-pointer border ${
                 isActive
-                  ? 'bg-primary text-white border-primary shadow-sm'
+                  ? 'bg-primary text-primary-foreground border-primary shadow-sm'
                   : 'bg-surface hover:bg-surface-hover text-foreground-muted border-border'
               }`}
             >

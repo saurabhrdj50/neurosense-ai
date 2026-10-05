@@ -19,9 +19,9 @@ export default function App() {
             toastOptions={{
               duration: 4000,
               style: {
-                background: 'var(--surface-card)',
-                color: 'var(--text-primary)',
-                border: '1px solid var(--border)',
+                background: 'rgb(var(--surface-card))',
+                color: 'rgb(var(--text-primary))',
+                border: '1px solid rgb(var(--border))',
                 borderRadius: '16px',
                 fontSize: '13px',
                 fontFamily: 'Inter, sans-serif',

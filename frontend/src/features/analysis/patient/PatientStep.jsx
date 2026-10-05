@@ -286,7 +286,7 @@ export function PatientStep({ patient, setPatient, patientText, setPatientText, 
                   onClick={() => setPatient(p => ({ ...p, sex: s }))}
                   className={`flex-1 py-2.5 rounded-xl text-sm font-extrabold transition-all border min-h-[44px] cursor-pointer ${
                     patient.sex === s
-                      ? 'bg-primary text-white border-primary shadow-sm'
+                      ? 'bg-primary text-primary-foreground border-primary shadow-sm'
                       : 'bg-background hover:bg-surface-hover text-foreground-muted border-border'
                   }`}
                 >
@@ -335,7 +335,7 @@ export function PatientStep({ patient, setPatient, patientText, setPatientText, 
                   onClick={() => toggleSymptomChip(chip)}
                   className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 min-h-[40px] cursor-pointer ${
                     active
-                      ? 'bg-primary text-white font-extrabold shadow-sm'
+                      ? 'bg-primary text-primary-foreground font-extrabold shadow-sm'
                       : 'bg-background hover:bg-surface-hover text-foreground border border-border'
                   }`}
                 >
@@ -390,7 +390,7 @@ export function PatientStep({ patient, setPatient, patientText, setPatientText, 
                       type="button"
                       onClick={() => setPatient(p => ({ ...p, handedness: h }))}
                       className={`flex-1 py-2.5 rounded-xl text-sm font-extrabold border min-h-[44px] cursor-pointer ${
-                        patient.handedness === h ? 'bg-primary text-white border-primary' : 'bg-background border-border text-foreground-muted'
+                        patient.handedness === h ? 'bg-primary text-primary-foreground border-primary' : 'bg-background border-border text-foreground-muted'
                       }`}
                     >
                       {h}

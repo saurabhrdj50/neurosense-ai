@@ -266,3 +266,104 @@ class TestSpeechSilenceGate:
             pytest.skip('CUDA present; CPU default not applicable')
         st = SpeechTranscriber()
         assert st.model_size == 'base'
+
+
+# --------------------------------------------------------------------------- #
+# Background analysis jobs                                                     #
+# --------------------------------------------------------------------------- #
+
+class TestBackgroundJobs:
+    def _minimal_form(self, pid='PAT-1003'):
+        return {
+            'patient_id': pid, 'name': 'Mohan Patel', 'age': '75',
+            'cognitive_tests': '{"screening_breakdown": {"orient_date": 3, "serial_7": 2}}',
+            'risk_factors': '{"hypertension": true}',
+        }
+
+    def test_analyze_async_returns_job_and_completes(self, authenticated_client):
+        resp = authenticated_client.post('/api/analysis/analyze-async', data=self._minimal_form(),
+                                         content_type='multipart/form-data')
+        assert resp.status_code == 202
+        body = resp.get_json()
+        assert body['job_id'] and body['status_url'].startswith('/api/analysis/jobs/')
+
+        import time
+        result = None
+        for _ in range(60):
+            status = authenticated_client.get(body['status_url']).get_json()
+            assert status['error'] is None
+            if status['status'] == 'completed':
+                result = status['result']
+                break
+            assert status['status'] in ('queued', 'running')
+            time.sleep(0.25)
+        assert result is not None, 'job never completed'
+        assert result.get('final_stage', {}).get('stage') in (
+            'Non-Demented', 'Very Mild Demented', 'Mild Demented', 'Moderate Demented')
+        assert result.get('created_at')
+
+    def test_job_status_hidden_from_other_users(self, client, authenticated_client):
+        resp = authenticated_client.post('/api/analysis/analyze-async', data=self._minimal_form(),
+                                         content_type='multipart/form-data')
+        job_id = resp.get_json()['job_id']
+        import time
+        for _ in range(60):
+            st = authenticated_client.get(f'/api/analysis/jobs/{job_id}').get_json()
+            if st['status'] in ('completed', 'failed'):
+                break
+            time.sleep(0.25)
+        # second doctor must not see doctor1's job
+        client.post('/api/auth/register', json={
+            'username': 'doctor9', 'email': 'doc9@test.com',
+            'password': 'Password123!', 'date_of_birth': '1990-05-05'})
+        client.post('/api/auth/login', json={'username': 'doctor9', 'password': 'Password123!'})
+        assert client.get(f'/api/analysis/jobs/{job_id}').status_code == 404
+        # anonymous as well
+        client.get('/api/auth/logout')
+        assert client.get(f'/api/analysis/jobs/{job_id}').status_code in (401, 404)
+
+    def test_unknown_job_404(self, authenticated_client):
+        assert authenticated_client.get('/api/analysis/jobs/deadbeef0000').status_code == 404
+
+    def test_async_rejects_cross_tenant_patient(self, client, authenticated_client):
+        client.post('/api/auth/register', json={
+            'username': 'doctor10', 'email': 'doc10@test.com',
+            'password': 'Password123!', 'date_of_birth': '1990-05-05'})
+        client.post('/api/auth/login', json={'username': 'doctor10', 'password': 'Password123!'})
+        resp = client.post('/api/analysis/analyze-async', data=self._minimal_form('PAT-1001'),
+                           content_type='multipart/form-data')
+        assert resp.status_code == 403
+
+    def test_job_manager_progress_and_failures(self):
+        from app.shared.jobs import JobManager
+        mgr = JobManager(max_workers=1)
+
+        stages = []
+
+        def work(progress):
+            progress('mri', 25)
+            progress('speech', 60)
+            stages.append('done')
+            return {'ok': True}
+
+        job_id = mgr.submit(work, user_id=1)
+        import time
+        for _ in range(50):
+            job = mgr.get(job_id, user_id=1)
+            if job['status'] == 'completed':
+                break
+            time.sleep(0.05)
+        job = mgr.get(job_id, user_id=1)
+        assert job['status'] == 'completed' and job['result'] == {'ok': True}
+        assert job['progress'] == 100
+
+        def boom(progress):
+            raise RuntimeError('ml exploded')
+
+        fail_id = mgr.submit(boom, user_id=1)
+        for _ in range(50):
+            job = mgr.get(fail_id, user_id=1)
+            if job['status'] == 'failed':
+                break
+            time.sleep(0.05)
+        assert 'ml exploded' in mgr.get(fail_id, user_id=1)['error']

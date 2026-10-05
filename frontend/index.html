@@ -5,10 +5,27 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="NeuroSense Advanced — Multimodal AI platform for Alzheimer's detection using MRI, cognitive assessment, and behavioral analysis." />
-    <meta name="theme-color" content="#0f172a" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#F8FAFC" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0B1120" />
     <title>NeuroSense Advanced — AI Alzheimer's Detection</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <script>
+      /* Apply the persisted (or system) theme BEFORE React boots so the first
+         paint already carries the `dark` class — no white flash on load. Must
+         stay in sync with getInitialTheme() in src/providers/ThemeProvider.jsx. */
+      (function () {
+        try {
+          var stored = localStorage.getItem('neurosense_theme');
+          var dark = stored === 'dark' || (stored !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          var root = document.documentElement;
+          root.classList.toggle('dark', dark);
+          root.classList.toggle('light', !dark);
+          root.setAttribute('data-theme', dark ? 'dark' : 'light');
+          root.style.colorScheme = dark ? 'dark' : 'light';
+        } catch (e) { /* noop */ }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

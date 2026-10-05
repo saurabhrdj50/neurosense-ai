@@ -16,7 +16,7 @@ import { CognitiveStep } from './cognitive/CognitiveStep';
 import { SpeechStep } from './speech/SpeechStep';
 import { RiskStep } from './risk/RiskStep';
 import { ReviewStep } from './review/ReviewStep';
-import { analysisApi } from './api/analysisApi';
+import { analysisApi, runAnalysisWithProgress } from './api/analysisApi';
 import { patientsApi } from '../patients/api/patientsApi';
 import { AnalysisLoader, useAnalysisProgress } from './AnalysisLoader';
 
@@ -37,6 +37,7 @@ export default function AnalysisPage() {
   const location = useLocation();
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [jobProgress, setJobProgress] = useState(null); // {stage, progress} from the background job
   const loadingRef = useRef(false);
   const { isAnalyzing, startAnalysis, stopAnalysis } = useAnalysisProgress();
 
@@ -177,6 +178,7 @@ export default function AnalysisPage() {
     loadingRef.current = true;
 
     setLoading(true);
+    setJobProgress(null);
     startAnalysis();
     const tid = toast.loading('Executing Clinical Analysis…');
     try {
@@ -202,7 +204,19 @@ export default function AnalysisPage() {
       );
       if (Object.keys(activeRiskFactors).length) fd.append('risk_factors', JSON.stringify(activeRiskFactors));
 
-      const data = await analysisApi.runFullAnalysis(fd);
+      // Prefer the background-job API: submit once, poll real pipeline
+      // progress. Falls back to the sync endpoint only when the async API is
+      // unavailable (nothing started server-side in that case).
+      let data;
+      try {
+        data = await runAnalysisWithProgress(fd, (stage, progress) => {
+          setJobProgress({ stage, progress });
+        });
+      } catch (err) {
+        if (!err.fallback) throw err;
+        data = await analysisApi.runFullAnalysis(fd);
+      }
+      setJobProgress(null);
       setAnalysisResults(data);
 
       stopAnalysis();
@@ -214,6 +228,7 @@ export default function AnalysisPage() {
       navigate('/results', { state: { autoView: true, fromAssessment: true, results: data } });
     } catch (err) {
       stopAnalysis();
+      setJobProgress(null);
       toast.dismiss(tid);
       toast.error('Analysis failed: ' + err.message);
     } finally {
@@ -356,6 +371,7 @@ export default function AnalysisPage() {
         isLoading={isAnalyzing}
         patientName={activePatientName || 'current patient'}
         modalities={selectedModalities}
+        job={jobProgress}
       />
 
       {/* ── Patient Roster Modal ────────────────────────────────────────── */}
@@ -375,7 +391,7 @@ export default function AnalysisPage() {
                   className="p-3 rounded-xl cursor-pointer flex items-center justify-between transition-all bg-surface hover:bg-surface-hover border border-border"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-primary text-white flex items-center justify-center font-bold text-xs">
+                    <div className="w-9 h-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center font-bold text-xs">
                       {(p.name || '?')[0].toUpperCase()}
                     </div>
                     <div>
@@ -507,20 +523,20 @@ export default function AnalysisPage() {
                     onClick={() => setStep(idx)}
                     className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-left transition-all border min-h-[48px] cursor-pointer shadow-2xs ${
                       active
-                        ? 'bg-primary text-white border-primary font-bold shadow-sm'
+                        ? 'bg-primary text-primary-foreground border-primary font-bold shadow-sm'
                         : complete
                         ? 'bg-emerald-500/10 text-foreground border-emerald-500/30 hover:bg-surface-hover font-medium'
                         : 'bg-surface hover:bg-surface-hover text-foreground-muted border-border font-medium'
                     }`}
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <Icon size={18} className={active ? 'text-white' : complete ? 'text-emerald-500' : 'text-foreground-muted'} />
-                      <span className={`truncate text-sm font-bold ${active ? 'text-white' : 'text-foreground'}`}>{s.label}</span>
+                      <Icon size={18} className={active ? 'text-primary-foreground' : complete ? 'text-emerald-500' : 'text-foreground-muted'} />
+                      <span className={`truncate text-sm font-bold ${active ? 'text-primary-foreground' : 'text-foreground'}`}>{s.label}</span>
                     </div>
 
                     <span className="text-xs shrink-0 font-bold ml-1">
                       {active ? (
-                        <span className="text-white/90">● Active</span>
+                        <span className="text-primary-foreground/90">● Active</span>
                       ) : complete ? (
                         <span className="text-emerald-500 flex items-center gap-0.5">✓ Done</span>
                       ) : (
@@ -575,7 +591,7 @@ export default function AnalysisPage() {
                 className="h-2.5 rounded-full transition-all cursor-pointer"
                 style={{
                   width: i === step ? 28 : 10,
-                  background: i === step ? 'var(--primary, #1E40AF)' : isStepComplete(i) ? '#10B981' : 'var(--border, #CBD5E1)',
+                  background: i === step ? 'rgb(var(--primary))' : isStepComplete(i) ? '#10B981' : 'rgb(var(--border))',
                 }}
               />
             ))}

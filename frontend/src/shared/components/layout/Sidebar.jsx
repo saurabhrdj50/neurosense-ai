@@ -43,7 +43,7 @@ export default function Sidebar({ open, onToggle, isMobile = false }) {
       {/* ── Brand Header ────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between px-4" style={{ minHeight: 60 }}>
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center flex-shrink-0 shadow-2xs">
+          <div className="w-8 h-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center flex-shrink-0 shadow-2xs">
             <Activity size={18} strokeWidth={2.5} />
           </div>
 
@@ -127,7 +127,7 @@ export default function Sidebar({ open, onToggle, isMobile = false }) {
       <div className="p-2.5 border-t border-border bg-surface-secondary/40">
         {open ? (
           <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-card border border-border/80 shadow-2xs">
-            <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center text-sm font-extrabold shrink-0 shadow-xs">
+            <div className="w-8 h-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center text-sm font-extrabold shrink-0 shadow-xs">
               {(user?.full_name || user?.username || 'U')[0].toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">

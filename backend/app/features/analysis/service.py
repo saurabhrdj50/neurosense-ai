@@ -3,7 +3,7 @@ import time
 import tempfile
 import threading
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Callable
 from werkzeug.datastructures import FileStorage
 
 from app.ml.contracts import (
@@ -171,28 +171,45 @@ class AnalysisOrchestrator:
             audio_result=audio_result,
         )
     
-    def run_full_analysis(self, inputs: AnalysisInput, doctor_id: Optional[int] = None) -> AnalysisResult:
+    def run_full_analysis(self, inputs: AnalysisInput, doctor_id: Optional[int] = None,
+                          progress: Optional[Callable[[str, int], None]] = None) -> AnalysisResult:
         """Run every requested assessment and combine the outputs.
 
         Composition root: each modality step lives in its feature module
         (``features/analysis/<modality>/service.py``); fusion, explanation
         and recommendations are assembled here. Persistence is deliberately
         excluded — see :meth:`persist_analysis`.
+
+        ``progress(stage, pct)`` is called between steps so background jobs
+        can report real pipeline position instead of guessing.
         """
         from app.features.analysis.mri.service import run_mri_step
         from app.features.analysis.speech.service import run_notes_step, run_speech_step
         from app.features.analysis.cognitive.service import run_cognitive_step
         from app.features.analysis.risk.service import run_risk_step
 
+        def report(stage: str, pct: int) -> None:
+            if progress is None:
+                return
+            try:
+                progress(stage, pct)
+            except Exception:
+                logger.debug("progress callback failed", exc_info=True)
+
         results: AnalysisResult = {}
         patient_info = inputs.get('patient_info') or {}
         results['patient_info'] = patient_info
         pid = patient_info.get('patient_id', '')
 
+        report('mri', 5)
         run_mri_step(self, inputs, results, pid, doctor_id)
+        report('notes', 28)
         run_notes_step(self, inputs, results)
+        report('speech', 32)
         run_speech_step(self, inputs, results, pid, doctor_id)
+        report('cognitive', 55)
         run_cognitive_step(self, inputs, results)
+        report('risk', 65)
         run_risk_step(self, inputs, results)
 
         # --- Fusion ---
@@ -200,6 +217,7 @@ class AnalysisOrchestrator:
             results.get('mri'), results.get('cognitive'), results.get('risk_profile'),
             results.get('sentiment')
         ]):
+            report('fusion', 72)
             try:
                 results['final_stage'] = self.fuse_results(
                     mri_result=results.get('mri'),
@@ -212,12 +230,14 @@ class AnalysisOrchestrator:
                 results['fusion_error'] = str(e)
 
         # AI Explanation & Recs
+        report('explanation', 82)
         try:
             from app.ml.explainability.explanation import generate_explanation
             results['ai_explanation'] = generate_explanation(results)
         except Exception as e:
             results['explanation_error'] = str(e)
 
+        report('recommendations', 90)
         try:
             from app.features.analysis.recommendation import generate_recommendations
             results['recommendations'] = generate_recommendations(results)

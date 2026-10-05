@@ -1,4 +1,12 @@
 /** @type {import('tailwindcss').Config} */
+
+/* Color tokens live in src/index.css as RGB channel triplets ("R G B"), which
+   lets Tailwind compose opacity modifiers (bg-primary/10, border-primary/20…)
+   via <alpha-value> while the same variables drive dark mode through the
+   `dark` class on <html>. Tint/shadow tokens that are not plain colors stay
+   as full CSS values and must not be used with alpha modifiers. */
+const channel = (token) => `rgb(var(--${token}) / <alpha-value>)`
+
 export default {
   darkMode: 'class',
   content: [
@@ -8,49 +16,49 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: 'var(--background)',
-        canvas:     'var(--bg-canvas)',
-        shell:      'var(--bg-shell)',
-        surface:    'var(--surface)',
-        card:       'var(--surface-card)',
-        hover:      'var(--surface-hover)',
-        active:     'var(--surface-active)',
-        elevated:   'var(--surface-elevated)',
-        
-        foreground: 'var(--foreground)',
-        muted:      'var(--foreground-muted)',
-        subtle:     'var(--foreground-subtle)',
-        inverse:    'var(--foreground-inverse)',
-        
-        border:          'var(--border)',
-        'border-subtle': 'var(--border-subtle)',
-        'border-strong': 'var(--border-strong)',
-        'border-focus':  'var(--border-focus)',
-        
+        background: channel('background'),
+        canvas:     channel('bg-canvas'),
+        shell:      channel('bg-shell'),
+        surface:    channel('surface'),
+        card:       channel('surface-card'),
+        hover:      channel('surface-hover'),
+        active:     channel('surface-active'),
+        elevated:   channel('surface-elevated'),
+
+        foreground: channel('foreground'),
+        muted:      channel('foreground-muted'),
+        subtle:     channel('foreground-subtle'),
+        inverse:    channel('foreground-inverse'),
+
+        border:          channel('border'),
+        'border-subtle': channel('border-subtle'),
+        'border-strong': channel('border-strong'),
+        'border-focus':  channel('border-focus'),
+
         primary: {
-          DEFAULT:    'var(--primary)',
-          hover:      'var(--primary-hover)',
+          DEFAULT:    channel('primary'),
+          hover:      channel('primary-hover'),
           soft:       'var(--primary-soft)',
-          foreground: 'var(--primary-foreground)',
+          foreground: channel('primary-foreground'),
         },
-        secondary:  'var(--secondary)',
-        accent:     'var(--accent)',
-        danger:     'var(--danger)',
-        success:    'var(--success)',
-        warning:    'var(--warning)',
-        info:       'var(--info)',
+        secondary:  channel('secondary'),
+        accent:     channel('accent'),
+        danger:     channel('danger'),
+        success:    channel('success'),
+        warning:    channel('warning'),
+        info:       channel('info'),
 
         risk: {
-          low:               'var(--risk-low-text)',
+          low:               channel('risk-low-text'),
           'low-bg':          'var(--risk-low-bg)',
           'low-border':      'var(--risk-low-border)',
-          moderate:          'var(--risk-moderate-text)',
+          moderate:          channel('risk-moderate-text'),
           'moderate-bg':     'var(--risk-moderate-bg)',
           'moderate-border': 'var(--risk-moderate-border)',
-          high:              'var(--risk-high-text)',
+          high:              channel('risk-high-text'),
           'high-bg':         'var(--risk-high-bg)',
           'high-border':     'var(--risk-high-border)',
-          critical:          'var(--risk-critical-text)',
+          critical:          channel('risk-critical-text'),
           'critical-bg':     'var(--risk-critical-bg)',
           'critical-border': 'var(--risk-critical-border)',
         }

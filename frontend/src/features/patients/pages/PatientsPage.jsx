@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Users, Search, Download, Eye, Plus, ArrowUpDown, ChevronUp, ChevronDown,
   Activity, FileText, Brain, Sparkles, MessageSquare, HeartPulse, ShieldCheck,
@@ -50,9 +51,26 @@ export default function PatientsPage() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  const [patients, setPatients] = useState([])
-  const [analyses, setAnalyses] = useState([])
-  const [loading, setLoading]   = useState(true)
+  // Server state lives in TanStack Query; mutations invalidate the cache
+  // instead of manually re-fetching both lists.
+  const queryClient = useQueryClient()
+  const patientsQuery = useQuery({
+    queryKey: ['patients'],
+    queryFn: async () => {
+      const res = await patientsApi.getAll().catch(() => ({ patients: [] }))
+      return res.patients || []
+    },
+  })
+  const analysesQuery = useQuery({
+    queryKey: ['analyses'],
+    queryFn: async () => {
+      const res = await historyApi.getAllAnalyses().catch(() => ({ analyses: [] }))
+      return res.analyses || []
+    },
+  })
+  const patients = useMemo(() => patientsQuery.data || [], [patientsQuery.data])
+  const analyses = useMemo(() => analysesQuery.data || [], [analysesQuery.data])
+  const loading = patientsQuery.isLoading || analysesQuery.isLoading
 
   /* Primary State: Selected Patient for Detail View */
   const [selectedPatientId, setSelectedPatientId] = useState(null)
@@ -92,24 +110,9 @@ export default function PatientsPage() {
   }, [])
 
   const loadData = useCallback(() => {
-    setLoading(true)
-    Promise.all([
-      patientsApi.getAll().catch(() => ({ patients: [] })),
-      historyApi.getAllAnalyses().catch(() => ({ analyses: [] })),
-    ])
-      .then(([pData, aData]) => {
-        const fetchedPatients = pData.patients || []
-        const fetchedAnalyses = aData.analyses || []
-        setPatients(fetchedPatients)
-        setAnalyses(fetchedAnalyses)
-      })
-      .catch(() => toast.error('Failed to load patient registry'))
-      .finally(() => setLoading(false))
-  }, [])
-
-  useEffect(() => {
-    loadData()
-  }, [loadData])
+    queryClient.invalidateQueries({ queryKey: ['patients'] })
+    queryClient.invalidateQueries({ queryKey: ['analyses'] })
+  }, [queryClient])
 
   /* Enrich Patients with Latest Diagnostic Stage & Sort Recent Analysis to Top */
   const enrichedPatients = useMemo(() => {
@@ -393,7 +396,7 @@ export default function PatientsPage() {
                     <div className="flex items-center justify-between gap-2 pl-1">
                       <div className="flex items-center gap-2.5 min-w-0">
                         <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-extrabold shrink-0 ${
-                          isSelected ? 'bg-primary text-white shadow-xs' : 'bg-primary/10 border border-primary/20 text-primary'
+                          isSelected ? 'bg-primary text-primary-foreground shadow-xs' : 'bg-primary/10 border border-primary/20 text-primary'
                         }`}>
                           {(pat.name || '?')[0].toUpperCase()}
                         </div>
@@ -434,7 +437,7 @@ export default function PatientsPage() {
               <div className="bg-card border border-border rounded-2xl p-5 space-y-4 shadow-2xs">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                   <div className="flex items-center gap-3.5">
-                    <div className="w-12 h-12 rounded-2xl bg-primary text-white font-extrabold text-lg flex items-center justify-center shadow-xs">
+                    <div className="w-12 h-12 rounded-2xl bg-primary text-primary-foreground font-extrabold text-lg flex items-center justify-center shadow-xs">
                       {(activePatient.name || '?')[0].toUpperCase()}
                     </div>
                     <div>
@@ -485,7 +488,7 @@ export default function PatientsPage() {
                         onClick={() => setActiveTab(tab.id)}
                         className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all min-h-[36px] ${
                           isActive
-                            ? 'bg-primary text-white shadow-xs'
+                            ? 'bg-primary text-primary-foreground shadow-xs'
                             : 'bg-surface border border-border text-foreground-muted hover:text-foreground'
                         }`}
                       >
@@ -764,7 +767,7 @@ export default function PatientsPage() {
                   aria-pressed={form.sex === s}
                   className={`flex-1 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
                     form.sex === s
-                      ? 'bg-primary border-primary text-white shadow-2xs'
+                      ? 'bg-primary border-primary text-primary-foreground shadow-2xs'
                       : 'bg-background border-border text-foreground-muted hover:text-foreground'
                   }`}
                 >

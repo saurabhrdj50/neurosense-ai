@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast'
 import { AuthProvider } from './providers/AuthProvider'
 import { ThemeProvider } from './providers/ThemeProvider'
 import AnimatedBg from './shared/components/AnimatedBg'
+import PwaUpdater from './shared/components/common/PwaUpdater'
 import AppRoutes from './app/routes'
 
 export default function App() {
@@ -14,8 +15,10 @@ export default function App() {
           <AnimatedBg />
           <div className="noise-overlay" />
           <AppRoutes />
+          <PwaUpdater />
           <Toaster
             position="top-right"
+            gutter={10}
             toastOptions={{
               duration: 4000,
               style: {
@@ -26,19 +29,23 @@ export default function App() {
                 fontSize: '13px',
                 fontFamily: 'Inter, sans-serif',
                 backdropFilter: 'blur(20px)',
-                boxShadow: 'var(--shadow)',
+                boxShadow: 'var(--shadow-lg)',
                 padding: '12px 16px',
               },
+              /* Accent colors follow the clinical risk tokens in index.css so
+                 toasts stay in-palette in both light and dark themes. */
               success: {
-                iconTheme: { primary: '#22c55e', secondary: '#0a0e1a' },
-                style: { borderLeft: '3px solid #22c55e' },
+                iconTheme: { primary: 'rgb(var(--success))', secondary: 'rgb(var(--surface-card))' },
+                style: { borderLeft: '3px solid rgb(var(--success))' },
               },
               error: {
-                iconTheme: { primary: '#ef4444', secondary: '#0a0e1a' },
-                style: { borderLeft: '3px solid #ef4444' },
+                duration: 6000,
+                iconTheme: { primary: 'rgb(var(--danger))', secondary: 'rgb(var(--surface-card))' },
+                style: { borderLeft: '3px solid rgb(var(--danger))' },
               },
               loading: {
-                style: { borderLeft: '3px solid #5b5ceb' },
+                iconTheme: { primary: 'rgb(var(--primary))', secondary: 'rgb(var(--surface-card))' },
+                style: { borderLeft: '3px solid rgb(var(--primary))' },
               },
             }}
           />

@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Clock, Brain, Download, TrendingUp, TrendingDown, Minus, AlertTriangle, RefreshCw } from 'lucide-react'
+import { ArrowLeft, Clock, Download, AlertTriangle, RefreshCw } from 'lucide-react'
 import toast from 'react-hot-toast'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -14,20 +14,26 @@ import { historyApi } from './api/historyApi'
 import LongitudinalTimeline from './components/LongitudinalTimeline'
 
 const STAGE_BADGE = {
+  'Cognitively Normal (CN)': { variant: 'success', color: '#10B981', label: 'Normal (CN)' },
   'Non-Demented':       { variant: 'success', color: '#10B981', label: 'Normal' },
   'Non Demented':       { variant: 'success', color: '#10B981', label: 'Normal' },
   'Very Mild Demented': { variant: 'purple',  color: '#7C3AED', label: 'Very Mild' },
+  'Mild Cognitive Impairment (MCI)': { variant: 'warning', color: '#F59E0B', label: 'Mild MCI' },
   'Mild Demented':      { variant: 'warning', color: '#F59E0B', label: 'Mild MCI' },
+  "Alzheimer's Disease (AD)": { variant: 'danger',  color: '#EF4444', label: "Alzheimer's (AD)" },
   'Moderate Demented':  { variant: 'danger',  color: '#EF4444', label: 'Moderate' },
   'Severe Demented':    { variant: 'danger',  color: '#EF4444', label: 'Severe' },
   'Unknown':            { variant: 'neutral', color: '#94A3B8', label: 'Unknown' },
 }
 
 const STAGE_SCORE = {
+  'Cognitively Normal (CN)': 10,
   'Non-Demented': 15,
   'Non Demented': 15,
   'Very Mild Demented': 35,
+  'Mild Cognitive Impairment (MCI)': 55,
   'Mild Demented': 60,
+  "Alzheimer's Disease (AD)": 88,
   'Moderate Demented': 85,
   'Severe Demented': 95,
   'Unknown': 50,

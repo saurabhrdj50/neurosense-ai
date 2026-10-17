@@ -7,6 +7,7 @@ import {
   Save, Check, ArrowLeft, FileSpreadsheet, Zap, X, AlertCircle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { requestAnalysisNotifyPermission, notifyAnalysisSuccess, notifyAnalysisFailure } from './notify';
 import Button from '../../shared/components/ui/Button';
 import Modal from '../../shared/components/ui/Modal';
 import { setAnalysisResults } from '../../context/ResultsStore';
@@ -19,6 +20,10 @@ import { ReviewStep } from './review/ReviewStep';
 import { analysisApi, runAnalysisWithProgress } from './api/analysisApi';
 import { patientsApi } from '../patients/api/patientsApi';
 import { AnalysisLoader, useAnalysisProgress } from './AnalysisLoader';
+import {
+  SAMPLE_PATIENT, SAMPLE_PATIENT_TEXT, SAMPLE_SPEECH_TEXT,
+  buildSampleCognitive, loadSampleMriFile,
+} from './sampleData';
 
 const STEPS = [
   { id: 'patient',   label: 'Patient Details',  icon: User,          required: true },
@@ -36,6 +41,12 @@ export default function AnalysisPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [step, setStep] = useState(0);
+  // Final verification checkbox on the Review step — gates submission.
+  const [confirmChecked, setConfirmChecked] = useState(false);
+  // Leaving the Review step always re-arms the confirmation.
+  useEffect(() => {
+    if (step !== STEPS.length - 1) setConfirmChecked(false);
+  }, [step]);
   const [loading, setLoading] = useState(false);
   const [jobProgress, setJobProgress] = useState(null); // {stage, progress} from the background job
   const loadingRef = useRef(false);
@@ -75,14 +86,18 @@ export default function AnalysisPage() {
   }, [location.state]);
 
   /* ── Load Patient Roster ────────────────────────────────────────────── */
+  // Fresh fetch every time the roster modal opens — a patient deleted (or
+  // added) in another tab/session must never appear in the picker.
   useEffect(() => {
+    if (!rosterModalOpen) return;
+    setPatientsLoading(true);
     patientsApi.getAll()
       .then(d => {
         setPatients(d.patients || []);
         setPatientsLoading(false);
       })
       .catch(() => setPatientsLoading(false));
-  }, []);
+  }, [rosterModalOpen]);
 
   /* ── Load draft from localStorage (keyed by patient when one is selected) ──
      When a patient arrives via location.state, only a draft belonging to that
@@ -171,6 +186,12 @@ export default function AnalysisPage() {
       toast.error('Patient name and patient ID are required before analysis.');
       return;
     }
+    // The Review step's verification checkbox is the deliberate final gate —
+    // it guards the submit button AND this handler (Ctrl+Enter path).
+    if (step === STEPS.length - 1 && !confirmChecked) {
+      toast.error('Please verify the patient identity and data, then tick the confirmation box.');
+      return;
+    }
 
     // Re-entrancy guard: keyboard shortcut + button can fire while a request
     // is already in flight — never submit twice.
@@ -180,6 +201,7 @@ export default function AnalysisPage() {
     setLoading(true);
     setJobProgress(null);
     startAnalysis();
+    requestAnalysisNotifyPermission();
     const tid = toast.loading('Executing Clinical Analysis…');
     try {
       const fd = new FormData();
@@ -194,7 +216,15 @@ export default function AnalysisPage() {
       });
       if (patientText) fd.append('patient_text', patientText);
       if (mriFile) fd.append('mri_image', mriFile);
-      if (Object.keys(cognData).length) fd.append('cognitive_tests', JSON.stringify(cognData));
+      if (Object.keys(cognData).length) {
+        // Strip any mmse/moca inherited from old localStorage drafts — the
+        // backend treats those keys as clinician-administered instrument
+        // scores, which this screening workflow never performs.
+        const cleanCogn = { ...cognData };
+        delete cleanCogn.mmse;
+        delete cleanCogn.moca;
+        fd.append('cognitive_tests', JSON.stringify(cleanCogn));
+      }
       if (audioFile) fd.append('audio_file', audioFile);
       else if (speechText) fd.append('audio_text', speechText);
       // Unticked risk factors are stored as `false` — only serialize the
@@ -224,18 +254,18 @@ export default function AnalysisPage() {
       localStorage.removeItem(perPatientDraftKey(currentPatient.patient_id));
       localStorage.removeItem(DRAFT_STORAGE_KEY);
       toast.dismiss(tid);
-      toast.success('Diagnostic evaluation complete!');
+      notifyAnalysisSuccess(currentPatient.name);
       navigate('/results', { state: { autoView: true, fromAssessment: true, results: data } });
     } catch (err) {
       stopAnalysis();
       setJobProgress(null);
       toast.dismiss(tid);
-      toast.error('Analysis failed: ' + err.message);
+      notifyAnalysisFailure(currentPatient.name, err.message);
     } finally {
       setLoading(false);
       loadingRef.current = false;
     }
-  }, [patient, patientText, mriFile, cognData, audioFile, speechText, risk, startAnalysis, stopAnalysis, navigate]);
+  }, [patient, patientText, mriFile, cognData, audioFile, speechText, risk, confirmChecked, step, startAnalysis, stopAnalysis, navigate]);
 
   /* ── Keyboard Shortcuts (Arrow Left/Right, Ctrl+S, Ctrl+Enter) ────── */
   useEffect(() => {
@@ -264,33 +294,45 @@ export default function AnalysisPage() {
   }, [step, saveDraft, handleSubmit]);
 
   /* ── Sample Case Loader ─────────────────────────────────────────────── */
-  const loadSampleClinicalCase = () => {
-    const docPrefix = 'DOC';
-    const sampleId = `${docPrefix}-PAT-` + Math.floor(1000 + Math.random() * 9000);
-    setPatient({
-      name: 'Eleanor Vance',
-      age: '72',
-      sex: 'F',
-      patient_id: sampleId,
-      education_years: '16',
-      photo: null,
-      handedness: 'Right',
-      ethnicity: 'Caucasian / European'
-    });
-    setPatientText('Patient presents with mild short-term memory complaints and occasional word-finding pauses. Independent in activities of daily living.');
-    setCognData({
-      screening_breakdown: {
-        orient_date: 1, orient_place: 1, register_3words: 3, delay_recall: 1,
-        digit_span_fwd: 3, serial_7: 2, animal_fluency: 2, object_naming: 3,
-        sentence_compreh: 1, multi_step_cmd: 2, logical_reason: 0, abstraction: 1,
-        months_reverse: 1, problem_solve: 2, auto_memory: 1,
-      },
-      questions_completed: 15
-    });
-    setSpeechText('I spent the morning walking through the botanical garden with my daughter. We noticed the hydrangeas were beginning to bloom.');
-    setRisk({ hypertension: true, family_history: true, physical_activity: 'moderate', sleep_hours: 6 });
-    toast.success('Loaded Clinical Evaluation Sample Case!');
+  const loadSampleClinicalCase = async () => {
+    const toastId = toast.loading('Preparing sample patient…');
+    try {
+      // Bundled illustrative MRI so the demo showcases the full pipeline,
+      // including Grad-CAM, without any real patient material.
+      const mri = await loadSampleMriFile();
+      setMriFile(mri);
+      setPatient({ ...SAMPLE_PATIENT, handedness: 'Right' });
+      setPatientText(SAMPLE_PATIENT_TEXT);
+      // Fully derived cognitive profile — fields mirror CognitiveStep's own
+      // computation so the report is consistent even if the step is skipped.
+      setCognData(buildSampleCognitive());
+      // Text-only speech sample: fillers/pauses/preserved content give the
+      // annotated transcript and linguistic biomarkers something to show.
+      setSpeechText(SAMPLE_SPEECH_TEXT);
+      // Risk values must be booleans matching RiskStep's toggle ids — the
+      // step UI cannot produce strings or numbers (a stale/foreign sample
+      // used 'moderate' / 6 here once).
+      setRisk({ hypertension: true, family_history: true, sleep_issues: true, physical_inactivity: false });
+      toast.success('Sample patient loaded — every step is pre-filled. Press Analyze to run it!', { id: toastId, duration: 5000 });
+    } catch (err) {
+      console.warn('Failed to load sample MRI asset:', err);
+      // Text-only fallback still demonstrates the full workflow.
+      setPatient(SAMPLE_PATIENT);
+      setPatientText(SAMPLE_PATIENT_TEXT);
+      setCognData(buildSampleCognitive());
+      setSpeechText(SAMPLE_SPEECH_TEXT);
+      setRisk({ hypertension: true, family_history: true, sleep_issues: true, physical_inactivity: false });
+      toast.error('Sample scan could not be loaded — loaded the text-only sample instead.', { id: toastId });
+    }
   };
+
+  /* ── "Load Sample Case" deep link from the dashboard empty state ──────── */
+  const sampleLoadedRef = useRef(false);
+  useEffect(() => {
+    if (!location.state?.loadSample || sampleLoadedRef.current) return;
+    sampleLoadedRef.current = true;
+    loadSampleClinicalCase();
+  }, [location.state]);
 
   const handleSelectPatient = (p) => {
     setSelectedPatient(p);
@@ -341,14 +383,15 @@ export default function AnalysisPage() {
         return (
           <ReviewStep
             patient={patient}
-            patientText={patientText}
             mriFile={mriFile}
             cognData={cognData}
             speechText={speechText}
             audioFile={audioFile}
             risk={risk}
+            patientText={patientText}
+            confirmChecked={confirmChecked}
+            onConfirmChange={setConfirmChecked}
             onGoToStep={setStep}
-            onSubmit={handleSubmit}
           />
         );
       default: return null;
@@ -521,20 +564,29 @@ export default function AnalysisPage() {
                   <button
                     key={s.id}
                     onClick={() => setStep(idx)}
-                    className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-left transition-all border min-h-[48px] cursor-pointer shadow-2xs ${
+                    className={`relative w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-left transition-all border min-h-[48px] cursor-pointer shadow-2xs ${
                       active
-                        ? 'bg-primary text-primary-foreground border-primary font-bold shadow-sm'
+                        ? 'bg-transparent border-transparent font-bold'
                         : complete
                         ? 'bg-emerald-500/10 text-foreground border-emerald-500/30 hover:bg-surface-hover font-medium'
                         : 'bg-surface hover:bg-surface-hover text-foreground-muted border-border font-medium'
                     }`}
                   >
-                    <div className="flex items-center gap-3 min-w-0">
+                    {active && (
+                      /* Sliding active pill — glides between steps instead of hard-swapping */
+                      <Motion.span
+                        layoutId="wizard-step-active-pill"
+                        transition={{ type: 'spring', damping: 30, stiffness: 420 }}
+                        className="absolute inset-0 rounded-xl bg-primary border border-primary shadow-sm"
+                        aria-hidden="true"
+                      />
+                    )}
+                    <div className="relative z-1 flex items-center gap-3 min-w-0">
                       <Icon size={18} className={active ? 'text-primary-foreground' : complete ? 'text-emerald-500' : 'text-foreground-muted'} />
                       <span className={`truncate text-sm font-bold ${active ? 'text-primary-foreground' : 'text-foreground'}`}>{s.label}</span>
                     </div>
 
-                    <span className="text-xs shrink-0 font-bold ml-1">
+                    <span className="relative z-1 text-xs shrink-0 font-bold ml-1">
                       {active ? (
                         <span className="text-primary-foreground/90">● Active</span>
                       ) : complete ? (
@@ -615,6 +667,7 @@ export default function AnalysisPage() {
                 size="md"
                 loading={loading}
                 onClick={handleSubmit}
+                disabled={!confirmChecked}
                 icon={Zap}
                 className="min-h-[44px] text-base font-bold px-6 shadow-md shadow-primary/20"
               >

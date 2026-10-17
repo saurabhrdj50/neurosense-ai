@@ -1,19 +1,19 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { ConfigProvider, Checkbox, Button as AntButton, Card } from 'antd';
 import {
-  Brain, Mail, Lock, User, Shield, Stethoscope, ArrowLeft, Building2,
-  AlertCircle, LockKeyhole, Sun, Moon, Eye, EyeOff, CalendarDays
+  Brain, Mail, Lock, User, Shield, Stethoscope, ArrowLeft,
+  AlertCircle, LockKeyhole, Eye, EyeOff, CalendarDays, CheckCircle2,
+  AtSign, Hospital
 } from 'lucide-react';
 import { useAuth } from '../../providers/AuthProvider';
 import { useTheme } from '../../providers/ThemeProvider';
-import { getAuthThemeConfig } from './AuthThemeConfig';
 import BrainCanvas from './components/BrainCanvas';
+import Button from '../../shared/components/ui/Button';
 import API_URL from '../../config/api';
 
-// Custom Sleek Tailwind Input Component (Linear / Vercel Style)
-function CustomInput({ label, icon: Icon, type = 'text', value, onChange, placeholder, error, required, ...props }) {
+/** Floating-label style tokenized input with icon, error state, and password reveal. */
+function AuthInput({ label, icon: Icon, type = 'text', value, onChange, placeholder, error, required, ...props }) {
   const [showPassword, setShowPassword] = useState(false);
   const isPassword = type === 'password';
   const inputType = isPassword ? (showPassword ? 'text' : 'password') : type;
@@ -21,15 +21,15 @@ function CustomInput({ label, icon: Icon, type = 'text', value, onChange, placeh
   return (
     <div className="space-y-1.5">
       {label && (
-        <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+        <label className="block text-xs font-bold uppercase tracking-wider text-muted">
           {label}
         </label>
       )}
-      <div className={`relative flex items-center h-12 rounded-xl border bg-slate-50/90 dark:bg-slate-900/70 transition-all duration-200 focus-within:border-indigo-500 focus-within:ring-4 focus-within:ring-indigo-500/10 focus-within:bg-white dark:focus-within:bg-slate-900 ${
-        error ? 'border-rose-500/80 ring-2 ring-rose-500/10' : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+      <div className={`relative flex items-center h-12 rounded-xl border bg-surface-secondary/60 transition-all duration-200 focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10 focus-within:bg-card focus-within:shadow-sm ${
+        error ? 'border-danger/80 ring-2 ring-danger/10' : 'border-border hover:border-border-strong'
       }`}>
         {Icon && (
-          <div className="pl-3.5 pr-2.5 text-slate-400 dark:text-slate-500 flex items-center justify-center pointer-events-none">
+          <div className="pl-3.5 pr-2.5 text-subtle flex items-center justify-center pointer-events-none">
             <Icon size={18} />
           </div>
         )}
@@ -39,20 +39,59 @@ function CustomInput({ label, icon: Icon, type = 'text', value, onChange, placeh
           onChange={onChange}
           placeholder={placeholder}
           required={required}
-          className="w-full h-full bg-transparent px-2.5 text-sm font-medium text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none"
+          className="w-full h-full bg-transparent px-2.5 text-sm font-medium text-foreground placeholder:text-subtle placeholder:opacity-70 focus:outline-none"
           {...props}
         />
         {isPassword && (
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="pr-3.5 pl-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+            className="pr-3.5 pl-2 text-subtle hover:text-foreground transition-colors"
+            aria-label={showPassword ? 'Hide password' : 'Show password'}
           >
             {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
         )}
       </div>
-      {error && <p className="text-[11px] font-medium text-rose-500 mt-1">{error}</p>}
+      {error && <p className="text-[11px] font-medium text-danger mt-1">{error}</p>}
+    </div>
+  );
+}
+
+/** Accessible custom checkbox (replaces the removed antd Checkbox). */
+function TermsCheckbox({ checked, onChange, error }) {
+  return (
+    <div className="pt-1">
+      <label className="flex items-start gap-2.5 cursor-pointer select-none group">
+        <button
+          type="button"
+          role="checkbox"
+          aria-checked={checked}
+          onClick={() => onChange({ target: { type: 'checkbox', checked: !checked } })}
+          className={`mt-0.5 w-[18px] h-[18px] rounded-md flex items-center justify-center border transition-all duration-150 shrink-0 ${
+            checked
+              ? 'bg-primary border-primary text-primary-foreground shadow-xs'
+              : `bg-surface-secondary border-border-strong group-hover:border-primary ${error ? 'border-danger' : ''}`
+          }`}
+        >
+          <AnimatePresence>
+            {checked && (
+              <motion.span
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                exit={{ scale: 0 }}
+                transition={{ duration: 0.15 }}
+              >
+                <CheckCircle2 size={13} strokeWidth={3} />
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </button>
+        <span className="text-xs text-muted group-hover:text-foreground transition-colors leading-relaxed">
+          I agree to the Terms of Service &amp; Privacy Policy
+        </span>
+      </label>
+      {error && <p className="text-[11px] font-medium text-danger mt-1">{error}</p>}
     </div>
   );
 }
@@ -99,16 +138,16 @@ export default function LoginPage() {
     return () => { isMounted = false; };
   }, []);
 
-  // Form states
+  // Form states — registration captures the clinician identity: full name,
+  // username (login ID), email, hospital, date of birth (the forgot-password
+  // identity factor), and password. The backend hardcodes role='doctor'.
   const [form, setForm] = useState({
     username: '',
     email: '',
     password: '',
     full_name: '',
-    institution: '',
     date_of_birth: '',
-    license_number: '',
-    department: '',
+    hospital: '',
     acceptTerms: false
   });
 
@@ -133,13 +172,22 @@ export default function LoginPage() {
     } else if (mode === 'register' && selectedRole === 'doctor') {
       if (!form.full_name.trim()) newErrors.full_name = 'Full Name is required';
 
+      const username = form.username.trim();
+      if (!username) {
+        newErrors.username = 'Username is required';
+      } else if (!/^[a-zA-Z0-9_.-]{3,30}$/.test(username)) {
+        newErrors.username = 'Username must be 3–30 characters — letters, numbers, underscores, dots, or hyphens only';
+      }
+
       if (!form.email.trim()) {
         newErrors.email = 'Email is required';
       } else if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(form.email.trim())) {
         newErrors.email = 'Please enter a valid email address';
       }
 
-      if (!form.institution.trim()) newErrors.institution = 'Hospital or Institution name is required';
+      if (!form.hospital.trim()) {
+        newErrors.hospital = 'Hospital / institution is required';
+      }
 
       if (!form.date_of_birth) {
         newErrors.date_of_birth = 'Date of birth is required';
@@ -150,14 +198,12 @@ export default function LoginPage() {
         }
       }
 
-      if (!form.license_number.trim()) newErrors.license_number = 'Medical license number is required';
-
-      if (!form.department.trim()) newErrors.department = 'Department is required';
-
+      // Mirror the backend strength rule exactly so users never hit a vague
+      // server-side rejection after passing client validation.
       if (!form.password) {
         newErrors.password = 'Password is required';
-      } else if (form.password.length < 6) {
-        newErrors.password = 'Password must be at least 6 characters';
+      } else if (form.password.length < 8 || !/[A-Z]/.test(form.password) || !/[0-9]/.test(form.password) || !/[^a-zA-Z0-9]/.test(form.password)) {
+        newErrors.password = 'Password needs 8+ characters with an uppercase letter, a number, and a symbol';
       }
 
       if (!form.acceptTerms) newErrors.acceptTerms = 'You must agree to the terms';
@@ -190,21 +236,23 @@ export default function LoginPage() {
           setErrors({ general: 'Incorrect username or password. Please try again.' });
         }
       } else {
+        // The backend username rules forbid '@' and enforce 3–30 chars — the
+        // same regex as the client validation above, so a validated form
+        // always passes. The hospital field is stored on the clinician
+        // profile and shown in the user dictionary.
         const payload = {
-          username: form.email,
+          username: form.username.trim(),
           email: form.email,
           password: form.password,
           full_name: form.full_name,
-          institution: form.institution,
-          department: form.department.trim(),
           date_of_birth: form.date_of_birth,
-          license_number: form.license_number.trim()
+          hospital: form.hospital.trim()
         };
         const res = await register(payload);
         const isSuccess = typeof res === 'boolean' ? res : res?.success;
         if (isSuccess) {
           setMode('login');
-          setForm(f => ({ ...f, username: form.email }));
+          setForm(f => ({ ...f, username: form.username.trim() }));
           setErrors({});
         } else {
           const msg = typeof res?.message === 'string' ? res.message : 'Could not create account. Please check your details.';
@@ -229,6 +277,7 @@ export default function LoginPage() {
       } else {
         if (forgotNewPw !== forgotConfirmPw) {
           setErrors({ forgot: 'Passwords do not match' });
+          setLoading(false);
           return;
         }
         const res = await resetPassword(forgotEmail, forgotNewPw, forgotDob);
@@ -244,428 +293,422 @@ export default function LoginPage() {
     }
   };
 
-  const antTheme = getAuthThemeConfig(isDark);
-
   return (
-    <ConfigProvider theme={antTheme}>
-      <div className="min-h-screen flex flex-col lg:flex-row relative overflow-hidden font-sans bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300">
-        
-        {/* Top Header Navigation */}
-        <div className="absolute top-5 left-6 right-6 z-30 flex items-center justify-between pointer-events-none">
-          <button
-            onClick={() => navigate('/')}
-            className="pointer-events-auto px-4 py-2 rounded-xl backdrop-blur-md border border-slate-200/80 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 text-slate-700 dark:text-slate-200 shadow-sm hover:border-indigo-500/50 flex items-center gap-2 text-xs font-semibold transition-all group"
-          >
-            <ArrowLeft size={15} className="group-hover:-translate-x-1 transition-transform" />
-            <span>Home</span>
-          </button>
-        </div>
+    <div className="min-h-screen flex flex-col lg:flex-row relative overflow-hidden font-sans bg-background text-foreground">
 
-        {/* ── LEFT HERO PANEL ────────────────── */}
-        <div className="hidden lg:flex lg:w-[50%] relative p-12 lg:p-16 flex-col justify-between overflow-hidden border-r border-slate-200/80 dark:border-slate-800 bg-gradient-to-br from-slate-100 via-indigo-50/60 to-slate-50 dark:from-slate-950 dark:via-indigo-950/80 dark:to-slate-900 transition-colors duration-300">
-          <BrainCanvas isDark={isDark} />
+      {/* Top Header Navigation */}
+      <div className="absolute top-5 left-6 right-6 z-30 flex items-center justify-between pointer-events-none">
+        <button
+          onClick={() => navigate('/')}
+          className="pointer-events-auto px-4 py-2 rounded-xl backdrop-blur-md border border-border bg-card/80 text-muted hover:text-foreground shadow-xs hover:border-primary/50 flex items-center gap-2 text-xs font-semibold transition-all group"
+        >
+          <ArrowLeft size={15} className="group-hover:-translate-x-1 transition-transform" />
+          <span>Home</span>
+        </button>
+      </div>
 
-          {/* Clean Brand Header */}
-          <div className="relative z-10 flex items-center gap-3 mt-12 cursor-pointer" onClick={() => navigate('/')}>
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-md bg-gradient-to-br from-indigo-500 to-indigo-700 text-white">
-              <Brain className="w-7 h-7" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-                NeuroSense AI
-              </h1>
-              <p className="text-xs font-medium text-slate-600 dark:text-slate-400">
-                Medical Imaging Intelligence
-              </p>
-            </div>
+      {/* ── LEFT HERO PANEL ────────────────── */}
+      <div className="hidden lg:flex lg:w-[50%] relative p-12 lg:p-16 flex-col justify-between overflow-hidden border-r border-border bg-gradient-to-br from-surface-secondary via-primary-soft to-surface-secondary">
+        <BrainCanvas isDark={isDark} />
+
+        {/* Clean Brand Header */}
+        <div className="relative z-10 flex items-center gap-3 mt-12 cursor-pointer" onClick={() => navigate('/')}>
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-md bg-gradient-to-br from-indigo-500 to-indigo-700 text-white">
+            <Brain className="w-7 h-7" />
           </div>
-
-          {/* Clean Hero Text */}
-          <div className="relative z-10 max-w-md my-auto space-y-4">
-            <h2 className="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-tight">
-              Smart AI for Brain Imaging & Diagnostics
-            </h2>
-            <p className="text-base text-slate-600 dark:text-slate-300 leading-relaxed">
-              Fast, accurate, and easy-to-use AI assistance for doctors and healthcare teams.
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              NeuroSense AI
+            </h1>
+            <p className="text-xs font-medium text-muted">
+              Medical Imaging Intelligence
             </p>
           </div>
-
-          {/* Simple Security Badge */}
-          <div className="relative z-10 flex items-center gap-2 border-t border-slate-200/80 dark:border-slate-800/80 pt-4 text-xs font-medium text-slate-600 dark:text-slate-400">
-            <LockKeyhole size={15} className="text-emerald-500 dark:text-emerald-400" />
-            <span>Secure & Private Medical System</span>
-          </div>
         </div>
 
-        {/* ── RIGHT AUTH CARD ───────────── */}
-        <div className="w-full lg:w-[50%] flex items-center justify-center p-6 sm:p-12 relative z-10 overflow-y-auto bg-slate-50/50 dark:bg-slate-950 transition-colors duration-300 pt-20 lg:pt-12">
-          
-          <div className="w-full max-w-md space-y-6">
+        {/* Clean Hero Text — scrim keeps the headline legible over the brain art */}
+        <div className="relative z-10 max-w-md my-auto space-y-4">
+          <div className="absolute -inset-x-10 -inset-y-8 -z-10 bg-gradient-to-r from-background/85 via-background/60 to-transparent blur-md rounded-3xl" aria-hidden="true" />
+          <h2 className="text-4xl font-extrabold tracking-tight text-foreground leading-tight">
+            Smart AI for Brain Imaging &amp; Diagnostics
+          </h2>
+          <p className="text-base text-muted leading-relaxed">
+            Fast, accurate, and easy-to-use AI assistance for doctors and healthcare teams.
+          </p>
+        </div>
 
-            {/* Mobile Logo */}
-            <div className="lg:hidden text-center mb-4 cursor-pointer" onClick={() => navigate('/')}>
-              <div className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto shadow-md mb-2 bg-indigo-600 text-white">
-                <Brain className="w-7 h-7" />
-              </div>
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">NeuroSense AI</h1>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Medical Imaging Intelligence</p>
+        {/* Simple Security Badge */}
+        <div className="relative z-10 flex items-center gap-2 border-t border-border pt-4 text-xs font-medium text-muted">
+          <LockKeyhole size={15} className="text-emerald-500 dark:text-emerald-400" />
+          <span>Secure &amp; Private Medical System</span>
+        </div>
+      </div>
+
+      {/* ── RIGHT AUTH CARD ───────────── */}
+      <div className="w-full lg:w-[50%] flex items-center justify-center p-6 sm:p-12 relative z-10 overflow-y-auto pt-20 lg:pt-12">
+
+        <div className="w-full max-w-md space-y-6">
+
+          {/* Mobile Logo */}
+          <div className="lg:hidden text-center mb-4 cursor-pointer" onClick={() => navigate('/')}>
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto shadow-md mb-2 bg-gradient-to-br from-indigo-500 to-indigo-700 text-white">
+              <Brain className="w-7 h-7" />
             </div>
+            <h1 className="text-2xl font-bold text-foreground">NeuroSense AI</h1>
+            <p className="text-xs text-muted">Medical Imaging Intelligence</p>
+          </div>
 
-            {/* Auth Form Card */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-            >
-              <Card
-                className="w-full shadow-2xl border-slate-200/80 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 overflow-hidden rounded-3xl"
-                bodyStyle={{ padding: '0px' }}
-              >
-                {/* Top Accent Bar */}
-                <div className="h-1.5 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600" />
+          {/* Auth Form Card */}
+          <motion.div
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+            className="rounded-3xl border border-border bg-card/95 backdrop-blur-xl shadow-lg overflow-hidden"
+          >
+            {/* Top Accent Bar */}
+            <div className="h-1.5 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-500" />
 
-                <div className="p-8 space-y-6">
+            <div className="p-8 space-y-6">
 
-                  {/* CARD TITLE & MODE TABS */}
-                  <div>
-                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight mb-1">
-                      {forgotMode
-                        ? 'Reset Password'
-                        : mode === 'login'
-                        ? 'Sign In'
-                        : 'Create Account'}
-                    </h2>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-5">
-                      {forgotMode
-                        ? 'Enter your clinical email and date of birth to verify your identity.'
-                        : mode === 'login'
-                        ? 'Enter your credentials to access your workstation.'
-                        : 'Register a new clinical doctor account.'}
-                    </p>
+              {/* CARD TITLE & MODE TABS */}
+              <div>
+                <h2 className="text-2xl font-bold text-foreground tracking-tight mb-1">
+                  {forgotMode
+                    ? 'Reset Password'
+                    : mode === 'login'
+                    ? 'Sign In'
+                    : 'Create Account'}
+                </h2>
+                <p className="text-xs text-muted mb-5">
+                  {forgotMode
+                    ? 'Enter your clinical email and date of birth to verify your identity.'
+                    : mode === 'login'
+                    ? 'Enter your credentials to access your workstation.'
+                    : 'Register a new clinical doctor account.'}
+                </p>
 
-                    {/* Mode Tab Switches (Sign In / Create Account) */}
-                    {!forgotMode && selectedRole === 'doctor' && (
-                      <div className="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-slate-100 dark:bg-slate-950 border border-slate-200/60 dark:border-slate-800 mb-4">
-                        <button
-                          type="button"
-                          onClick={() => { setMode('login'); setErrors({}); }}
-                          className={`py-2.5 rounded-xl text-xs font-semibold transition-all ${
-                            mode === 'login'
-                              ? 'bg-indigo-600 text-white shadow-sm'
-                              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                          }`}
-                        >
-                          Sign In
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => { setMode('register'); setErrors({}); }}
-                          className={`py-2.5 rounded-xl text-xs font-semibold transition-all ${
-                            mode === 'register'
-                              ? 'bg-indigo-600 text-white shadow-sm'
-                              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                          }`}
-                        >
-                          Create Account
-                        </button>
-                      </div>
-                    )}
-
-                    {/* ROLE PILL BANNER (User Highlighted Design: Role: Doctor ... Switch to Admin) */}
-                    {!forgotMode && (
-                      <div className="p-3 px-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-300">
-                          {selectedRole === 'doctor' ? (
-                            <Stethoscope className="text-indigo-600 dark:text-indigo-400" size={17} />
-                          ) : (
-                            <Shield className="text-purple-600 dark:text-purple-400" size={17} />
-                          )}
-                          <span>
-                            Role: <strong className="font-bold text-slate-900 dark:text-white">{selectedRole === 'doctor' ? 'Doctor' : 'Admin'}</strong>
-                          </span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const newRole = selectedRole === 'doctor' ? 'admin' : 'doctor';
-                            setSelectedRole(newRole);
-                            if (newRole === 'admin') setMode('login');
-                            setErrors({});
-                          }}
-                          className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline transition-colors"
-                        >
-                          Switch to {selectedRole === 'doctor' ? 'Admin' : 'Doctor'}
-                        </button>
-                      </div>
-                    )}
-
-                    {/* SERVER CONNECTION STATUS PILL */}
-                    {!forgotMode && (
-                      <div className="mt-2.5 p-2.5 px-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-950/40 flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-2 font-medium">
-                          {serverStatus === 'online' ? (
-                            <>
-                              <span className="relative flex h-2 w-2">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-                              </span>
-                              <span className="text-emerald-700 dark:text-emerald-400 font-semibold text-[11px]">Backend Connected</span>
-                            </>
-                          ) : serverStatus === 'checking' ? (
-                            <>
-                              <span className="relative flex h-2 w-2">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
-                              </span>
-                              <span className="text-amber-700 dark:text-amber-400 font-semibold text-[11px]">Connecting to backend...</span>
-                            </>
-                          ) : (
-                            <>
-                              <span className="h-2 w-2 rounded-full bg-rose-500" />
-                              <span className="text-rose-600 dark:text-rose-400 font-semibold text-[11px]">Backend Unreachable</span>
-                            </>
-                          )}
-                        </div>
-                        {serverStatus === 'offline' && (
-                          <button
-                            type="button"
-                            onClick={() => setServerStatus('checking')}
-                            className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
-                          >
-                            Retry
-                          </button>
+                {/* Mode Tab Switches (Sign In / Create Account) */}
+                {!forgotMode && selectedRole === 'doctor' && (
+                  <div className="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-surface-secondary border border-border mb-4">
+                    {['login', 'register'].map(m => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => { setMode(m); setErrors({}); }}
+                        className={`relative py-2.5 rounded-xl text-xs font-semibold transition-colors duration-150 ${
+                          mode === m
+                            ? 'text-white'
+                            : 'text-muted hover:text-foreground'
+                        }`}
+                      >
+                        {mode === m && (
+                          <motion.span
+                            layoutId="auth-mode-pill"
+                            transition={{ type: 'spring', damping: 30, stiffness: 400 }}
+                            className="absolute inset-0 rounded-xl bg-indigo-600 shadow-sm"
+                            aria-hidden="true"
+                          />
                         )}
-                      </div>
-                    )}
+                        <span className="relative z-1">{m === 'login' ? 'Sign In' : 'Create Account'}</span>
+                      </button>
+                    ))}
                   </div>
+                )}
 
-                  {/* Error Banner */}
-                  {errors.general && (
-                    <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-medium flex items-center gap-2">
-                      <AlertCircle size={16} className="flex-shrink-0" />
-                      <span>{errors.general}</span>
-                    </div>
-                  )}
-
-                  {/* FORGOT PASSWORD FORM */}
-                  {forgotMode ? (
-                    <form onSubmit={handleForgotSubmit} className="space-y-4">
-                      {errors.forgot && (
-                        <p className="text-xs text-rose-500 p-2.5 bg-rose-500/10 rounded-xl border border-rose-500/20">{errors.forgot}</p>
+                {/* ROLE PILL BANNER */}
+                {!forgotMode && (
+                  <div className="p-3 px-4 rounded-2xl border border-border bg-surface-secondary/60 flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-xs font-medium text-muted">
+                      {selectedRole === 'doctor' ? (
+                        <Stethoscope className="text-primary" size={17} />
+                      ) : (
+                        <Shield className="text-purple-500 dark:text-purple-400" size={17} />
                       )}
+                      <span>
+                        Role: <strong className="font-bold text-foreground">{selectedRole === 'doctor' ? 'Doctor' : 'Admin'}</strong>
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newRole = selectedRole === 'doctor' ? 'admin' : 'doctor';
+                        setSelectedRole(newRole);
+                        if (newRole === 'admin') setMode('login');
+                        setErrors({});
+                      }}
+                      className="text-xs font-semibold text-primary hover:underline transition-colors"
+                    >
+                      Switch to {selectedRole === 'doctor' ? 'Admin' : 'Doctor'}
+                    </button>
+                  </div>
+                )}
 
-                      {forgotStep === 1 ? (
+                {/* SERVER CONNECTION STATUS PILL */}
+                {!forgotMode && (
+                  <div className="mt-2.5 p-2.5 px-3.5 rounded-xl border border-border bg-surface-secondary/40 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2 font-medium">
+                      {serverStatus === 'online' ? (
                         <>
-                          <CustomInput
-                            label="Email Address"
-                            icon={Mail}
-                            type="email"
-                            placeholder="doctor@hospital.org"
-                            value={forgotEmail}
-                            onChange={e => setForgotEmail(e.target.value)}
-                            required
-                          />
-                          <CustomInput
-                            label="Date of Birth"
-                            icon={CalendarDays}
-                            type="date"
-                            placeholder="YYYY-MM-DD"
-                            value={forgotDob}
-                            onChange={e => setForgotDob(e.target.value)}
-                            required
-                          />
-                          <AntButton
-                            type="primary"
-                            htmlType="submit"
-                            loading={loading}
-                            block
-                            size="large"
-                            className="mt-2 font-semibold bg-indigo-600 hover:bg-indigo-500 h-12 rounded-xl text-sm"
-                          >
-                            Continue
-                          </AntButton>
+                          <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                          </span>
+                          <span className="text-emerald-600 dark:text-emerald-400 font-semibold text-[11px]">Backend Connected</span>
+                        </>
+                      ) : serverStatus === 'checking' ? (
+                        <>
+                          <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+                          </span>
+                          <span className="text-amber-600 dark:text-amber-400 font-semibold text-[11px]">Connecting to backend...</span>
                         </>
                       ) : (
                         <>
-                          <CustomInput
-                            label="New Password"
-                            icon={Lock}
-                            type="password"
-                            placeholder="Enter new password"
-                            value={forgotNewPw}
-                            onChange={e => setForgotNewPw(e.target.value)}
-                            required
-                          />
-                          <CustomInput
-                            label="Confirm New Password"
-                            icon={Lock}
-                            type="password"
-                            placeholder="Confirm new password"
-                            value={forgotConfirmPw}
-                            onChange={e => setForgotConfirmPw(e.target.value)}
-                            required
-                          />
-                          <AntButton
-                            type="primary"
-                            htmlType="submit"
-                            loading={loading}
-                            block
-                            size="large"
-                            className="mt-2 font-semibold bg-indigo-600 hover:bg-indigo-500 h-12 rounded-xl text-sm"
-                          >
-                            Reset Password
-                          </AntButton>
+                          <span className="h-2 w-2 rounded-full bg-danger" />
+                          <span className="text-danger font-semibold text-[11px]">Backend Unreachable</span>
                         </>
                       )}
-
+                    </div>
+                    {serverStatus === 'offline' && (
                       <button
                         type="button"
-                        onClick={() => setForgotMode(false)}
-                        className="w-full text-center text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline pt-1"
+                        onClick={() => setServerStatus('checking')}
+                        className="text-[11px] font-bold text-primary hover:underline"
                       >
-                        Back to Sign In
+                        Retry
                       </button>
-                    </form>
-                  ) : (
-                    /* MAIN AUTHENTICATION FORM */
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                      {/* DOCTOR REGISTRATION FIELDS */}
-                      {mode === 'register' && selectedRole === 'doctor' && (
-                        <>
-                          <CustomInput
-                            label="Full Name"
-                            icon={User}
-                            placeholder="Dr. Sarah Jenkins"
-                            value={form.full_name}
-                            onChange={setField('full_name')}
-                            error={errors.full_name}
-                          />
+                    )}
+                  </div>
+                )}
+              </div>
 
-                          <CustomInput
-                            label="Clinical Email"
-                            icon={Mail}
-                            type="email"
-                            placeholder="sarah@hospital.org"
-                            value={form.email}
-                            onChange={setField('email')}
-                            error={errors.email}
-                          />
+              {/* Error Banner */}
+              <AnimatePresence>
+                {errors.general && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="p-3.5 rounded-xl bg-danger/10 border border-danger/30 text-danger text-xs font-medium flex items-center gap-2">
+                      <AlertCircle size={16} className="flex-shrink-0" />
+                      <span>{errors.general}</span>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
-                          <CustomInput
-                            label="Hospital / Institution"
-                            icon={Building2}
-                            placeholder="St. Jude Hospital"
-                            value={form.institution}
-                            onChange={setField('institution')}
-                            error={errors.institution}
-                          />
-
-                          <CustomInput
-                            label="Date of Birth"
-                            icon={CalendarDays}
-                            type="date"
-                            placeholder="YYYY-MM-DD"
-                            value={form.date_of_birth}
-                            onChange={setField('date_of_birth')}
-                            error={errors.date_of_birth}
-                          />
-
-                          <CustomInput
-                            label="Medical License Number"
-                            icon={Shield}
-                            placeholder="e.g. MD-8849201"
-                            value={form.license_number}
-                            onChange={setField('license_number')}
-                            error={errors.license_number}
-                          />
-
-                          <CustomInput
-                            label="Department"
-                            icon={Stethoscope}
-                            placeholder="e.g. Neurology"
-                            value={form.department}
-                            onChange={setField('department')}
-                            error={errors.department}
-                          />
-                        </>
-                      )}
-
-                      {/* USERNAME FIELD (LOGIN MODE) */}
-                      {mode === 'login' && (
-                        <CustomInput
-                          label={selectedRole === 'admin' ? 'Admin Username' : 'Email or Username'}
-                          icon={User}
-                          placeholder={selectedRole === 'admin' ? 'admin' : 'dr_sarah'}
-                          value={form.username}
-                          onChange={setField('username')}
-                          error={errors.username}
-                        />
-                      )}
-
-                      {/* PASSWORD FIELD */}
-                      <CustomInput
-                        label="Password"
-                        icon={Lock}
-                        type="password"
-                        placeholder="••••••••"
-                        value={form.password}
-                        onChange={setField('password')}
-                        error={errors.password}
-                      />
-
-                      {/* FORGOT PASSWORD (backend flask-login "remember me" is
-                          decided server-side, so no client remember flag) */}
-                      {mode === 'login' && (
-                        <div className="flex items-center justify-end text-xs pt-1">
-                          <button
-                            type="button"
-                            onClick={() => { setForgotMode(true); setForgotStep(1); setErrors({}); }}
-                            className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
-                          >
-                            Forgot Password?
-                          </button>
-                        </div>
-                      )}
-
-                      {/* ACCEPT TERMS CHECKBOX */}
-                      {mode === 'register' && selectedRole === 'doctor' && (
-                        <div className="pt-1">
-                          <Checkbox
-                            checked={form.acceptTerms}
-                            onChange={setField('acceptTerms')}
-                          >
-                            <span className="text-xs text-slate-700 dark:text-slate-300">
-                              I agree to the Terms of Service & Privacy Policy
-                            </span>
-                          </Checkbox>
-                          {errors.acceptTerms && <p className="text-[11px] font-medium text-rose-500 mt-1">{errors.acceptTerms}</p>}
-                        </div>
-                      )}
-
-                      {/* PRIMARY ACTION BUTTON */}
-                      <div className="pt-2">
-                        <AntButton
-                          type="primary"
-                          htmlType="submit"
-                          loading={loading}
-                          block
-                          size="large"
-                          className="font-semibold shadow-md bg-indigo-600 hover:bg-indigo-500 h-12 text-sm rounded-xl"
-                        >
-                          {mode === 'login' ? 'Sign In' : 'Create Account'}
-                        </AntButton>
-                      </div>
-                    </form>
+              {/* FORGOT PASSWORD FORM */}
+              {forgotMode ? (
+                <form onSubmit={handleForgotSubmit} className="space-y-4">
+                  {errors.forgot && (
+                    <p className="text-xs text-danger p-2.5 bg-danger/10 rounded-xl border border-danger/20">{errors.forgot}</p>
                   )}
 
-                </div>
-              </Card>
-            </motion.div>
+                  <AnimatePresence mode="wait">
+                    {forgotStep === 1 ? (
+                      <motion.div
+                        key="forgot-step-1"
+                        initial={{ opacity: 0, x: 24 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -24 }}
+                        transition={{ duration: 0.2 }}
+                        className="space-y-4"
+                      >
+                        <AuthInput
+                          label="Email Address"
+                          icon={Mail}
+                          type="email"
+                          placeholder="doctor@hospital.org"
+                          value={forgotEmail}
+                          onChange={e => setForgotEmail(e.target.value)}
+                          required
+                        />
+                        <AuthInput
+                          label="Date of Birth"
+                          icon={CalendarDays}
+                          type="date"
+                          placeholder="YYYY-MM-DD"
+                          value={forgotDob}
+                          onChange={e => setForgotDob(e.target.value)}
+                          required
+                        />
+                        <Button type="submit" loading={loading} className="w-full">
+                          Continue
+                        </Button>
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="forgot-step-2"
+                        initial={{ opacity: 0, x: 24 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -24 }}
+                        transition={{ duration: 0.2 }}
+                        className="space-y-4"
+                      >
+                        <AuthInput
+                          label="New Password"
+                          icon={Lock}
+                          type="password"
+                          placeholder="Enter new password"
+                          value={forgotNewPw}
+                          onChange={e => setForgotNewPw(e.target.value)}
+                          required
+                        />
+                        <AuthInput
+                          label="Confirm New Password"
+                          icon={Lock}
+                          type="password"
+                          placeholder="Confirm new password"
+                          value={forgotConfirmPw}
+                          onChange={e => setForgotConfirmPw(e.target.value)}
+                          required
+                        />
+                        <Button type="submit" loading={loading} className="w-full">
+                          Reset Password
+                        </Button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
 
-          </div>
+                  <button
+                    type="button"
+                    onClick={() => setForgotMode(false)}
+                    className="w-full text-center text-xs font-semibold text-primary hover:underline pt-1"
+                  >
+                    Back to Sign In
+                  </button>
+                </form>
+              ) : (
+                /* MAIN AUTHENTICATION FORM */
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  {/* DOCTOR REGISTRATION FIELDS — name, username, email,
+                      hospital, DOB, password. DOB stays because the
+                      forgot-password flow verifies identity with email +
+                      date of birth. */}
+                  {mode === 'register' && selectedRole === 'doctor' && (
+                    <>
+                      <AuthInput
+                        label="Full Name"
+                        icon={User}
+                        placeholder="Dr. Sarah Jenkins"
+                        value={form.full_name}
+                        onChange={setField('full_name')}
+                        error={errors.full_name}
+                      />
+
+                      <AuthInput
+                        label="Username"
+                        icon={AtSign}
+                        placeholder="dr_sarah"
+                        value={form.username}
+                        onChange={setField('username')}
+                        error={errors.username}
+                      />
+
+                      <AuthInput
+                        label="Clinical Email"
+                        icon={Mail}
+                        type="email"
+                        placeholder="sarah@hospital.org"
+                        value={form.email}
+                        onChange={setField('email')}
+                        error={errors.email}
+                      />
+
+                      <AuthInput
+                        label="Hospital / Institution"
+                        icon={Hospital}
+                        placeholder="City General Hospital"
+                        value={form.hospital}
+                        onChange={setField('hospital')}
+                        error={errors.hospital}
+                      />
+
+                      <AuthInput
+                        label="Date of Birth"
+                        icon={CalendarDays}
+                        type="date"
+                        placeholder="YYYY-MM-DD"
+                        value={form.date_of_birth}
+                        onChange={setField('date_of_birth')}
+                        error={errors.date_of_birth}
+                      />
+                      <p className="text-[11px] text-muted font-medium -mt-2">
+                        Only used to verify your identity if you forget your password.
+                      </p>
+                    </>
+                  )}
+
+                  {/* USERNAME FIELD (LOGIN MODE) */}
+                  {mode === 'login' && (
+                    <AuthInput
+                      label={selectedRole === 'admin' ? 'Admin Username' : 'Email or Username'}
+                      icon={User}
+                      placeholder={selectedRole === 'admin' ? 'admin' : 'dr_sarah'}
+                      value={form.username}
+                      onChange={setField('username')}
+                      error={errors.username}
+                    />
+                  )}
+
+                  {/* PASSWORD FIELD */}
+                  <AuthInput
+                    label="Password"
+                    icon={Lock}
+                    type="password"
+                    placeholder="••••••••"
+                    value={form.password}
+                    onChange={setField('password')}
+                    error={errors.password}
+                  />
+
+                  {/* FORGOT PASSWORD — doctor accounts only. The fixed admin
+                      credential (admin/admin) is a deployment constant with
+                      no self-service reset; the backend refuses tokens for
+                      it regardless. */}
+                  {mode === 'login' && selectedRole === 'doctor' && (
+                    <div className="flex items-center justify-end text-xs pt-1">
+                      <button
+                        type="button"
+                        onClick={() => { setForgotMode(true); setForgotStep(1); setErrors({}); }}
+                        className="font-semibold text-primary hover:underline"
+                      >
+                        Forgot Password?
+                      </button>
+                    </div>
+                  )}
+
+                  {/* ACCEPT TERMS CHECKBOX */}
+                  {mode === 'register' && selectedRole === 'doctor' && (
+                    <TermsCheckbox
+                      checked={form.acceptTerms}
+                      onChange={setField('acceptTerms')}
+                      error={errors.acceptTerms}
+                    />
+                  )}
+
+                  {/* PRIMARY ACTION BUTTON */}
+                  <div className="pt-2">
+                    <Button
+                      type="submit"
+                      loading={loading}
+                      className="w-full btn-sheen"
+                    >
+                      {mode === 'login' ? 'Sign In' : 'Create Account'}
+                    </Button>
+                  </div>
+                </form>
+              )}
+
+            </div>
+          </motion.div>
+
         </div>
-
       </div>
-    </ConfigProvider>
+
+    </div>
   );
 }

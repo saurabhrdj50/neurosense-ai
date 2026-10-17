@@ -31,6 +31,8 @@ class AuditLog(Base):
         Index('idx_audit_log_action', 'action'),
         Index('idx_audit_log_timestamp', 'timestamp'),
         Index('idx_audit_log_resource', 'resource_type', 'resource_id'),
+        Index('idx_audit_log_action_timestamp', 'action', 'timestamp'),
+        Index('idx_audit_log_resource_type_timestamp', 'resource_type', 'timestamp'),
     )
 
     def to_dict(self):

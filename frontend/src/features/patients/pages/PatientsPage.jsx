@@ -1,10 +1,12 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react'
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { getAnalysisResults, setAnalysisResults } from '../../../context/ResultsStore'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   Users, Search, Download, Eye, Plus, ArrowUpDown, ChevronUp, ChevronDown,
   Activity, FileText, Brain, Sparkles, MessageSquare, HeartPulse, ShieldCheck,
   CheckCircle2, Clock, Calendar, User, Filter, X, ArrowRight, ChevronRight,
-  Trash2, AlertTriangle
+  Trash2
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useNavigate, useLocation } from 'react-router-dom'
@@ -16,19 +18,25 @@ import Badge from '../../../shared/components/ui/Badge'
 import Modal from '../../../shared/components/ui/Modal'
 import Card from '../../../shared/components/ui/Card'
 import { SectionSkeleton } from '../../../shared/components/ui/Skeleton'
+import { useReducedMotionPref } from '../../../shared/motion'
 import { patientsApi } from '../api/patientsApi'
 import { historyApi } from '../../history/api/historyApi'
 import LongitudinalTimeline from '../../history/components/LongitudinalTimeline'
 import {
   getAnalysisStage,
   getAnalysisConfidence,
+  getRiskLevel,
+  doctorDisplayName,
 } from '../../../shared/utils/clinicalMappers'
 
 const STAGE_CONFIG = {
+  'Cognitively Normal (CN)': { label: 'Normal / Healthy (CN)', variant: 'success', color: '#10B981' },
   'Non-Demented':       { label: 'Normal / Healthy', variant: 'success', color: '#10B981' },
   'Non Demented':       { label: 'Normal / Healthy', variant: 'success', color: '#10B981' },
   'Very Mild Demented': { label: 'Very Mild Decline', variant: 'purple',  color: '#7C3AED' },
+  'Mild Cognitive Impairment (MCI)': { label: 'Mild Impairment (MCI)', variant: 'warning', color: '#F59E0B' },
   'Mild Demented':      { label: 'Mild Impairment (MCI)', variant: 'warning', color: '#F59E0B' },
+  "Alzheimer's Disease (AD)": { label: "Alzheimer's Disease (AD)", variant: 'danger',  color: '#EF4444' },
   'Moderate Demented':  { label: 'Moderate Decline', variant: 'danger',  color: '#EF4444' },
   'Severe Demented':    { label: 'Severe Decline', variant: 'danger',  color: '#EF4444' },
   'Unassessed':         { label: 'Pending Assessment', variant: 'neutral', color: '#94A3B8' },
@@ -54,22 +62,24 @@ export default function PatientsPage() {
   // Server state lives in TanStack Query; mutations invalidate the cache
   // instead of manually re-fetching both lists.
   const queryClient = useQueryClient()
+  // Query errors are NOT swallowed — a failed fetch must show the error
+  // banner below, never a silent "empty registry".
   const patientsQuery = useQuery({
     queryKey: ['patients'],
     queryFn: async () => {
-      const res = await patientsApi.getAll().catch(() => ({ patients: [] }))
-      return res.patients || []
+      const res = await patientsApi.getAll()
+      return { patients: res.patients || [], total: res.total ?? res.patients?.length ?? 0 }
     },
   })
   const analysesQuery = useQuery({
     queryKey: ['analyses'],
     queryFn: async () => {
-      const res = await historyApi.getAllAnalyses().catch(() => ({ analyses: [] }))
-      return res.analyses || []
+      const res = await historyApi.getAllAnalyses()
+      return { analyses: res.analyses || [], total: res.total ?? res.analyses?.length ?? 0 }
     },
   })
-  const patients = useMemo(() => patientsQuery.data || [], [patientsQuery.data])
-  const analyses = useMemo(() => analysesQuery.data || [], [analysesQuery.data])
+  const patients = useMemo(() => patientsQuery.data?.patients || [], [patientsQuery.data])
+  const analyses = useMemo(() => analysesQuery.data?.analyses || [], [analysesQuery.data])
   const loading = patientsQuery.isLoading || analysesQuery.isLoading
 
   /* Primary State: Selected Patient for Detail View */
@@ -79,14 +89,20 @@ export default function PatientsPage() {
   /* Search State */
   const [search, setSearch] = useState('')
 
-  /* Delete Confirmation Modal State */
-  const [deleteTarget, setDeleteTarget] = useState(null)
-  const [deleting, setDeleting]         = useState(false)
-
   /* Modal State */
   const [addOpen, setAddOpen] = useState(false)
   const [saving, setSaving]   = useState(false)
   const [formErrors, setFormErrors] = useState({})
+
+  /* Deep-link from the Dashboard onboarding card ("Register First Patient"
+     navigates here with openAddModal: true). State is cleared after opening
+     so a refresh doesn't re-open the modal. */
+  useEffect(() => {
+    if (location.state?.openAddModal) {
+      setAddOpen(true)
+      navigate(location.pathname + location.search, { replace: true, state: null })
+    }
+  }, [location.state, location.pathname, location.search, navigate])
   const [form, setForm]       = useState({
     patient_id: '',
     name: '',
@@ -95,6 +111,13 @@ export default function PatientsPage() {
     education_years: '',
     notes: ''
   })
+
+  /* Delete with undo: the record vanishes immediately (optimistic cache
+     update), the API call is deferred behind a 7s toast window offering
+     Undo, and failures roll the optimistic removal back. Several deletes
+     can be pending at once, hence the per-patient map. */
+  const pendingDeletesRef = useRef(new Map()) // patient_id -> {patient, snapshots, timer}
+  const reduced = useReducedMotionPref()
 
   // Keyboard shortcut '/' to focus search
   useEffect(() => {
@@ -125,7 +148,7 @@ export default function PatientsPage() {
         return {
           ...p,
           stage: 'Unassessed',
-          risk: 'Normal',
+          risk: 'Unknown',
           conf: 0,
           lastAnalysis: null,
           history: [],
@@ -135,9 +158,9 @@ export default function PatientsPage() {
 
       const latest = pAnalyses[0]
       const stage  = getAnalysisStage(latest)
-      let risk     = 'Normal'
-      if (stage.includes('Mild') && !stage.includes('Moderate')) risk = 'Mild'
-      else if (stage.includes('Moderate') || stage.includes('High') || stage.includes('Alzheimer')) risk = 'High'
+      /* Risk tier comes from the shared stage mapper — an unrecognized or
+         unassessed stage maps to 'Unknown', never a fabricated tier. */
+      const risk = getRiskLevel(stage)
 
       return {
         ...p,
@@ -233,29 +256,96 @@ export default function PatientsPage() {
     }
   }
 
-  /* Delete Patient Handler */
-  const handleDeletePatient = async () => {
-    if (!deleteTarget) return
-    setDeleting(true)
-    try {
-      await patientsApi.delete(deleteTarget.patient_id)
-      toast.success(`Patient record deleted successfully`)
-      const deletedId = deleteTarget.patient_id
-      setDeleteTarget(null)
-      loadData()
-      
-      const remaining = enrichedPatients.filter((p) => p.patient_id !== deletedId)
-      if (remaining.length > 0) {
-        setSelectedPatientId(remaining[0].patient_id)
-      } else {
-        setSelectedPatientId(null)
-      }
-    } catch (err) {
-      toast.error(err.message || 'Failed to delete patient record')
-    } finally {
-      setDeleting(false)
+  /* Restore the pre-deletion cache snapshots and drop the pending delete. */
+  const handleUndoDelete = useCallback((pid) => {
+    const pending = pendingDeletesRef.current.get(pid)
+    if (!pending) return
+    clearTimeout(pending.timer)
+    pendingDeletesRef.current.delete(pid)
+    if (pending.snapshots.prevPatients !== undefined) {
+      queryClient.setQueryData(['patients'], pending.snapshots.prevPatients)
     }
-  }
+    if (pending.snapshots.prevAnalyses !== undefined) {
+      queryClient.setQueryData(['analyses'], pending.snapshots.prevAnalyses)
+    }
+    setSelectedPatientId(pid)
+    toast.success(`Deletion cancelled — ${pending.patient.name}'s record restored.`)
+  }, [queryClient])
+
+  const handleDeletePatient = useCallback((target) => {
+    if (!target || pendingDeletesRef.current.has(target.patient_id)) return
+    const pid = target.patient_id
+
+    /* Optimistic removal from both cached lists (the registry and the
+       analysis feed), keeping snapshots for rollback. */
+    const prevPatients = queryClient.getQueryData(['patients'])
+    const prevAnalyses = queryClient.getQueryData(['analyses'])
+    queryClient.setQueryData(['patients'], (old) => {
+      if (!old) return old
+      const list = (old.patients || []).filter((p) => p.patient_id !== pid)
+      return { ...old, patients: list, total: Math.max(0, (old.total ?? list.length + 1) - 1) }
+    })
+    queryClient.setQueryData(['analyses'], (old) => {
+      if (!old) return old
+      const list = (old.analyses || []).filter(
+        (a) => (a.patient_info?.patient_id || a.patient_id) !== pid
+      )
+      return { ...old, analyses: list }
+    })
+
+    const remaining = enrichedPatients.filter((p) => p.patient_id !== pid)
+    setSelectedPatientId(remaining[0]?.patient_id || null)
+
+    toast((t) => (
+      <div className="flex items-start gap-3 min-w-[280px]">
+        <span className="w-8 h-8 rounded-lg bg-danger/10 border border-danger/20 text-danger flex items-center justify-center shrink-0" aria-hidden="true">
+          <Trash2 size={15} />
+        </span>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-bold text-foreground">Patient {target.name} deleted</p>
+          <p className="text-[11px] text-foreground-muted font-medium mt-0.5">Removes the profile and all assessment history.</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => { toast.dismiss(t.id); handleUndoDelete(pid) }}
+          className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold text-primary bg-primary/10 border border-primary/30 hover:bg-primary/20 transition-colors cursor-pointer"
+        >
+          Undo
+        </button>
+      </div>
+    ), { duration: 7000 })
+
+    const timer = setTimeout(async () => {
+      pendingDeletesRef.current.delete(pid)
+      try {
+        await patientsApi.delete(pid)
+        toast.success('Patient record permanently deleted.')
+        // Everywhere = every cached dataset: registry, analysis feed, every
+        // patient-history query, and the last-result store if it holds the
+        // deleted patient's report.
+        queryClient.invalidateQueries({ queryKey: ['patients'] })
+        queryClient.invalidateQueries({ queryKey: ['analyses'] })
+        queryClient.invalidateQueries({ queryKey: ['patient-history'] })
+        const stored = getAnalysisResults()
+        if (stored && (stored.patient_info?.patient_id || stored.patient_id) === pid) {
+          setAnalysisResults(null)
+        }
+      } catch (err) {
+        /* Never let a failed delete silently swallow the record — roll back. */
+        if (prevPatients !== undefined) queryClient.setQueryData(['patients'], prevPatients)
+        if (prevAnalyses !== undefined) queryClient.setQueryData(['analyses'], prevAnalyses)
+        setSelectedPatientId(pid)
+        toast.error(err.message || 'Failed to delete patient record — changes reverted.')
+      }
+    }, 7100)
+    pendingDeletesRef.current.set(pid, { patient: target, snapshots: { prevPatients, prevAnalyses }, timer })
+  }, [enrichedPatients, handleUndoDelete, queryClient])
+
+  /* Clear any pending delete timers when leaving the page. */
+  useEffect(() => {
+    const pending = pendingDeletesRef.current
+    return () => pending.forEach((p) => clearTimeout(p.timer))
+  }, [])
 
   /* Download single analysis CSV report */
   const handleDownloadAnalysis = (analysis) => {
@@ -308,7 +398,7 @@ export default function PatientsPage() {
           <h1 className="text-2xl font-extrabold text-foreground tracking-tight flex items-center gap-2.5">
             Patient Workspace
             <span className="text-xs font-mono font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-full border border-primary/20">
-              {enrichedPatients.length} Active Patients
+              {patientsQuery.data?.total ?? enrichedPatients.length} Active Patients
             </span>
           </h1>
           <p className="text-xs text-foreground-muted font-medium mt-0.5">
@@ -365,30 +455,49 @@ export default function PatientsPage() {
             </div>
           </div>
 
-          {/* Patient Card List */}
+          {/* Patient Card List — rows animate in, reflow on filter, and
+              fade-collapse out when a delete (or search) removes them */}
           <div className="space-y-2.5 max-h-[calc(100vh-230px)] overflow-y-auto pr-1">
-            {loading ? (
+            {patientsQuery.isError ? (
+              <div role="alert" className="bg-rose-500/10 border border-rose-500/30 rounded-2xl p-6 text-center space-y-3">
+                <p className="text-xs font-semibold text-foreground">
+                  Could not load the patient registry.
+                </p>
+                <button
+                  onClick={() => patientsQuery.refetch()}
+                  className="text-xs font-bold text-primary hover:underline"
+                >
+                  Retry
+                </button>
+              </div>
+            ) : loading ? (
               <SectionSkeleton rows={5} />
             ) : filteredPatients.length === 0 ? (
               <div className="bg-card border border-border rounded-2xl p-6 text-center text-xs text-foreground-muted font-medium">
                 No patients match search criteria.
               </div>
             ) : (
-              filteredPatients.map((pat) => {
-                const isSelected = activePatient?.patient_id === pat.patient_id
-                const stageInfo = STAGE_CONFIG[pat.stage] || STAGE_CONFIG['Unknown']
-                const isEvaluated = Boolean(pat.lastAnalysis)
+              <AnimatePresence initial={false} mode="popLayout">
+                {filteredPatients.map((pat) => {
+                  const isSelected = activePatient?.patient_id === pat.patient_id
+                  const stageInfo = STAGE_CONFIG[pat.stage] || STAGE_CONFIG['Unknown']
+                  const isEvaluated = Boolean(pat.lastAnalysis)
 
-                return (
-                  <div
-                    key={pat.patient_id}
-                    onClick={() => setSelectedPatientId(pat.patient_id)}
-                    className={`relative p-4 rounded-2xl border transition-all cursor-pointer space-y-2.5 overflow-hidden ${
-                      isSelected
-                        ? 'bg-primary/5 border-2 border-primary shadow-sm ring-2 ring-primary/20'
-                        : 'bg-card border-border hover:border-primary/40 hover:shadow-2xs'
-                    }`}
-                  >
+                  return (
+                    <motion.div
+                      key={pat.patient_id}
+                      layout={!reduced}
+                      initial={reduced ? false : { opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.96, transition: { duration: 0.18 } }}
+                      transition={{ duration: 0.2, ease: 'easeOut' }}
+                      onClick={() => setSelectedPatientId(pat.patient_id)}
+                      className={`relative p-4 rounded-2xl border cursor-pointer space-y-2.5 overflow-hidden ${
+                        isSelected
+                          ? 'bg-primary/5 border-2 border-primary shadow-sm ring-2 ring-primary/20'
+                          : 'bg-card border-border hover:border-primary/40 hover:shadow-2xs'
+                      }`}
+                    >
                     {isSelected && (
                       <span className="absolute left-0 top-0 bottom-0 w-1.5 bg-primary rounded-l-2xl" />
                     )}
@@ -417,9 +526,10 @@ export default function PatientsPage() {
                         {formatDate(pat.lastAnalysis)}
                       </span>
                     </div>
-                  </div>
-                )
-              })
+                    </motion.div>
+                  )
+                })}
+              </AnimatePresence>
             )}
           </div>
 
@@ -446,7 +556,7 @@ export default function PatientsPage() {
                         <Badge variant={activeStageInfo.variant}>{activeStageInfo.label}</Badge>
                       </div>
                       <p className="text-xs text-foreground-muted font-medium mt-1">
-                        Patient ID: <span className="font-mono font-bold text-foreground">{activePatient.patient_id}</span> · {activePatient.age}y {formatSex(activePatient.sex)} · Education: {activePatient.education_years || 16} yrs
+                        Patient ID: <span className="font-mono font-bold text-foreground">{activePatient.patient_id}</span> · {activePatient.age}y {formatSex(activePatient.sex)} · Education: {activePatient.education_years != null ? `${activePatient.education_years} yrs` : 'not recorded'}
                       </p>
                     </div>
                   </div>
@@ -456,7 +566,7 @@ export default function PatientsPage() {
                       size="sm"
                       variant="outline"
                       icon={Trash2}
-                      onClick={() => setDeleteTarget(activePatient)}
+                      onClick={() => handleDeletePatient(activePatient)}
                       className="min-h-[38px] text-xs font-bold px-3 text-danger border-danger/30 hover:bg-danger/10 hover:border-danger"
                     >
                       Delete Patient
@@ -474,7 +584,7 @@ export default function PatientsPage() {
                   </div>
                 </div>
 
-                {/* Dossier Navigation Tabs (2 Streamlined Tabs) */}
+                {/* Dossier Navigation Tabs (2 Streamlined Tabs) — active pill slides between tabs */}
                 <div className="flex items-center gap-2 border-t border-border pt-3">
                   {[
                     { id: 'history', label: `Test History & Reports (${activePatient.history.length})`, icon: Clock },
@@ -486,14 +596,23 @@ export default function PatientsPage() {
                       <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all min-h-[36px] ${
+                        aria-pressed={isActive}
+                        className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-colors min-h-[36px] ${
                           isActive
-                            ? 'bg-primary text-primary-foreground shadow-xs'
+                            ? 'text-primary-foreground'
                             : 'bg-surface border border-border text-foreground-muted hover:text-foreground'
                         }`}
                       >
-                        <TabIcon size={14} />
-                        <span>{tab.label}</span>
+                        {isActive && (
+                          <motion.span
+                            layoutId="dossier-tab-pill"
+                            transition={{ type: 'spring', damping: 30, stiffness: 420 }}
+                            className="absolute inset-0 rounded-xl bg-primary shadow-xs"
+                            aria-hidden="true"
+                          />
+                        )}
+                        <TabIcon size={14} className="relative z-1" />
+                        <span className="relative z-1">{tab.label}</span>
                       </button>
                     )
                   })}
@@ -653,12 +772,12 @@ export default function PatientsPage() {
 
                     <div className="p-3.5 rounded-xl bg-surface border border-border space-y-1">
                       <span className="text-foreground-muted font-bold block text-[11px] uppercase tracking-wider">Education Level</span>
-                      <strong className="text-foreground text-sm">{activePatient.education_years || 16} years of formal education</strong>
+                      <strong className="text-foreground text-sm">{activePatient.education_years != null ? `${activePatient.education_years} years of formal education` : 'Not recorded'}</strong>
                     </div>
 
                     <div className="p-3.5 rounded-xl bg-surface border border-border space-y-1">
                       <span className="text-foreground-muted font-bold block text-[11px] uppercase tracking-wider">Attending Physician</span>
-                      <strong className="text-foreground text-sm">{activePatient.attending_physician || '—'}</strong>
+                      <strong className="text-foreground text-sm">{doctorDisplayName(activePatient.doctor_username)}</strong>
                     </div>
 
                     <div className="p-3.5 rounded-xl bg-surface border border-border space-y-1">
@@ -670,7 +789,7 @@ export default function PatientsPage() {
                   <div className="p-4 rounded-xl bg-surface border border-border space-y-1.5">
                     <span className="text-foreground-muted font-bold block text-[11px] uppercase tracking-wider">Clinical Intake & Referral Notes</span>
                     <p className="text-foreground leading-relaxed font-medium text-xs">
-                      {activePatient.notes || 'No preliminary intake notes recorded. Patient enrolled in standard routine tracking protocol.'}
+                      {activePatient.notes || 'No intake or referral notes recorded for this patient.'}
                     </p>
                   </div>
                 </div>
@@ -798,47 +917,8 @@ export default function PatientsPage() {
         </form>
       </Modal>
 
-      {/* ── Delete Confirmation Warning Modal ────────────────────────────── */}
-      <Modal
-        open={Boolean(deleteTarget)}
-        onClose={() => !deleting && setDeleteTarget(null)}
-        title="Delete Patient Record?"
-      >
-        <div className="space-y-4 py-2">
-          <div className="flex items-start gap-3 p-4 rounded-xl bg-danger/10 border border-danger/20 text-danger text-xs font-medium">
-            <AlertTriangle size={22} className="shrink-0 mt-0.5" />
-            <div>
-              <strong className="font-bold text-sm block mb-1">Permanent Deletion Warning</strong>
-              Are you sure you want to delete patient <strong className="font-bold text-foreground underline">{deleteTarget?.name}</strong> (ID: <span className="font-mono font-bold">{deleteTarget?.patient_id}</span>)?
-              <p className="mt-1 text-foreground-muted leading-normal">
-                This will permanently delete all associated test reports, diagnostic history, and profile records from the system database. This action cannot be undone.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-border">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={deleting}
-              onClick={() => setDeleteTarget(null)}
-              className="min-h-[38px] text-xs font-bold px-4"
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="danger"
-              size="sm"
-              loading={deleting}
-              icon={Trash2}
-              onClick={handleDeletePatient}
-              className="min-h-[38px] text-xs font-bold px-4"
-            >
-              Yes, Delete Record
-            </Button>
-          </div>
-        </div>
-      </Modal>
+      {/* Deletion is now a Gmail-style optimistic delete with a 7s undo toast
+          (see handleDeletePatient) instead of a blocking confirm modal. */}
 
     </div>
   )

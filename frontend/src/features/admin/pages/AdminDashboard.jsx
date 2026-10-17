@@ -13,7 +13,11 @@ import { adminApi } from '../api/adminApi'
 import { doctorDisplayName } from '../../../shared/utils/clinicalMappers'
 
 // ── Stage → design token mapping ─────────────────────────────────────────
+// Canonical 3-stage labels first; legacy 4-stage labels kept for old records.
 const STAGE_BADGE_VARIANT = {
+  'Cognitively Normal (CN)': 'success',
+  'Mild Cognitive Impairment (MCI)': 'warning',
+  "Alzheimer's Disease (AD)": 'danger',
   'Non-Demented':       'success',
   'Non Demented':       'success',
   'Very Mild Demented': 'purple',
@@ -28,6 +32,9 @@ const STAGE_BADGE_VARIANT = {
 
 // Progress bar color per severity
 const STAGE_BAR_COLOR = {
+  'Cognitively Normal (CN)': 'bg-emerald-500',
+  'Mild Cognitive Impairment (MCI)': 'bg-amber-500',
+  "Alzheimer's Disease (AD)": 'bg-red-500',
   'Non-Demented':       'bg-emerald-500',
   'Non Demented':       'bg-emerald-500',
   'Very Mild Demented': 'bg-violet-500',

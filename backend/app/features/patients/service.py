@@ -61,6 +61,14 @@ class PatientService:
         photo = self.store_avatar(
             doctor_id, pid, patient_info.get('photo'), patient_name=name
         )
+        # patient_info is stored verbatim as the session's results_json
+        # patient block. A freshly captured data-URL (tens of KB) must never
+        # be copied into every saved analysis — write back the canonical
+        # avatar URL the same mapping Patient.to_dict serves. If avatar
+        # storage failed, the data-URL passes through so the photo still
+        # renders on the just-finished report.
+        if photo != patient_info.get('photo') and photo:
+            patient_info['photo'] = f"/api/patients/photo/{pid}"
         existing = self._repo.get_by_patient_id(pid)
         if existing:
             existing_owner = existing.get('created_by')

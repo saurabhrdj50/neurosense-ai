@@ -144,8 +144,6 @@ def setup_logging(
         force=True
     )
     
-    logging.getLogger('werkzeug').setLevel(logging.WARNING)
-    logging.getLogger('flask').setLevel(logging.INFO)
 
 
 def get_logger(name: str) -> logging.Logger:

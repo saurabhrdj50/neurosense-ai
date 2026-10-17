@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Brain, Loader2 } from 'lucide-react'
 import GlassCard from '../../shared/components/ui/GlassCard'
 import { ANALYSIS_STAGE_LABELS } from './api/analysisApi'
+import { useTheme } from '../../providers/ThemeProvider'
 
 /**
  * Honest analysis loader.
@@ -14,6 +15,7 @@ import { ANALYSIS_STAGE_LABELS } from './api/analysisApi'
  * The modality chips reflect the inputs the clinician actually submitted.
  */
 export function AnalysisLoader({ isLoading, patientName = 'Current patient', modalities = [], job = null }) {
+  const { isDark } = useTheme()
   const displayModalities = modalities.length ? modalities : ['Demographics', 'MRI', 'Cognition', 'Speech', 'Risk Factors']
   // Real pipeline position from the background job (stage + 0-100). When the
   // sync fallback is used there is no job — the bar falls back to easing.
@@ -31,7 +33,7 @@ export function AnalysisLoader({ isLoading, patientName = 'Current patient', mod
           exit={{ opacity: 0, transition: { duration: 0.45 } }}
           className="fixed inset-0 z-50 flex items-center justify-center p-4 transition-colors duration-300"
           style={{
-            background: 'rgba(15, 23, 42, 0.85)',
+            background: isDark ? 'rgba(15, 23, 42, 0.85)' : 'rgba(241, 245, 249, 0.72)',
             backdropFilter: 'blur(16px)',
           }}
         >

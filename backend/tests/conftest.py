@@ -1,5 +1,5 @@
 """
-Shared pytest fixtures for NeuroSense tests.
+Shared pytest fixtures for the NeuroSense FastAPI app.
 """
 
 import os
@@ -9,66 +9,71 @@ import pytest
 # Ensure the project root is on sys.path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# Test-mode env: disables the rate limiter and enables the reset-token echo
+# (there is no email delivery channel in tests). Demo data seeding is opted
+# into per-fixture below.
+os.environ.setdefault('SECRET_KEY', 'test-secret-key')
+os.environ.setdefault('TESTING', 'true')
+os.environ.setdefault('EXPOSE_RESET_TOKEN', 'true')
+
+from fastapi.testclient import TestClient
+
 
 @pytest.fixture
-def app(tmp_path):
-    """Create a Flask test application with a temporary database."""
-    tmp_db = str(tmp_path / 'test_patient_data.db')
-    os.environ['SECRET_KEY'] = 'test-secret-key'
-    os.environ['TESTING'] = 'true'  # disables rate-limiter in test mode
-    os.environ['SEED_DEMO_DATA'] = 'true'  # ensure seed users/patients are created
-    os.environ['EXPOSE_RESET_TOKEN'] = 'true'  # no email delivery channel in tests
-    os.environ['FLASK_ENV'] = 'development'
+def app(tmp_path, monkeypatch):
+    """The FastAPI app with a fresh temporary database per test.
 
-    # Config flag attrs are computed once at first import (before the env vars
-    # above existed), so patch them directly for deterministic test isolation.
+    Default: throwaway SQLite file. Set ``TEST_DATABASE_URL`` (e.g. a CI
+    postgres service) to run the same suite against PostgreSQL — tables are
+    dropped and recreated per test, so a dedicated empty database is required.
+    """
     from app.config.settings import Config
-    original_expose_reset_token = Config.EXPOSE_RESET_TOKEN
-    Config.EXPOSE_RESET_TOKEN = True
+    from app.shared import bootstrap, db_orm
 
-    # Patch the DB path BEFORE modules are loaded
-    from app.shared.database import Database
-    
-    from app.config.settings import Config
-    original_config_db = Config.DB_PATH
-    Config.DB_PATH = tmp_db
+    monkeypatch.setenv('SEED_DEMO_DATA', 'true')
 
-    # Now reset the singleton AFTER patching, so create_app() picks up the new path
-    original_db_instance = Database._instance
-    Database._instance = None
+    test_db_url = os.environ.get('TEST_DATABASE_URL')
+    if test_db_url:
+        if test_db_url.startswith('postgres://'):
+            test_db_url = test_db_url.replace('postgres://', 'postgresql://', 1)
+        monkeypatch.setattr(Config, 'DATABASE_URL', test_db_url)
+    else:
+        monkeypatch.setattr(Config, 'DATABASE_URL', None)
+        monkeypatch.setattr(Config, 'DB_PATH', str(tmp_path / 'test_patient_data.db'))
+    db_orm.reset_engine()
 
-    # Clear cached modules so they reinitialise with fresh DB
-    import app as app_module
-    flask_app = app_module.create_app()
-    
-    flask_app.config['TESTING'] = True
-    flask_app.config['WTF_CSRF_ENABLED'] = False
+    from app.main import app as fastapi_app
 
+    # Fresh schema per test (request-path code never runs DDL). Order matters:
+    # schema → test doctor user → bootstrap, so the demo patients (opted into
+    # below) are owned by the doctor exactly like the old seeded world. The
+    # app itself ships only the fixed admin (admin/admin) — the doctor here
+    # is test scaffolding, created through the repository like the seeder did.
     from app.shared.db_orm import Base, get_engine
     Base.metadata.drop_all(bind=get_engine())
-    Base.metadata.create_all(bind=get_engine())
+    bootstrap.ensure_schema()
+
     from app.features.auth.repository import UserRepository
-    UserRepository()
-    from app.features.patients.repository import PatientRepository
-    PatientRepository()
+    UserRepository().create(
+        username='doctor',
+        email='doctor@neurosense.ai',
+        password='Doctor@123',
+        role='doctor',
+        full_name='Dr. Gupta',
+        date_of_birth='1980-06-20',
+    )
 
-    with flask_app.app_context():
-        yield flask_app
+    bootstrap.bootstrap_database()
 
-    # Restore original DB paths and clear modules
-    Database._instance = None
-    Config.DB_PATH = original_config_db
-    Config.EXPOSE_RESET_TOKEN = original_expose_reset_token
-    os.environ.pop('TESTING', None)
-    os.environ.pop('SEED_DEMO_DATA', None)
-    os.environ.pop('EXPOSE_RESET_TOKEN', None)
-    os.environ.pop('FLASK_ENV', None)
+    yield fastapi_app
+
+    db_orm.reset_engine()
 
 
 @pytest.fixture
 def client(app):
-    """Flask test client."""
-    return app.test_client()
+    """FastAPI test client (httpx transport)."""
+    return TestClient(app)
 
 
 @pytest.fixture

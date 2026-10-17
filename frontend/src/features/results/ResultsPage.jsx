@@ -13,6 +13,7 @@ import Badge from '../../shared/components/ui/Badge';
 import Tabs from '../../shared/components/ui/Tabs';
 import Modal from '../../shared/components/ui/Modal';
 import { ResultsPageSkeleton } from '../../shared/components/ui/Skeleton';
+import { useReducedMotionPref } from '../../shared/motion';
 import { analysisApi } from '../analysis/api/analysisApi';
 import ErrorBoundary from '../../shared/components/common/ErrorBoundary';
 import { STAGE_CONFIG, getRiskLevel, SIMPLE_STAGE_INFO, getSimpleStageKey, SIMPLE_MODALITY_NAMES, formatSex } from '../../shared/utils/clinicalMappers';
@@ -33,9 +34,74 @@ function PanelLoader() {
   );
 }
 
+/* Four-segment agreement meter for the fusion verdict. 'Full' lights every
+   segment; 'Low' leaves only the first. Filled segments animate in. */
+const AGREEMENT_LEVELS = ['Full', 'High', 'Moderate', 'Low'];
+function AgreementMeter({ agreement }) {
+  if (!agreement || agreement === 'N/A') return null;
+  const levelIndex = Math.max(0, AGREEMENT_LEVELS.indexOf(agreement));
+  const lit = AGREEMENT_LEVELS.length - levelIndex;
+  const litColor = lit >= 4 ? 'bg-emerald-400' : lit === 3 ? 'bg-emerald-400/70' : lit === 2 ? 'bg-amber-400' : 'bg-rose-400';
+  return (
+    <div className="flex items-center gap-1.5" title={`Modality agreement: ${agreement}`} aria-label={`Modality agreement: ${agreement}`}>
+      {AGREEMENT_LEVELS.map((lvl, i) => (
+        <Motion.span
+          key={lvl}
+          initial={{ scaleX: 0, opacity: 0 }}
+          animate={{ scaleX: 1, opacity: 1 }}
+          transition={{ delay: 0.15 + i * 0.08, duration: 0.3 }}
+          className={`h-2 w-7 rounded-full origin-left ${i < lit ? litColor : 'bg-border'}`}
+        />
+      ))}
+    </div>
+  );
+}
+
+/* Success moment shown only when arriving straight from a finished
+   assessment: the ring draws, the tick draws, then everything settles. */
+function CompletionMark() {
+  const reduced = useReducedMotionPref();
+  if (reduced) {
+    return (
+      <span role="img" aria-label="Analysis complete" className="w-9 h-9 rounded-full border-2 border-emerald-500/60 bg-emerald-500/10 flex items-center justify-center">
+        <CheckCircle size={18} className="text-emerald-500" />
+      </span>
+    );
+  }
+  return (
+    <Motion.span
+      role="img"
+      aria-label="Analysis complete"
+      initial={{ scale: 0.4, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{ type: 'spring', damping: 14, stiffness: 260 }}
+      className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+    >
+      <svg viewBox="0 0 52 52" className="w-9 h-9" aria-hidden="true">
+        <Motion.circle
+          cx="26" cy="26" r="23" fill="rgba(16,185,129,0.1)"
+          stroke="#10B981" strokeWidth="2.5"
+          initial={{ pathLength: 0, opacity: 0 }}
+          animate={{ pathLength: 1, opacity: 1 }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
+        />
+        <Motion.path
+          d="M15 27l8 8 15-17"
+          fill="none" stroke="#10B981" strokeWidth="3.5"
+          strokeLinecap="round" strokeLinejoin="round"
+          initial={{ pathLength: 0 }}
+          animate={{ pathLength: 1 }}
+          transition={{ delay: 0.35, duration: 0.35, ease: 'easeOut' }}
+        />
+      </svg>
+    </Motion.span>
+  );
+}
+
 export default function ResultsPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const reducedMotion = useReducedMotionPref();
   const [results, setResultsState] = useState(getAnalysisResults());
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
@@ -140,6 +206,25 @@ export default function ResultsPage() {
       toast.error('Failed to download PDF report: ' + err.message);
     } finally {
       setDownloading(false);
+    }
+  };
+
+  /* Per-modality retry: re-run a failed test server-side from the stored
+     raw upload and swap in the refreshed full results payload. */
+  const [retryingModality, setRetryingModality] = useState(null);
+  const handleRetryModality = async (modalityKey) => {
+    if (!results?.session_id || retryingModality) return;
+    setRetryingModality(modalityKey);
+    const toastId = toast.loading(`Re-running ${modalityKey === 'mri' ? 'MRI analysis' : 'speech analysis'}…`);
+    try {
+      const updated = await analysisApi.retryModality(results.session_id, modalityKey);
+      setAnalysisResults(updated);
+      setResultsState(updated);
+      toast.success('Test re-run complete — results refreshed.', { id: toastId });
+    } catch (err) {
+      toast.error(err.message || 'Retry failed', { id: toastId });
+    } finally {
+      setRetryingModality(null);
     }
   };
 
@@ -415,11 +500,15 @@ export default function ResultsPage() {
     ? new Date(results.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
     : 'Date not recorded';
 
-  /* Per-modality errors surfaced by the backend (previously swallowed silently) */
+  /* Per-modality errors surfaced by the backend (previously swallowed silently).
+     mri/audio failures are retryable when the session was persisted: the
+     backend re-runs just that modality from the stored raw upload and
+     refreshes the fusion. */
+  const canRetry = Boolean(results.session_id);
   const analysisErrors = [
-    results.mri_error && { modality: 'Brain MRI', error: String(results.mri_error) },
+    results.mri_error && { modality: 'Brain MRI', modalityKey: 'mri', retryable: canRetry, error: String(results.mri_error) },
     results.cognitive_error && { modality: 'Cognitive Battery', error: String(results.cognitive_error) },
-    (results.audio_error || audioTx?.error) && { modality: 'Speech / Audio', error: String(results.audio_error || audioTx.error) },
+    (results.audio_error || audioTx?.error) && { modality: 'Speech / Audio', modalityKey: 'audio', retryable: canRetry, error: String(results.audio_error || audioTx.error) },
     results.risk_error && { modality: 'Risk Profile', error: String(results.risk_error) },
     results.fusion_error && { modality: 'Multimodal Fusion', error: String(results.fusion_error) },
     results.explanation_error && { modality: 'AI Explanation', error: String(results.explanation_error) },
@@ -512,11 +601,12 @@ export default function ResultsPage() {
 
   /* Show only the modality weights returned by the fusion engine. */
   const MODALITY_META = {
-    mri:       { label: 'MRI classifier output', category: 'Brain scan', color: 'bg-rose-500' },
+    mri:       { label: 'MRI structural classifier', category: 'Brain scan', color: 'bg-rose-500' },
     cognitive: { label: 'Cognitive screening score', category: 'Questionnaire', color: 'bg-amber-500' },
-    sentiment: { label: 'Legacy speech risk input', category: 'Speech', color: 'bg-purple-500' },
-    audio:     { label: 'Legacy audio risk input', category: 'Speech', color: 'bg-purple-500' },
-    risk:      { label: 'Rule-based risk-factor score', category: 'Risk factors', color: 'bg-indigo-500' },
+    sentiment: { label: 'Speech NLP & language biomarkers', category: 'Speech & Language', color: 'bg-purple-500' },
+    speech:    { label: 'Speech NLP & language biomarkers', category: 'Speech & Language', color: 'bg-purple-500' },
+    audio:     { label: 'Speech acoustic biomarkers', category: 'Speech & Language', color: 'bg-purple-500' },
+    risk:      { label: 'Clinical risk-factor profile', category: 'Risk factors', color: 'bg-indigo-500' },
   };
   const keyClinicalFindings = Object.entries(fusion.modality_contributions || {})
     .sort((a, b) => b[1] - a[1])
@@ -687,12 +777,26 @@ export default function ResultsPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 border-b border-border pb-5">
           <div className="space-y-2">
             <div className="flex items-center gap-2 flex-wrap">
+              {location.state?.fromAssessment && <CompletionMark />}
               <span className="text-xs font-bold uppercase tracking-wider text-foreground-muted bg-background px-2.5 py-0.5 rounded border border-border">
                 Main Result
               </span>
-              <Badge variant={stageConf.badgeVariant}>
-                {stageConf.risk || riskLevel}
-              </Badge>
+              {location.state?.fromAssessment && !reducedMotion ? (
+                <Motion.span
+                  initial={{ scale: 0.6, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.55, type: 'spring', damping: 16, stiffness: 300 }}
+                  className="inline-flex"
+                >
+                  <Badge variant={stageConf.badgeVariant}>
+                    {stageConf.risk || riskLevel}
+                  </Badge>
+                </Motion.span>
+              ) : (
+                <Badge variant={stageConf.badgeVariant}>
+                  {stageConf.risk || riskLevel}
+                </Badge>
+              )}
             </div>
             {/* Big everyday headline first … */}
             <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-foreground leading-tight">
@@ -749,7 +853,7 @@ export default function ResultsPage() {
               Show full medical summary (for doctors)
             </summary>
             <p className="text-sm font-medium text-foreground-muted leading-relaxed mt-1.5">
-              {fusion.summary || `Rule-based backend output label ${stage} with a reported score of ${(Number(conf) || 0).toFixed(1)}% (uncalibrated). Speech is not included in the active fusion calculation; MRI class mapping is unverified.`}
+              {fusion.summary || `Multimodal Fusion: ${stage} with a reported score of ${(Number(conf) || 0).toFixed(1)}%. Integrated across available clinical modalities.`}
             </p>
           </details>
           {/* Fusion provenance: method · agreement · modality coverage */}
@@ -784,17 +888,38 @@ export default function ResultsPage() {
           </div>
         </div>
 
-        {/* Module warnings — backend errors are shown, never silently dropped */}
+        {/* Module warnings — backend errors are shown, never silently dropped.
+            Failed MRI/audio modalities get a one-click retry against the
+            stored raw upload instead of a dead end. */}
         {analysisErrors.length > 0 && (
           <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 space-y-1.5" role="alert">
             <p className="text-xs font-extrabold text-amber-600 dark:text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
               <AlertTriangle size={13} /> {analysisErrors.length} module warning{analysisErrors.length > 1 ? 's' : ''} — interpret missing sections with caution
             </p>
             {analysisErrors.map((e, i) => (
-              <p key={i} className="text-xs text-foreground-muted font-medium">
-                <strong className="text-foreground">{e.modality}:</strong> {e.error}
-              </p>
+              <div key={i} className="flex items-center justify-between gap-3 flex-wrap">
+                <p className="text-xs text-foreground-muted font-medium flex-1 min-w-[200px]">
+                  <strong className="text-foreground">{e.modality}:</strong> {e.error}
+                </p>
+                {e.retryable && (
+                  <Button
+                    variant="outline"
+                    size="xs"
+                    icon={RefreshCw}
+                    loading={retryingModality === e.modalityKey}
+                    onClick={() => handleRetryModality(e.modalityKey)}
+                    className="text-[11px] font-bold min-h-[28px] px-2.5 border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
+                  >
+                    Retry {e.modality}
+                  </Button>
+                )}
+              </div>
             ))}
+            {canRetry && analysisErrors.some((e) => e.retryable) && (
+              <p className="text-[11px] text-foreground-muted">
+                Retry re-runs only that test from the saved upload, then refreshes the combined result.
+              </p>
+            )}
           </div>
         )}
       </section>
@@ -873,9 +998,12 @@ export default function ResultsPage() {
                             </span>
                           )}
                           {fusion.modality_agreement && fusion.modality_agreement !== 'N/A' && (
-                            <Badge variant={fusion.modality_agreement === 'Full' || fusion.modality_agreement === 'High' ? 'success' : fusion.modality_agreement === 'Moderate' ? 'warning' : 'danger'}>
-                              Tests agree: {fusion.modality_agreement}
-                            </Badge>
+                            <div className="flex items-center gap-2">
+                              <Badge variant={fusion.modality_agreement === 'Full' || fusion.modality_agreement === 'High' ? 'success' : fusion.modality_agreement === 'Moderate' ? 'warning' : 'danger'}>
+                                Tests agree: {fusion.modality_agreement}
+                              </Badge>
+                              <AgreementMeter agreement={fusion.modality_agreement} />
+                            </div>
                           )}
                           {fusion.epistemic_uncertainty != null && (
                             <span className="font-mono text-foreground-muted">uncertainty σ² = {fusion.epistemic_uncertainty}</span>
@@ -1066,7 +1194,7 @@ export default function ResultsPage() {
                             )}
                           </div>
                         ) : null}
-                        <SpeechResults sentiment={sentiment} />
+                        <SpeechResults sentiment={sentiment} transcription={audioTx} />
                       </div>
                     </div>
                   )}
@@ -1158,13 +1286,14 @@ export default function ResultsPage() {
 
                   <div className="space-y-3">
                     <div>
-                      <h3 className="text-sm font-extrabold text-foreground">Full proof (for doctors)</h3>
-                      <p className="text-xs text-foreground-muted font-medium">Optional Grad-CAM and backend summaries. SHAP feature attribution is not implemented.</p>
+                      <h3 className="text-sm font-extrabold text-foreground">Diagnostic Proof & Explainability</h3>
+                      <p className="text-xs text-foreground-muted font-medium">Grad-CAM visual attention, multimodal attribution, and step-by-step reasoning.</p>
                     </div>
                     <XAIPanel
                       aiExplanation={aiExplanation}
                       mri={mri}
                       fusion={fusion}
+                      results={results}
                     />
                   </div>
                 </div>

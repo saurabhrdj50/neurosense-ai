@@ -1,0 +1,5 @@
+Model,Accuracy,Precision,Recall,F1-Score,AUC-ROC
+DistilBERT Only,0.78,0.81,0.75,0.78,0.85
+DistilBERT + Linguistic,0.82,0.84,0.8,0.82,0.89
+DistilBERT + Linguistic + Sentiment,0.8,0.82,0.78,0.8,0.87
+Ensemble (Fusion),0.84,0.86,0.82,0.84,0.91

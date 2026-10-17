@@ -28,12 +28,12 @@ def test_admin_audit_log_endpoint(client):
     # Login as admin
     client.post('/api/auth/login', json={
         'username': 'admin',
-        'password': 'Admin@123!',
+        'password': 'admin',
     })
 
     res = client.get('/api/admin/audit-log')
     assert res.status_code == 200
-    data = res.get_json()
+    data = res.json()
     assert 'logs' in data
     assert 'total' in data
     assert isinstance(data['logs'], list)

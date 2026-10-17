@@ -1,13 +1,17 @@
 /**
  * @fileoverview Shared Clinical Mapping Utilities.
  * Unified source of truth for Alzheimer's stage classification, risk levels, badge styles, and colors.
+ *
+ * Stage vocabulary: the pipeline is 3-stage, mirroring the 3-class MRI model
+ * (CN / MCI / AD). Legacy 4-stage labels from older records ('Non-Demented',
+ * 'Very Mild Demented', 'Mild Demented', 'Moderate Demented', 'Severe
+ * Demented') remain mapped below so historical sessions keep rendering.
  */
 
 export const RISK_COLORS = {
   Normal: '#10B981',
   Mild: '#F59E0B',
-  Moderate: '#EF4444',
-  High: '#DC2626',
+  AD: '#EF4444',
 };
 
 export const STAGE_CONFIG = {
@@ -78,9 +82,10 @@ export function getRiskLevel(stage) {
 export function stageToBadgeVariant(stage) {
   if (!stage) return 'neutral';
   const lower = stage.toLowerCase();
-  if (stage === 'Normal' || lower.includes('non') || lower === 'low') return 'success';
-  if (stage === 'Mild' || (lower.includes('mild') && !lower.includes('moderate')) || lower === 'medium') return 'warning';
-  if (stage === 'High' || lower.includes('moderate') || lower.includes('severe')) return 'danger';
+  if (lower.includes('cognitively normal') || lower.includes('normal cognition') || lower === 'cn'
+      || stage === 'Normal' || lower.includes('non') || lower === 'low') return 'success';
+  if (stage === 'Mild' || (lower.includes('mild') && !lower.includes('moderate')) || lower.includes('mci') || lower === 'medium') return 'warning';
+  if (stage === 'High' || lower.includes('moderate') || lower.includes('severe') || lower.includes('alzheimer') || lower === 'ad') return 'danger';
   return 'neutral';
 }
 

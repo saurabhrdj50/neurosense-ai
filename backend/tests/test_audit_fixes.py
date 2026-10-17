@@ -40,7 +40,7 @@ class TestFusionGating:
         partial = CognitiveEvaluator().evaluate({'screening_breakdown': {'orient_date': 3}})
         result = self.fusion.predict(cognitive_result=partial)
         assert result['stage'] in (
-            'Non-Demented', 'Very Mild Demented', 'Mild Demented', 'Moderate Demented'
+            'Cognitively Normal (CN)', 'Mild Cognitive Impairment (MCI)', "Alzheimer's Disease (AD)"
         )
 
     def test_all_zero_answers_vote_severe_not_nothing(self):
@@ -55,7 +55,7 @@ class TestFusionGating:
         })
         assert answered['tests_completed'] == 15
         result = self.fusion.predict(cognitive_result=answered)
-        assert result['stage'] == 'Moderate Demented'
+        assert result['stage'] == "Alzheimer's Disease (AD)"
 
     def test_cognitive_scores_are_clamped(self):
         """Out-of-range answers can never inflate the composite."""
@@ -102,19 +102,19 @@ class TestAuthHardening:
         from app.config.settings import Config
         monkeypatch.setattr(Config, 'EXPOSE_RESET_TOKEN', False)
         resp = client.post('/api/auth/forgot-password', json={
-            'email': 'admin@neurosense.ai', 'date_of_birth': '1985-01-15'})
+            'email': 'doctor@neurosense.ai', 'date_of_birth': '1980-06-20'})
         assert resp.status_code == 200
-        assert 'reset_token' not in resp.get_json()
+        assert 'reset_token' not in resp.json()
 
     def test_forgot_password_response_identical_for_unknown_identity(self, client, monkeypatch):
         from app.config.settings import Config
         monkeypatch.setattr(Config, 'EXPOSE_RESET_TOKEN', False)
         known = client.post('/api/auth/forgot-password', json={
-            'email': 'admin@neurosense.ai', 'date_of_birth': '1985-01-15'})
+            'email': 'doctor@neurosense.ai', 'date_of_birth': '1980-06-20'})
         unknown = client.post('/api/auth/forgot-password', json={
-            'email': 'nobody@nowhere.io', 'date_of_birth': '1985-01-15'})
+            'email': 'nobody@nowhere.io', 'date_of_birth': '1980-06-20'})
         # Identical body so existence cannot be probed.
-        assert known.get_json() == unknown.get_json()
+        assert known.json() == unknown.json()
 
     def test_registration_cannot_create_admin(self, client):
         resp = client.post('/api/auth/register', json={
@@ -141,7 +141,7 @@ class TestAuthHardening:
 
     def test_user_dict_hides_security_fields(self, client):
         client.post('/api/auth/login', json={'username': 'doctor', 'password': 'Doctor@123'})
-        me = client.get('/api/auth/current-user').get_json()
+        me = client.get('/api/auth/current-user').json()
         for field in ('storage_key', 'failed_login_attempts', 'locked_until'):
             assert field not in me['user']
 
@@ -158,18 +158,17 @@ class TestAuthHardening:
 class TestOwnership:
     def test_analyze_rejects_other_doctors_patient(self, client):
         """A second doctor cannot analyze (and overwrite) doctor1's patient."""
-        import app.shared.database as db_mod
         # doctor (id from seed) owns PAT-1001
         client.post('/api/auth/login', json={'username': 'doctor', 'password': 'Doctor@123'})
         resp = client.post('/api/auth/register', json={
             'username': 'doctor2', 'email': 'doc2@test.com',
             'password': 'Password123!', 'date_of_birth': '1990-05-05'})
         assert resp.status_code == 201
-        client.get('/api/auth/logout')
+        client.post('/api/auth/logout')
         client.post('/api/auth/login', json={'username': 'doctor2', 'password': 'Password123!'})
         resp = client.post('/api/analysis/analyze', data={
             'patient_id': 'PAT-1001', 'name': 'Hijacked', 'age': '70',
-        }, content_type='multipart/form-data')
+        })
         assert resp.status_code == 403
         # The patient record is untouched.
         from app.features.patients.repository import PatientRepository
@@ -213,14 +212,11 @@ class TestStorageSafety:
 
     def test_mri_upload_rejects_content_mismatch(self, client, authenticated_client):
         """A text payload with an image extension is rejected (magic-byte check)."""
-        data = {
-            'patient_id': 'PAT-CUSTOM-1', 'name': 'Test Patient',
-            'mri_image': (io.BytesIO(b'<html>not an image</html>'), 'scan.png'),
-        }
-        resp = authenticated_client.post('/api/analysis/analyze', data=data,
-                                         content_type='multipart/form-data')
+        data = {'patient_id': 'PAT-CUSTOM-1', 'name': 'Test Patient'}
+        files = {'mri_image': ('scan.png', io.BytesIO(b'<html>not an image</html>'), 'image/png')}
+        resp = authenticated_client.post('/api/analysis/analyze', data=data, files=files)
         assert resp.status_code == 400
-        assert 'does not match' in resp.get_json()['message']
+        assert 'does not match' in resp.json()['message']
 
 
 # --------------------------------------------------------------------------- #
@@ -281,16 +277,15 @@ class TestBackgroundJobs:
         }
 
     def test_analyze_async_returns_job_and_completes(self, authenticated_client):
-        resp = authenticated_client.post('/api/analysis/analyze-async', data=self._minimal_form(),
-                                         content_type='multipart/form-data')
+        resp = authenticated_client.post('/api/analysis/analyze-async', data=self._minimal_form())
         assert resp.status_code == 202
-        body = resp.get_json()
+        body = resp.json()
         assert body['job_id'] and body['status_url'].startswith('/api/analysis/jobs/')
 
         import time
         result = None
         for _ in range(60):
-            status = authenticated_client.get(body['status_url']).get_json()
+            status = authenticated_client.get(body['status_url']).json()
             assert status['error'] is None
             if status['status'] == 'completed':
                 result = status['result']
@@ -299,16 +294,15 @@ class TestBackgroundJobs:
             time.sleep(0.25)
         assert result is not None, 'job never completed'
         assert result.get('final_stage', {}).get('stage') in (
-            'Non-Demented', 'Very Mild Demented', 'Mild Demented', 'Moderate Demented')
+            'Cognitively Normal (CN)', 'Mild Cognitive Impairment (MCI)', "Alzheimer's Disease (AD)")
         assert result.get('created_at')
 
     def test_job_status_hidden_from_other_users(self, client, authenticated_client):
-        resp = authenticated_client.post('/api/analysis/analyze-async', data=self._minimal_form(),
-                                         content_type='multipart/form-data')
-        job_id = resp.get_json()['job_id']
+        resp = authenticated_client.post('/api/analysis/analyze-async', data=self._minimal_form())
+        job_id = resp.json()['job_id']
         import time
         for _ in range(60):
-            st = authenticated_client.get(f'/api/analysis/jobs/{job_id}').get_json()
+            st = authenticated_client.get(f'/api/analysis/jobs/{job_id}').json()
             if st['status'] in ('completed', 'failed'):
                 break
             time.sleep(0.25)
@@ -319,7 +313,7 @@ class TestBackgroundJobs:
         client.post('/api/auth/login', json={'username': 'doctor9', 'password': 'Password123!'})
         assert client.get(f'/api/analysis/jobs/{job_id}').status_code == 404
         # anonymous as well
-        client.get('/api/auth/logout')
+        client.post('/api/auth/logout')
         assert client.get(f'/api/analysis/jobs/{job_id}').status_code in (401, 404)
 
     def test_unknown_job_404(self, authenticated_client):
@@ -330,8 +324,7 @@ class TestBackgroundJobs:
             'username': 'doctor10', 'email': 'doc10@test.com',
             'password': 'Password123!', 'date_of_birth': '1990-05-05'})
         client.post('/api/auth/login', json={'username': 'doctor10', 'password': 'Password123!'})
-        resp = client.post('/api/analysis/analyze-async', data=self._minimal_form('PAT-1001'),
-                           content_type='multipart/form-data')
+        resp = client.post('/api/analysis/analyze-async', data=self._minimal_form('PAT-1001'))
         assert resp.status_code == 403
 
     def test_job_manager_progress_and_failures(self):

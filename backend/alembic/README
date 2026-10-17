@@ -1,0 +1,122 @@
+# NeuroSense AI — Database Migrations (Alembic)
+
+This directory contains the database migration environment and version history for NeuroSense AI, powered by **Alembic** and **SQLAlchemy 2**.
+
+---
+
+## 🏗️ Architecture & Multi-Database Support
+
+NeuroSense AI is engineered to run seamlessly across both enterprise relational databases and zero-dependency local environments:
+
+1. **PostgreSQL 16 (Production & Docker)**:
+   - Full ACID transaction guarantees, JSONB document storage, high-concurrency indexing, and native column alterations.
+   - Database URL automatically pinned to `postgresql+psycopg2://` driver.
+2. **SQLite 3 (Local Development & Fallback)**:
+   - File-based database (`patient_data.db`) initialized when `DATABASE_URL` is unset.
+   - Batch rendering mode enabled (`render_as_batch=True`) in `env.py` to allow column additions, renames, and drops without SQLite schema lock limitations.
+
+---
+
+## 📂 Directory Structure
+
+```
+backend/alembic/
+├── README                     # This documentation file
+├── env.py                     # Migration execution environment & model registry
+├── script.py.mako             # Template for newly generated migration revisions
+└── versions/                  # Chronological migration revision scripts
+```
+
+### Models Tracked in `env.py`
+
+Every ORM model is registered in `alembic/env.py` so that autogenerate detects all schema diffs:
+- `app.shared.models.user.User` — Doctors and system administrators with hashed credentials and roles.
+- `app.shared.models.patient.Patient` — Longitudinal patient records with Fernet-encrypted PHI fields (name, medical record number, contact).
+- `app.shared.models.session.AnalysisSession` — Multimodal screening records (MRI, speech, cognitive, risk, fusion outputs, PDF reports).
+- `app.shared.models.audit_log.AuditLog` — Immutable security and audit logging tracking access to patient health information.
+- `app.shared.models.app_meta.AppMeta` — System configuration flags and migration state indicators.
+
+---
+
+## 🚀 Migration Commands Reference
+
+Run all Alembic commands from the `backend/` directory with the virtual environment activated:
+
+```bash
+cd backend
+source venv/bin/activate
+```
+
+### 1. Apply Migrations to Latest Schema (`upgrade head`)
+Apply all pending migrations to the configured database:
+
+```bash
+# Against default database (configured via DATABASE_URL or SQLite)
+alembic upgrade head
+
+# Explicitly against PostgreSQL container
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/neurosense alembic upgrade head
+```
+
+### 2. Generate a New Migration Revision
+When you add or modify SQLAlchemy models in `app/shared/models/`:
+
+```bash
+# Automatic schema diff detection
+alembic revision --autogenerate -m "add_patient_risk_score"
+
+# Empty manual revision
+alembic revision -m "custom_data_backfill"
+```
+
+> **Important**: Always inspect the generated script in `alembic/versions/` before applying it to ensure constraints, nullable defaults, and indexes match your expectations.
+
+### 3. Check Current Migration Status
+View the database's current applied revision:
+
+```bash
+alembic current
+```
+
+### 4. View Revision History
+Display the chronological sequence of all migration revisions:
+
+```bash
+alembic history --verbose
+```
+
+### 5. Rollback Migrations (`downgrade`)
+Revert schema changes if necessary:
+
+```bash
+# Rollback the single most recent migration
+alembic downgrade -1
+
+# Rollback to a specific revision ID
+alembic downgrade <revision_id>
+
+# Rollback all migrations to base (empty schema)
+alembic downgrade base
+```
+
+---
+
+## ⚙️ Environment Variables
+
+Alembic reads database connection strings from the environment:
+
+| Variable | Description | Default |
+|---|---|---|
+| `ALEMBIC_DATABASE_URL` | Takes highest precedence for migration runs if specified. | None |
+| `DATABASE_URL` | Standard connection string (e.g., `postgresql://user:pass@host:5432/dbname`). | `sqlite:///patient_data.db` |
+
+---
+
+## 💡 Troubleshooting
+
+- **Target database not reachable**: Verify that your PostgreSQL Docker container is running (`docker compose ps`) and port `5432` is accessible.
+- **SQLite Batch Mode Issues**: Ensure new revisions define table operations inside `with op.batch_alter_table("table_name") as batch_op:` when modifying existing columns.
+- **Head Divergence (Multiple Heads)**: If branches introduce conflicting migrations, merge them using:
+  ```bash
+  alembic merge -m "merge_conflicting_branches" <rev_a> <rev_b>
+  ```

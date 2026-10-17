@@ -6,13 +6,18 @@ class PatientSchema:
     @staticmethod
     def validate_create(data: Dict[str, Any]) -> Dict[str, Any]:
         errors = {}
-        
-        patient_id = data.get('patient_id', '').strip()
-        name = data.get('name', '').strip()
+
+        # `or ''` guards against JSON null / missing fields — a bare
+        # .get(..., '').strip() raises AttributeError (→ 500) on null.
+        patient_id = (data.get('patient_id') or '').strip()
+        name = (data.get('name') or '').strip()
         age = data.get('age')
         sex = data.get('sex')
         education_years = data.get('education_years')
-        notes = data.get('notes', '').strip()
+        notes = (data.get('notes') or '').strip()
+        photo = data.get('photo')
+        if photo is not None and not isinstance(photo, str):
+            errors['photo'] = 'Photo must be a base64 image data URL'
         
         if not patient_id:
             errors['patient_id'] = 'Patient ID is required'
@@ -53,13 +58,23 @@ class PatientSchema:
             'sex': sex,
             'education_years': education_years,
             'notes': notes,
+            'photo': photo,
         }
-    
+
     @staticmethod
     def validate_update(data: Dict[str, Any]) -> Dict[str, Any]:
         allowed = {'name', 'age', 'sex', 'education_years', 'stage', 'notes'}
         result = {k: v for k, v in data.items() if k in allowed}
-        
+
+        if 'name' in result:
+            name = (result['name'] or '').strip()
+            if len(name) < 2:
+                raise ValueError({'name': 'Name must be at least 2 characters'})
+            result['name'] = name
+
+        if 'sex' in result and result['sex'] is not None and result['sex'] not in ('M', 'F', 'Other'):
+            raise ValueError({'sex': 'Sex must be M, F, or Other'})
+
         if 'age' in result:
             try:
                 result['age'] = int(result['age'])

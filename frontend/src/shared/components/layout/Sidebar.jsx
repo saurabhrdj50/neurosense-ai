@@ -92,7 +92,7 @@ export default function Sidebar({ open, onToggle, isMobile = false }) {
       </div>
 
       {/* ── Nav items ─────────────────────────────────────────────────── */}
-      <nav className="flex-1 px-2.5 space-y-1.5 mt-2" role="navigation" aria-label="Primary navigation">
+      <nav className="flex-1 px-2.5 space-y-1.5 mt-2" role="navigation" aria-label="Primary navigation" data-tour="sidebar-nav">
         {open && (
           <div className="px-2.5 pt-2 pb-1.5 text-xs font-bold uppercase tracking-wider text-foreground-muted">
             {isAdmin ? 'Admin System' : 'Navigation Menu'}
@@ -102,20 +102,29 @@ export default function Sidebar({ open, onToggle, isMobile = false }) {
           <NavLink key={to} to={to} title={!open ? label : undefined}>
             {({ isActive }) => (
               <div
-                className={`flex items-center gap-3.5 px-3.5 py-3 rounded-xl cursor-pointer transition-all duration-150 relative min-h-[48px] ${
+                className={`flex items-center gap-3.5 px-3.5 py-3 rounded-xl cursor-pointer transition-colors duration-150 relative min-h-[48px] ${
                   open ? '' : 'justify-center'
                 } ${
                   isActive
-                    ? 'bg-primary/10 text-primary font-bold shadow-2xs'
+                    ? 'text-primary font-bold'
                     : 'text-foreground-muted hover:bg-surface-hover hover:text-foreground font-medium'
                 }`}
               >
                 {isActive && (
-                  <span className="absolute left-0 top-2 bottom-2 w-1.5 rounded-r-full bg-primary" />
+                  <>
+                    {/* Sliding active pill — glides between nav items */}
+                    <motion.span
+                      layoutId="sidebar-active-pill"
+                      transition={{ type: 'spring', damping: 30, stiffness: 420 }}
+                      className="absolute inset-0 rounded-xl bg-primary/10"
+                      aria-hidden="true"
+                    />
+                    <span className="absolute left-0 top-2 bottom-2 w-1.5 rounded-r-full bg-primary" aria-hidden="true" />
+                  </>
                 )}
-                <Icon size={20} className={`shrink-0 ${isActive ? 'text-primary' : 'text-foreground-muted'}`} />
+                <Icon size={20} className={`relative z-1 shrink-0 transition-transform duration-150 ${isActive ? 'text-primary scale-105' : 'text-foreground-muted group-hover:scale-105'}`} />
                 {open && (
-                  <span className="text-base font-semibold whitespace-nowrap truncate">{label}</span>
+                  <span className="relative z-1 text-base font-semibold whitespace-nowrap truncate">{label}</span>
                 )}
               </div>
             )}

@@ -2,9 +2,7 @@ import re
 import magic
 from typing import Dict, Any, List, Optional, Tuple
 from functools import wraps
-from flask import request, jsonify, g
 
-from app.shared.exceptions import ValidationError
 
 
 class InputValidator:
@@ -88,17 +86,16 @@ class InputValidator:
             
             mime_mapping = {
                 'image': ['image/jpeg', 'image/png', 'image/gif', 'image/bmp', 'image/tiff'],
-                'audio': ['audio/wav', 'audio/mpeg', 'audio/ogg', 'audio/flac', 'audio/webm'],
+                'audio': ['audio/wav', 'audio/x-wav', 'audio/mpeg', 'audio/ogg', 'audio/flac', 'audio/webm', 'video/webm'],
                 'text': ['text/plain'],
             }
             
-            allowed_mimes = []
+            allowed_mimes = set()
             for file_type in allowed_types:
-                allowed_mimes.extend(mime_mapping.get(file_type, []))
+                allowed_mimes.update(mime_mapping.get(file_type, []))
             
-            for allowed_mime in allowed_mimes:
-                if file_mime.startswith(allowed_mime.split('/')[0]):
-                    return True, ""
+            if file_mime in allowed_mimes:
+                return True, ""
             
             return False, f"Invalid file type: {file_mime}. Allowed: {', '.join(allowed_types)}"
         except Exception:
@@ -125,95 +122,3 @@ class InputValidator:
             return False, f"Invalid factor type: {factor_type}"
         
         return True, ""
-
-
-class RequestValidator:
-    """Validates incoming HTTP requests."""
-    
-    @staticmethod
-    def validate_json() -> Tuple[bool, Dict, str]:
-        """Validate JSON content type and parse."""
-        if not request.is_json:
-            return False, {}, "Content-Type must be application/json"
-        
-        try:
-            data = request.get_json()
-            if data is None:
-                return False, {}, "Invalid JSON body"
-            return True, data, ""
-        except Exception as e:
-            return False, {}, f"Failed to parse JSON: {str(e)}"
-    
-    @staticmethod
-    def validate_form_fields(required_fields: List[str]) -> Tuple[bool, Dict, str]:
-        """Validate form contains required fields."""
-        data = {}
-        missing = []
-        
-        for field in required_fields:
-            value = request.form.get(field)
-            if value is not None:
-                data[field] = value.strip()
-            elif field in request.files:
-                data[field] = request.files[field]
-            else:
-                missing.append(field)
-        
-        if missing:
-            return False, {}, f"Missing required fields: {', '.join(missing)}"
-        
-        return True, data, ""
-
-
-def validate_request(*required_fields: str, json_body: bool = False):
-    """Decorator for request validation."""
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            if json_body:
-                valid, data, error = RequestValidator.validate_json()
-                if not valid:
-                    return jsonify({'error': error}), 400
-                g.validated_data = data
-            else:
-                valid, data, error = RequestValidator.validate_form_fields(list(required_fields))
-                if not valid:
-                    return jsonify({'error': error}), 400
-                g.form_data = data
-            
-            return f(*args, **kwargs)
-        return decorated_function
-    return decorator
-
-
-def sanitize_input(func):
-    """Decorator to sanitize all string inputs in request."""
-    @wraps(func)
-    def decorated_function(*args, **kwargs):
-        if request.is_json:
-            data = request.get_json(silent=True) or {}
-            sanitized = {}
-            for key, value in data.items():
-                if isinstance(value, str):
-                    sanitized[key] = InputValidator.sanitize_string(value)
-                elif isinstance(value, dict):
-                    sanitized[key] = {
-                        k: InputValidator.sanitize_string(v) if isinstance(v, str) else v
-                        for k, v in value.items()
-                    }
-                else:
-                    sanitized[key] = value
-            g.sanitized_data = sanitized
-        return func(*args, **kwargs)
-    return decorated_function
-
-
-def rate_limit_key_func():
-    """Generate rate limit key including user ID if authenticated."""
-    from app.shared.security import get_current_user_id
-    
-    user_id = get_current_user_id()
-    if user_id:
-        return f"user_{user_id}"
-    
-    return request.remote_addr

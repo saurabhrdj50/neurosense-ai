@@ -1,4 +1,15 @@
 import API_URL from '../../../config/api';
+import { notifyUnauthorized } from '../../../services/apiClient';
+
+// Same global session-expiry contract as services/apiClient: a 401 on any
+// analysis endpoint means the session died — let AuthProvider reset and
+// redirect instead of failing silently mid-assessment.
+async function authedFetch(url, options = {}) {
+  const res = await fetch(url, options)
+  if (res.status === 401) notifyUnauthorized(url)
+  return res
+}
+
 
 async function handleResponse(res) {
   if (!res.ok) {
@@ -25,7 +36,7 @@ const JOB_POLL_MAX_MS = 10 * 60 * 1000
 
 export const analysisApi = {
   runFullAnalysis: async (formData) => {
-    const res = await fetch(`${API_URL}/api/analysis/analyze`, {
+    const res = await authedFetch(`${API_URL}/api/analysis/analyze`, {
       method: 'POST',
       credentials: 'include',
       body: formData,
@@ -34,7 +45,7 @@ export const analysisApi = {
   },
 
   analyzeAsync: async (formData) => {
-    const res = await fetch(`${API_URL}/api/analysis/analyze-async`, {
+    const res = await authedFetch(`${API_URL}/api/analysis/analyze-async`, {
       method: 'POST',
       credentials: 'include',
       body: formData,
@@ -47,15 +58,34 @@ export const analysisApi = {
   },
 
   getAnalysisJob: async (jobId) => {
-    const res = await fetch(`${API_URL}/api/analysis/jobs/${jobId}`, { credentials: 'include' })
+    const res = await authedFetch(`${API_URL}/api/analysis/jobs/${jobId}`, { credentials: 'include' })
     return handleResponse(res)
+  },
+
+  /**
+   * Re-run one failed modality ('mri' | 'audio') for a persisted session
+   * from its stored raw upload. Returns the refreshed full results payload;
+   * the session's fusion, explanation and PDF are regenerated server-side.
+   */
+  retryModality: async (sessionId, modality) => {
+    const res = await authedFetch(`${API_URL}/api/analysis/sessions/${sessionId}/retry`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ modality }),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.message || err.error || `HTTP ${res.status}`)
+    }
+    return res.json()
   },
 
   mriPreview: async (file) => {
     const formData = new FormData()
     formData.append('mri_image', file)
 
-    const res = await fetch(`${API_URL}/api/analysis/mri/preview`, {
+    const res = await authedFetch(`${API_URL}/api/analysis/mri/preview`, {
       method: 'POST',
       credentials: 'include',
       body: formData,
@@ -69,7 +99,7 @@ export const analysisApi = {
   },
 
   getPastAnalyses: async () => {
-    const res = await fetch(`${API_URL}/api/analysis/history`, { credentials: 'include' });
+    const res = await authedFetch(`${API_URL}/api/analysis/history`, { credentials: 'include' });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: 'Request failed' }))
       throw new Error(err.error || `HTTP ${res.status}`)
@@ -79,7 +109,7 @@ export const analysisApi = {
   },
 
   downloadPdfReport: async (results) => {
-    const res = await fetch(`${API_URL}/api/analysis/report/pdf`, {
+    const res = await authedFetch(`${API_URL}/api/analysis/report/pdf`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',

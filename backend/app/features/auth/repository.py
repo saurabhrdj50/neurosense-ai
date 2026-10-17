@@ -5,7 +5,7 @@ from typing import Optional, List, Dict, Any
 from sqlalchemy.exc import IntegrityError
 from app.shared.repository import BaseRepository
 from app.shared.security import hash_password, verify_password
-from app.shared.db_orm import SessionLocal, init_db
+from app.shared.db_orm import SessionLocal
 from app.shared.models.user import User
 from app.shared.time_utils import utc_now, utc_now_iso, parse_timestamp
 
@@ -19,63 +19,9 @@ LOCKOUT_MINUTES = 15
 # burns the same ~100ms of KDF time as a real password check (timing parity).
 _DUMMY_HASH = hash_password('timing-equalizer-not-a-real-password')
 
-SAMPLE_USERS = [
-    {'username': 'admin', 'email': 'admin@neurosense.ai', 'password': 'Admin@123!', 'role': 'admin', 'full_name': 'System Admin', 'date_of_birth': '1985-01-15'},
-    {'username': 'doctor', 'email': 'doctor@neurosense.ai', 'password': 'Doctor@123', 'role': 'doctor', 'full_name': 'Dr. Gupta', 'date_of_birth': '1980-06-20'},
-]
-
 
 class UserRepository(BaseRepository):
-    def _init_schema(self) -> None:
-        """Initialize the SQLAlchemy schema."""
-        init_db()
-        self._ensure_seed_data()
-
-    def _ensure_seed_data(self) -> None:
-        with SessionLocal() as db:
-            count = db.query(User).count()
-            if count > 0:
-                # Backfill storage_key for existing users that don't have one
-                self._backfill_storage_keys(db)
-                return
-
-            if not self._should_seed_demo_users():
-                logger.info("Demo user seeding disabled; no users present.")
-                return
-
-            for u in SAMPLE_USERS:
-                user = User(
-                    username=u['username'],
-                    email=u['email'],
-                    password_hash=hash_password(u['password']),
-                    role=u['role'],
-                    full_name=u['full_name'],
-                    date_of_birth=u.get('date_of_birth', '')
-                )
-                db.add(user)
-                try:
-                    db.flush()  # Obtain the auto-generated ID
-                    safe = self._generate_storage_key_from_username(u['username'])
-                    user.storage_key = f"{user.id}_{safe}"
-                except Exception:
-                    pass
-            try:
-                db.commit()
-                logger.info("Seeded default users via SQLAlchemy")
-            except IntegrityError:
-                db.rollback()
-
-    @staticmethod
-    def _should_seed_demo_users() -> bool:
-        # Demo accounts carry hardcoded public passwords, so seeding must be
-        # an explicit opt-in — never an accident of FLASK_ENV being unset.
-        from app.config.settings import Config
-        if Config.SEED_DEMO_USERS:
-            return True
-        # Legacy env var kept for backwards compatibility.
-        import os
-        explicit = os.environ.get('SEED_DEMO_DATA')
-        return explicit is not None and explicit.lower() in ('1', 'true', 'yes')
+    """User persistence. Schema and demo seeding live in app.shared.bootstrap."""
 
     @staticmethod
     def _generate_storage_key_from_username(username: str, user_id: Optional[int] = None) -> str:
@@ -87,23 +33,6 @@ class UserRepository(BaseRepository):
         if user_id is not None:
             return f"{user_id}_{safe}"
         return safe  # Will be updated with ID after commit
-
-    @staticmethod
-    def _backfill_storage_keys(db) -> None:
-        """Backfill storage_key for legacy users who have none set."""
-        users = db.query(User).filter(User.storage_key.is_(None)).all()
-        for user in users:
-            safe = "".join(
-                c if c.isalnum() or c in ('-', '_') else '_'
-                for c in (user.username or 'unknown')
-            ).strip('_').lower()
-            user.storage_key = f"{user.id}_{safe}"
-        if users:
-            try:
-                db.commit()
-                logger.info("Backfilled storage_key for %d users", len(users))
-            except Exception:
-                db.rollback()
 
     # ---------------------------------------------------------------------- #
     # Basic lookups                                                            #
@@ -273,7 +202,8 @@ class UserRepository(BaseRepository):
         password: str,
         role: str = 'doctor',
         full_name: str = '',
-        date_of_birth: str = ''
+        date_of_birth: str = '',
+        hospital: str = ''
     ) -> Dict[str, Any]:
         with SessionLocal() as db:
             try:
@@ -283,7 +213,8 @@ class UserRepository(BaseRepository):
                     password_hash=hash_password(password),
                     role=role,
                     full_name=full_name,
-                    date_of_birth=date_of_birth
+                    date_of_birth=date_of_birth,
+                    hospital=hospital
                 )
                 db.add(user)
                 db.flush()  # Populate user.id before commit

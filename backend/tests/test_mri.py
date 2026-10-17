@@ -33,7 +33,7 @@ class TestProductionMRIArtifact:
         Image.new("RGB", (64, 64), color=(128, 128, 128)).save(img)
         clf = MRIClassifier(model_path=str(Config.MODEL_PATH))
         out = clf.predict(str(img))
-        assert out.get("stage") in ("Non-Demented", "Very Mild Demented", "Mild Demented", "Moderate Demented")
+        assert out.get("stage") in ("Cognitively Normal (CN)", "Mild Cognitive Impairment (MCI)", "Alzheimer's Disease (AD)")
         assert 0 <= out.get("confidence", -1) <= 100
         assert isinstance(out.get("probabilities"), dict)
         # No fabricated clinical measurements in genuine inference output.

@@ -1,28 +1,103 @@
-# NeuroSense local stack: Flask API + built frontend preview.
-# Usage: cp backend/.env.example backend/.env  (then edit SECRET_KEY)
-#        docker compose up --build
-# API at http://localhost:10000, UI at http://localhost:3000.
+# NeuroSense local stack: FastAPI + PostgreSQL + nginx-served frontend.
+# Usage:
+#   1. cp backend/.env.example backend/.env   (then set SECRET_KEY)
+#   2. Place the model files in backend/app/models/ (gitignored — see
+#      backend/app/models/README.md). Without them the api container stays
+#      UNHEALTHY by design (its /api/health checks for the MRI model) and web
+#      will not start.
+#   3. docker compose up --build
+#
+# Database credentials for the whole stack come from THIS directory's .env
+# (POSTGRES_USER / POSTGRES_PASSWORD / POSTGRES_DB), with dev fallbacks baked
+# into the defaults below. If host port 3000 is taken (e.g. by `npm run dev`),
+# stop the dev server or set WEB_PORT=3001 in .env.
+#
+# UI at http://localhost:3000 (same-origin /api proxy → no CORS needed),
+# raw API at http://localhost:10000 (interactive docs at /docs, disabled in
+# production).
 services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-neuro}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-neuro}
+      POSTGRES_DB: ${POSTGRES_DB:-neurosense}
+    volumes:
+      - neuro_pg:/var/lib/postgresql/data
+    # results_json payload building benefits from a bit of temp memory
+    shm_size: 128m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-neuro} -d ${POSTGRES_DB:-neurosense}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - neuro_redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: cgr.dev/chainguard/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - neuro_minio:/data
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/9000' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   api:
     build: ./backend
+    restart: unless-stopped
+    stop_grace_period: 30s   # let in-flight ML jobs finish before SIGKILL
     ports:
       - "10000:10000"
     env_file:
       - ./backend/.env
     environment:
-      # Single environment block — YAML last-wins silently dropped earlier
-      # keys when this was split in two.
       PORT: 10000
-      SQLITE_PATH: /app/data/patient_data.db
+      DATABASE_URL: postgresql://${POSTGRES_USER:-neuro}:${POSTGRES_PASSWORD:-neuro}@db:5432/${POSTGRES_DB:-neurosense}
       ENABLE_EAGER_WARMUP: ${ENABLE_EAGER_WARMUP:-false}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      USE_CELERY: ${USE_CELERY:-true}
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_BUCKET: neurosense-uploads
+      STORAGE_BACKEND: ${STORAGE_BACKEND:-minio}
     volumes:
-      # Trained checkpoint (read-only; never baked into the image).
       - ./backend/app/models:/app/app/models:ro
-      # SQLite DB, uploads, and Whisper cache persist across restarts.
-      - neuro_data:/app/data
       - neuro_uploads:/app/app/uploads
       - neuro_whisper:/home/neuro/.cache/whisper
+      - neuro_hf:/home/neuro/.cache/huggingface
     user: "10001:10001"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:10000/api/health')"]
       interval: 30s
@@ -30,21 +105,118 @@ services:
       retries: 3
       start_period: 60s
 
-  web:
-    image: node:20-slim
-    working_dir: /app
-    command: sh -c "npm ci && npm run build && npx vite preview --host 0.0.0.0 --port 3000"
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./frontend:/app
+  worker:
+    build: ./backend
+    restart: unless-stopped
+    command: celery -A app.celery_app worker --loglevel=info -c 2
+    env_file:
+      - ./backend/.env
     environment:
-      VITE_API_URL: http://localhost:10000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-neuro}:${POSTGRES_PASSWORD:-neuro}@db:5432/${POSTGRES_DB:-neurosense}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_BUCKET: neurosense-uploads
+      STORAGE_BACKEND: ${STORAGE_BACKEND:-minio}
+    volumes:
+      - ./backend/app/models:/app/app/models:ro
+      - neuro_uploads:/app/app/uploads
+      - neuro_whisper:/home/neuro/.cache/whisper
+      - neuro_hf:/home/neuro/.cache/huggingface
+    user: "10001:10001"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        # Empty → the built app calls same-origin /api (nginx proxies it to
+        # the api service). For a cross-origin deployment set VITE_API_URL to
+        # the public API URL and configure CORS_ORIGINS + SameSite cookies.
+        VITE_API_URL: ""
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-3000}:80"
     depends_on:
       api:
-        condition: service_started
+        condition: service_healthy
+    healthcheck:
+      # 127.0.0.1, not localhost: busybox wget resolves localhost to ::1
+      # first and nginx (IPv4-only listener) refuses it.
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # Nightly clinical-records backup: pg_dump at 02:30 UTC into ./backups
+  # (bind mount), keeping the last 14 files. Clinical records are the one
+  # asset that must survive any failure — verify the backups restore
+  # (pg_restore into a scratch db) at least once.
+  # ⚠️ Dumps are NOT encrypted: ./backups contains full clinical records, so
+  # the directory must be stored/access-controlled (and ideally encrypted at
+  # rest) like the database itself.
+  db_backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      PGHOST: db
+      PGUSER: ${POSTGRES_USER:-neuro}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-neuro}
+      PGDATABASE: ${POSTGRES_DB:-neurosense}
+      BACKUP_DIR: /backups
+      BACKUP_TIME: "02:30"
+      BACKUP_RETENTION: "14"
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        set -e
+        mkdir -p "$${BACKUP_DIR}"
+        echo "[db_backup] nightly pg_dump scheduled at $${BACKUP_TIME} UTC, keeping $${BACKUP_RETENTION} dumps"
+        # Busybox 'date' (alpine image) has no GNU '-d today HH:MM', so compute
+        # the next run with epoch arithmetic: epoch started at UTC midnight,
+        # hence now % 86400 == seconds since midnight.
+        hh=$${BACKUP_TIME%:*}
+        mm=$${BACKUP_TIME#*:}
+        # Strip leading zeros so shell arithmetic cannot read them as octal.
+        case "$$hh" in 0*) hh=$${hh#0};; esac
+        case "$$mm" in 0*) mm=$${mm#0};; esac
+        while true; do
+          now=$$(date -u +%s)
+          target=$$(( now - now % 86400 + hh * 3600 + mm * 60 ))
+          if [ "$$target" -le "$$now" ]; then
+            target=$$(( target + 86400 ))
+          fi
+          sleep $$((target - now))
+          stamp=$$(date -u +%Y%m%d_%H%M%S)
+          echo "[db_backup] dumping to $${BACKUP_DIR}/neurosense_$${stamp}.dump"
+          if pg_dump -Fc -f "$${BACKUP_DIR}/neurosense_$${stamp}.dump"; then
+            echo "[db_backup] dump completed"
+          else
+            echo "[db_backup] ERROR: pg_dump failed" >&2
+          fi
+          # Prune backups beyond retention (newest $${BACKUP_RETENTION} kept).
+          ls -1t "$${BACKUP_DIR}"/neurosense_*.dump 2>/dev/null | tail -n +$$((BACKUP_RETENTION + 1)) | xargs -r rm -f
+        done
+    volumes:
+      - ./backups:/backups
+    depends_on:
+      db:
+        condition: service_healthy
 
 volumes:
-  neuro_data:
+  neuro_pg:
   neuro_uploads:
   neuro_whisper:
+  neuro_hf:
+  neuro_redis:
+  neuro_minio:

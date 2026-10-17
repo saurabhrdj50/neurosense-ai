@@ -2,12 +2,59 @@ import shutil
 import base64
 import binascii
 import logging
+import os
+import re
+import unicodedata
 from pathlib import Path
-from typing import Optional
-from werkzeug.datastructures import FileStorage
+from typing import BinaryIO, Optional, Protocol
 from app.config.settings import Config
 
 logger = logging.getLogger(__name__)
+
+
+class FileLike(Protocol):
+    """Duck type shared by uploaded-file adapters and the tests.
+
+    Mirrors the historical file-object surface: a name, a seekable binary
+    stream, and a way to persist to a path.
+    """
+
+    filename: str
+    stream: BinaryIO
+
+    def save(self, path: str) -> None: ...
+
+
+# ── Filename sanitization (same semantics as the historical helper) ────────
+_FILENAME_ASCII_STRIP_RE = re.compile(r"[^A-Za-z0-9_.-]")
+_WINDOWS_DEVICE_FILES = {
+    'CON', 'PRN', 'AUX', 'NUL',
+    'COM1', 'COM2', 'COM3', 'COM4', 'COM5', 'COM6', 'COM7', 'COM8', 'COM9',
+    'LPT1', 'LPT2', 'LPT3', 'LPT4', 'LPT5', 'LPT6', 'LPT7', 'LPT8', 'LPT9',
+}
+
+
+def secure_filename(filename: str) -> str:
+    """Return an ASCII-only, filesystem-safe version of ``filename``.
+
+    Normalizes Unicode, strips path separators and unsafe characters, and
+    collapses whitespace to underscores. May return an empty string —
+    callers supply a fallback.
+    """
+    filename = str(unicodedata.normalize('NFKD', filename))
+    filename = filename.encode('ascii', 'ignore').decode('ascii')
+
+    for sep in os.sep, os.path.altsep:
+        if sep:
+            filename = filename.replace(sep, ' ')
+    filename = str(_FILENAME_ASCII_STRIP_RE.sub('', '_'.join(filename.split()))).strip('._')
+
+    # Windows reserves a few device names in every folder — prepend an
+    # underscore so a stored file can never collide with one.
+    if os.name == 'nt' and filename and filename.split('.')[0].upper() in _WINDOWS_DEVICE_FILES:
+        filename = f'_{filename}'
+
+    return filename
 
 # Maximum decoded avatar size (bytes) — avatars are display thumbnails.
 MAX_AVATAR_BYTES = 2 * 1024 * 1024
@@ -38,7 +85,7 @@ CONTENT_SIGNATURES = {
 }
 
 
-def sniff_content_category(file_obj: FileStorage, category: str) -> bool:
+def sniff_content_category(file_obj: Optional[FileLike], category: str) -> bool:
     """Return True when the stream starts with a known signature for `category`.
 
     Reads the first bytes and seeks back so later consumers see the whole
@@ -63,7 +110,103 @@ def sniff_content_category(file_obj: FileStorage, category: str) -> bool:
         return True
     return False
 
+
+_MINIO_CLIENT = None
+_MINIO_CHECKED = False
+
+
+def get_minio_client():
+    """Returns an initialized MinIO client instance if configured, else None."""
+    global _MINIO_CLIENT, _MINIO_CHECKED
+    if _MINIO_CHECKED:
+        return _MINIO_CLIENT
+    _MINIO_CHECKED = True
+    endpoint = getattr(Config, 'MINIO_ENDPOINT', '')
+    if not endpoint:
+        return None
+    try:
+        from minio import Minio
+        client = Minio(
+            endpoint,
+            access_key=getattr(Config, 'MINIO_ACCESS_KEY', 'minioadmin'),
+            secret_key=getattr(Config, 'MINIO_SECRET_KEY', 'minioadmin'),
+            secure=getattr(Config, 'MINIO_SECURE', False),
+        )
+        bucket = getattr(Config, 'MINIO_BUCKET', 'neurosense-uploads')
+        if not client.bucket_exists(bucket):
+            client.make_bucket(bucket)
+            logger.info("Provisioned MinIO bucket '%s'", bucket)
+        _MINIO_CLIENT = client
+        logger.info("MinIO object storage initialized at %s (bucket: %s)", endpoint, bucket)
+        return _MINIO_CLIENT
+    except Exception as exc:
+        logger.warning("MinIO initialization skipped (%s) — using local filesystem storage.", exc)
+        _MINIO_CLIENT = None
+        return None
+
+
 class StorageManager:
+    @staticmethod
+    def sync_to_minio(local_path: Path, object_name: str) -> bool:
+        """Best-effort upload of a file to MinIO object storage."""
+        client = get_minio_client()
+        if not client:
+            return False
+        try:
+            bucket = getattr(Config, 'MINIO_BUCKET', 'neurosense-uploads')
+            client.fput_object(bucket, object_name, str(local_path))
+            return True
+        except Exception as exc:
+            logger.warning("Failed to sync %s to MinIO: %s", object_name, exc)
+            return False
+
+    @staticmethod
+    def sync_from_minio(object_name: str, local_path: Path) -> bool:
+        """Download file from MinIO if missing locally."""
+        if local_path.exists():
+            return True
+        client = get_minio_client()
+        if not client:
+            return False
+        try:
+            bucket = getattr(Config, 'MINIO_BUCKET', 'neurosense-uploads')
+            local_path.parent.mkdir(parents=True, exist_ok=True)
+            client.fget_object(bucket, object_name, str(local_path))
+            return True
+        except Exception as exc:
+            logger.debug("Object %s not found in MinIO: %s", object_name, exc)
+            return False
+
+    @staticmethod
+    def delete_minio_prefix(prefix: str) -> bool:
+        """Delete all objects matching a prefix in MinIO."""
+        client = get_minio_client()
+        if not client:
+            return False
+        try:
+            bucket = getattr(Config, 'MINIO_BUCKET', 'neurosense-uploads')
+            objects = client.list_objects(bucket, prefix=prefix, recursive=True)
+            for obj in objects:
+                client.remove_object(bucket, obj.object_name)
+            return True
+        except Exception as exc:
+            logger.warning("Failed to delete MinIO prefix %s: %s", prefix, exc)
+            return False
+
+    @staticmethod
+    def get_presigned_url(object_name: str, expiry_seconds: int = 3600) -> Optional[str]:
+        """Generate a pre-signed GET URL for direct client download from MinIO."""
+        client = get_minio_client()
+        if not client:
+            return None
+        try:
+            from datetime import timedelta
+            bucket = getattr(Config, 'MINIO_BUCKET', 'neurosense-uploads')
+            return client.presigned_get_object(bucket, object_name, expires=timedelta(seconds=expiry_seconds))
+        except Exception as exc:
+            logger.warning("Failed to generate presigned URL for %s: %s", object_name, exc)
+            return None
+
     @staticmethod
     def sanitize_name(name: str) -> str:
         if not name:
@@ -171,19 +314,19 @@ class StorageManager:
             f.write(data)
 
         relative_path = file_path.relative_to(Config.UPLOAD_FOLDER)
+        StorageManager.sync_to_minio(file_path, relative_path.as_posix())
         return relative_path.as_posix()
 
     @staticmethod
-    def persist_raw_file(doctor_id: int, patient_id: str, file_obj: FileStorage, subfolder: str, filename: str, doctor_name: Optional[str] = None, patient_name: Optional[str] = None) -> str:
+    def persist_raw_file(doctor_id: int, patient_id: str, file_obj: FileLike, subfolder: str, filename: str, doctor_name: Optional[str] = None, patient_name: Optional[str] = None) -> str:
         """
-        Persists a Flask FileStorage object to the patient's specific folder.
+        Persists an uploaded file object to the patient's specific folder.
         Returns relative path, e.g. 'doctors/1_doctor/patients/PAT-123_eleanor/{subfolder}/{filename}'
         """
         patient_dir = StorageManager.get_patient_directory(doctor_id, patient_id, doctor_name, patient_name)
         target_dir = patient_dir / subfolder
         target_dir.mkdir(parents=True, exist_ok=True)
 
-        from werkzeug.utils import secure_filename
         safe_filename = secure_filename(filename) or 'upload.bin'
 
         file_path = target_dir / safe_filename
@@ -192,6 +335,7 @@ class StorageManager:
         file_obj.save(str(file_path))
 
         relative_path = file_path.relative_to(Config.UPLOAD_FOLDER)
+        StorageManager.sync_to_minio(file_path, relative_path.as_posix())
         return relative_path.as_posix()
 
     @staticmethod
@@ -300,7 +444,6 @@ class StorageManager:
         reports_dir = patient_dir / 'sessions' / f'sess_{session_id}' / 'reports'
         reports_dir.mkdir(parents=True, exist_ok=True)
 
-        from werkzeug.utils import secure_filename
         safe_filename = secure_filename(filename)
         
         file_path = reports_dir / safe_filename
@@ -308,5 +451,6 @@ class StorageManager:
             f.write(pdf_bytes)
             
         relative_path = file_path.relative_to(Config.UPLOAD_FOLDER)
+        StorageManager.sync_to_minio(file_path, relative_path.as_posix())
         return relative_path.as_posix()
 

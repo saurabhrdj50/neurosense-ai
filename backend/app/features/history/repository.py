@@ -3,7 +3,7 @@ import logging
 from typing import Optional, List, Dict, Any
 
 from app.shared.repository import BaseRepository
-from app.shared.db_orm import SessionLocal, init_db
+from app.shared.db_orm import SessionLocal
 from app.shared.models.session import Session
 from app.shared.models.patient import Patient
 from app.shared.time_utils import utc_now_iso
@@ -12,8 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class SessionRepository(BaseRepository):
-    def _init_schema(self) -> None:
-        init_db()
+    """Analysis-session persistence. Schema lives in app.shared.bootstrap."""
 
     def save(
         self,
@@ -50,6 +49,36 @@ class SessionRepository(BaseRepository):
             logger.info("Saved session for patient %s by user %s", patient_id, created_by)
             return new_sess.id
 
+    def update_results(self, session_id: int, results: Dict[str, Any]) -> bool:
+        """Overwrite a session's stored results (per-modality retry).
+
+        Column extraction mirrors :meth:`save` so list views, trends and the
+        dashboard stay consistent with the updated full_results JSON. The
+        original timestamp is kept — a retry corrects the same assessment,
+        it does not create a new point in the longitudinal timeline.
+        """
+        mri = results.get('mri', {})
+        cog = results.get('cognitive', {})
+        sent = results.get('sentiment', {})
+        risk = results.get('risk_profile', {})
+        fusion = results.get('final_stage', {})
+
+        with SessionLocal() as db:
+            sess = db.query(Session).filter(Session.id == session_id).first()
+            if not sess:
+                return False
+            sess.mri_stage = mri.get('stage')
+            sess.mri_confidence = mri.get('confidence')
+            sess.cognitive_score = cog.get('composite_score')
+            sess.sentiment_risk = sent.get('cognitive_risk_score')
+            sess.risk_score = risk.get('overall_risk_score')
+            sess.final_stage = fusion.get('stage')
+            sess.final_confidence = fusion.get('confidence')
+            sess.results_json = json.dumps(results, default=str)
+            db.commit()
+            logger.info("Updated stored results for session %d", session_id)
+            return True
+
     def get_history(self, patient_id: str, limit: int = 20) -> List[Dict[str, Any]]:
         with SessionLocal() as db:
             sessions = db.query(Session).filter(
@@ -57,19 +86,40 @@ class SessionRepository(BaseRepository):
             ).order_by(Session.timestamp.desc()).limit(limit).all()
             return [self._format_session(s.to_dict(), include_results=True) for s in sessions]
 
-    def get_all(self) -> List[Dict[str, Any]]:
+    def get_all(self, limit: Optional[int] = None, offset: int = 0) -> List[Dict[str, Any]]:
         with SessionLocal() as db:
-            sessions = db.query(Session).order_by(Session.timestamp.desc()).all()
+            query = db.query(Session).order_by(Session.timestamp.desc())
+            if limit is not None:
+                sessions = query.offset(max(offset, 0)).limit(limit).all()
+            else:
+                sessions = query.all()
             return [self._format_session(s.to_dict()) for s in sessions]
 
-    def get_for_doctor(self, doctor_id: int) -> List[Dict[str, Any]]:
+    def get_for_doctor(self, doctor_id: int, limit: Optional[int] = None,
+                       offset: int = 0) -> List[Dict[str, Any]]:
         with SessionLocal() as db:
-            sessions = db.query(Session).outerjoin(
+            query = db.query(Session).outerjoin(
                 Patient, Session.patient_id == Patient.patient_id
             ).filter(
                 (Session.created_by == doctor_id) | (Patient.created_by == doctor_id)
-            ).order_by(Session.timestamp.desc()).all()
+            ).order_by(Session.timestamp.desc())
+            if limit is not None:
+                sessions = query.offset(max(offset, 0)).limit(limit).all()
+            else:
+                sessions = query.all()
             return [self._format_session(s.to_dict()) for s in sessions]
+
+    def count_all(self) -> int:
+        with SessionLocal() as db:
+            return int(db.query(Session).count())
+
+    def count_for_doctor(self, doctor_id: int) -> int:
+        with SessionLocal() as db:
+            return int(db.query(Session).outerjoin(
+                Patient, Session.patient_id == Patient.patient_id
+            ).filter(
+                (Session.created_by == doctor_id) | (Patient.created_by == doctor_id)
+            ).count())
 
     def get_session_detail(self, session_id: int) -> Optional[Dict[str, Any]]:
         with SessionLocal() as db:

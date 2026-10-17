@@ -30,7 +30,7 @@ const UNAUTHORIZED_EXEMPT = [
   '/api/auth/reset-password',
 ]
 
-function notifyUnauthorized(endpoint) {
+export function notifyUnauthorized(endpoint) {
   if (typeof window === 'undefined') return
   if (UNAUTHORIZED_EXEMPT.some((path) => endpoint.includes(path))) return
   if (window.location.pathname === '/login') return

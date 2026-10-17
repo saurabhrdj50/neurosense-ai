@@ -10,7 +10,7 @@ import React from 'react'
 export function Skeleton({ width = '100%', height = 20, rounded = 6, className = '' }) {
   return (
     <div
-      className={`animate-pulse bg-slate-200 dark:bg-slate-700 ${className}`}
+      className={`animate-pulse bg-surface-hover dark:bg-surface-hover ${className}`}
       style={{ width, height, borderRadius: rounded }}
       aria-hidden="true"
     />
@@ -22,7 +22,7 @@ export function Skeleton({ width = '100%', height = 20, rounded = 6, className =
  */
 export function StatCardSkeleton() {
   return (
-    <div className="p-4 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+    <div className="p-4 rounded-lg bg-card border border-border">
       <div className="flex justify-between items-start mb-4">
         <Skeleton width={36} height={36} rounded={8} />
         <Skeleton width={56} height={20} rounded={4} />
@@ -56,7 +56,7 @@ export function ResultsPageSkeleton() {
       <Skeleton height={40} rounded={8} />
 
       {/* Verdict hero */}
-      <div className="p-5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+      <div className="p-5 rounded-lg bg-card border border-border">
         <div className="flex items-center gap-5">
           <Skeleton width={96} height={96} rounded="50%" />
           <div className="flex-1 space-y-2">
@@ -76,7 +76,7 @@ export function ResultsPageSkeleton() {
 
       {/* Content panels */}
       {[1, 2].map(i => (
-        <div key={i} className="p-4 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3">
+        <div key={i} className="p-4 rounded-lg bg-card border border-border space-y-3">
           <Skeleton width={150} height={18} rounded={4} />
           <Skeleton width="100%" height={60} rounded={6} />
         </div>
@@ -90,7 +90,7 @@ export function ResultsPageSkeleton() {
  */
 export function PatientRowSkeleton() {
   return (
-    <div className="flex items-center gap-4 px-3.5 py-3 border-b border-slate-100 dark:border-slate-800">
+    <div className="flex items-center gap-4 px-3.5 py-3 border-b border-border-subtle">
       <Skeleton width={72} height={14} rounded={3} />
       <div className="flex items-center gap-2.5">
         <Skeleton width={28} height={28} rounded={6} />

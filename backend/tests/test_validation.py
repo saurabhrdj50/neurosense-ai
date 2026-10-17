@@ -2,7 +2,7 @@
 Tests for the validation module.
 """
 import pytest
-from app.shared.validation import InputValidator, RequestValidator
+from app.shared.validation import InputValidator
 
 
 class TestInputValidator:

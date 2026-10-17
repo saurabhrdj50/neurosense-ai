@@ -3,14 +3,16 @@ import os
 
 logger = logging.getLogger(__name__)
 
+# Primary backend: faster-whisper (CTranslate2) — ~4x faster and lighter than
+# openai-whisper on CPU, same fully-local transcription (no PHI leaves the box).
 try:
-    import speech_recognition as sr
-    HAS_SR = True
+    from faster_whisper import WhisperModel as FasterWhisperModel
+    HAS_FASTER_WHISPER = True
 except ImportError:
-    HAS_SR = False
-    logger.warning("SpeechRecognition not installed.")
+    HAS_FASTER_WHISPER = False
+    FasterWhisperModel = None
 
-
+# Legacy fallback kept for environments that already have openai-whisper.
 try:
     import whisper
     HAS_WHISPER = True
@@ -31,11 +33,16 @@ except ImportError:
 
 class SpeechTranscriber:
     """
-    Research-grade Speech Analysis Module using OpenAI Whisper.
+    Research-grade Speech Analysis Module using local Whisper transcription.
     Extracts transcript, speech rate, pause frequency, pitch variation, and acoustic biomarkers.
     """
     def __init__(self, model_size: str = None) -> None:
         self.whisper_model = None
+        self.whisper_impl = None  # 'faster' | 'openai' | None
+        # Why no backend loaded, when the libraries themselves are installed —
+        # surfaced verbatim so a "no backend" report is diagnosable (a cache
+        # permission error must not masquerade as a missing dependency).
+        self._init_error = None
         # Whisper-turbo on CPU burns minutes per clip and blew through the
         # request timeout; pick the model by accelerator unless the operator
         # pins one via WHISPER_MODEL.
@@ -49,18 +56,42 @@ class SpeechTranscriber:
                 model_size = 'base'
         self.model_size = model_size
 
-        if HAS_WHISPER and whisper is not None:
+        requested = os.environ.get('WHISPER_BACKEND', 'auto').strip().lower()
+        if requested in ('', 'auto', 'faster', 'openai'):
+            want_faster = requested in ('', 'auto', 'faster')
+            want_openai = requested in ('', 'auto', 'openai')
+        else:
+            logger.warning("Unknown WHISPER_BACKEND '%s' — using auto.", requested)
+            want_faster, want_openai = True, True
+
+        if want_faster and HAS_FASTER_WHISPER:
+            try:
+                import torch
+                device = 'cuda' if torch.cuda.is_available() else 'cpu'
+                compute = 'float16' if device == 'cuda' else 'int8'
+                self.whisper_model = FasterWhisperModel(model_size, device=device, compute_type=compute)
+                self.whisper_impl = 'faster'
+                logger.info("faster-whisper (%s, %s/%s) initialized.", model_size, device, compute)
+            except Exception as e:
+                # A pinned size this faster-whisper build doesn't ship (e.g. 'turbo')
+                # must not take transcription down — fall back to a known-good one.
+                logger.warning("faster-whisper '%s' failed (%s); retrying 'base'.", model_size, e)
+                try:
+                    self.whisper_model = FasterWhisperModel('base', device='cpu', compute_type='int8')
+                    self.whisper_impl = 'faster'
+                    self.model_size = 'base'
+                except Exception as e2:
+                    self._init_error = e2
+                    logger.warning("faster-whisper unavailable: %s", e2)
+
+        if self.whisper_impl is None and want_openai and HAS_WHISPER and whisper is not None:
             try:
                 self.whisper_model = whisper.load_model(model_size)
+                self.whisper_impl = 'openai'
                 logger.info("OpenAI Whisper (%s) initialized.", model_size)
             except Exception as e:
+                self._init_error = e
                 logger.warning("Could not load Whisper model '%s': %s", model_size, e)
-
-        if HAS_SR:
-            self.recognizer = sr.Recognizer()
-            logger.info("SpeechRecognition loaded fallback.")
-        else:
-            self.recognizer = None
 
     def _try_load_audio(self, audio_path: str):
         """Load audio with librosa; decode webm/ogg/mp3 to WAV via ffmpeg first if unavailable.
@@ -90,34 +121,21 @@ class SpeechTranscriber:
                 raise
 
     def _extract_acoustic_from(self, y, sr_rate) -> dict:
-        """Extract raw acoustic summaries from an already-decoded signal."""
+        """Extract rich clinical acoustic summaries from an already-decoded signal."""
         features = {}
         if not HAS_LIBROSA or librosa is None or y is None or sr_rate is None:
             return features
         try:
-            duration = max(len(y) / sr_rate, 0.1)
-
-            # Pitch (F0) extraction
-            f0, voiced_flag, voiced_probs = librosa.pyin(y, fmin=librosa.note_to_hz('C2'), fmax=librosa.note_to_hz('C6'))
-            valid_f0 = f0[~np.isnan(f0)] if f0 is not None else np.array([])
-
-            if len(valid_f0) > 5:
-                f0_std = float(np.std(valid_f0))
-                features['f0_std_hz'] = round(f0_std, 2)
-                features['mean_f0_hz'] = round(float(np.mean(valid_f0)), 2)
-                features['pitch_variation'] = 'Reduced' if f0_std < 12.0 else 'Not reduced'
-
-            # Energy / Silence detection
-            non_silent_intervals = librosa.effects.split(y, top_db=25)
-            non_silent_duration = sum((end - start) for start, end in non_silent_intervals) / sr_rate
-            silent_duration = max(duration - non_silent_duration, 0.0)
-            pause_ratio = round(silent_duration / duration, 3)
-
-            features['silent_pause_ratio'] = float(pause_ratio)
-            features['pause_frequency'] = 'Elevated' if pause_ratio > 0.25 else 'Not elevated'
-            features['mfcc_mean'] = round(float(np.mean(librosa.feature.mfcc(y=y, sr=sr_rate))), 2)
+            from app.ml.speech.acoustic_biomarkers import AcousticBiomarkerExtractor
+            extractor = AcousticBiomarkerExtractor()
+            features = extractor.extract(y, sr_rate)
+            # Map backward-compatible aliases for historical consumers
+            if 'f0_mean_hz' in features:
+                features['mean_f0_hz'] = features['f0_mean_hz']
+            if 'pause_ratio' in features:
+                features['silent_pause_ratio'] = features['pause_ratio']
         except Exception as e:
-            logger.warning("Librosa acoustic extraction warning: %s", e)
+            logger.warning("Acoustic extraction warning: %s", e)
         return features
 
     def _extract_acoustic_biomarkers(self, audio_path: str) -> dict:
@@ -170,7 +188,7 @@ class SpeechTranscriber:
             'linguistic_biomarkers': {},
         }
 
-        # Try Whisper first if available
+        # Try a local Whisper backend first (faster-whisper, else openai-whisper)
         if self.whisper_model is not None:
             y = None
             sr_rate = None
@@ -196,8 +214,8 @@ class SpeechTranscriber:
                     })
                     return result
 
-                # Whisper accepts a 16 kHz float array; cap duration so a long
-                # recording cannot monopolize a CPU worker past the timeout.
+                # Both backends accept a 16 kHz float array; cap duration so a
+                # long recording cannot monopolize a CPU worker past the timeout.
                 whisper_input = audio_path
                 if y is not None:
                     try:
@@ -208,13 +226,25 @@ class SpeechTranscriber:
                         whisper_input = y[:int(max_sec * sr_rate)]
                         logger.info("Trimming audio to %.0fs for transcription.", max_sec)
 
-                res = self.whisper_model.transcribe(whisper_input)
+                if self.whisper_impl == 'faster':
+                    seg_iter, _info = self.whisper_model.transcribe(whisper_input)
+                    raw_segments = [
+                        {'text': s.text, 'no_speech_prob': float(getattr(s, 'no_speech_prob', 0.0) or 0.0)}
+                        for s in seg_iter
+                    ]
+                    fallback_text = ''
+                else:  # 'openai'
+                    res = self.whisper_model.transcribe(whisper_input)
+                    raw_segments = [
+                        {'text': s.get('text', ''), 'no_speech_prob': float(s.get('no_speech_prob', 0.0) or 0.0)}
+                        for s in (res.get('segments') or [])
+                    ]
+                    fallback_text = res.get('text', '')
+
                 # Drop segments Whisper itself flagged as probable silence —
                 # their text is hallucination, not the patient's speech.
-                segments = res.get('segments') or []
-                kept = [s for s in segments
-                        if float(s.get('no_speech_prob', 0.0)) < 0.6]
-                if segments and not kept:
+                kept = [s for s in raw_segments if s['no_speech_prob'] < 0.6]
+                if raw_segments and not kept:
                     result.update({
                         'text': '',
                         'method': f'whisper_{self.model_size}',
@@ -224,8 +254,7 @@ class SpeechTranscriber:
                                               else self._extract_acoustic_biomarkers(audio_path)),
                     })
                     return result
-                text = (''.join(s.get('text', '') for s in kept) if kept
-                        else res.get('text', '')).strip()
+                text = (''.join(s['text'] for s in kept) if kept else fallback_text).strip()
 
                 words = text.split()
                 linguistic = self._extract_linguistic_biomarkers(text, words)
@@ -249,56 +278,22 @@ class SpeechTranscriber:
                     except OSError:
                         pass
 
-
-        if not HAS_SR:
-            result['error'] = 'SpeechRecognition and Whisper not available.'
-            return result
-
-        # The Google free web API receives raw patient audio (PHI) with no
-        # consent gate and no BAA — it must be an explicit operator opt-in,
-        # never a silent fallback. sr.AudioFile also only decodes
-        # WAV/AIFF/FLAC, so this path fails for mp3/webm/ogg anyway.
-        from app.config.settings import Config
-        if not Config.ENABLE_GOOGLE_SPEECH_FALLBACK:
+        if self.whisper_model is None and self._init_error is not None:
+            # Libraries installed, model load failed — report the real cause
+            # (e.g. unwritable HF cache) instead of "install faster-whisper".
             result['error'] = (
-                'Local Whisper transcription unavailable. Set '
-                'ENABLE_GOOGLE_SPEECH_FALLBACK=true to allow the third-party '
-                'speech service (requires patient consent).'
+                'Speech-to-text backend is installed but failed to initialize: '
+                f'{self._init_error}'
             )
             result['method'] = 'unavailable'
             return result
 
-        try:
-            with sr.AudioFile(audio_path) as source:
-                self.recognizer.adjust_for_ambient_noise(source, duration=0.5)
-                audio = self.recognizer.record(source)
-
-            try:
-                text = self.recognizer.recognize_google(audio, language=language)
-                words = text.split()
-                linguistic = self._extract_linguistic_biomarkers(text, words)
-                acoustic = self._extract_acoustic_biomarkers(audio_path)
-
-                return {
-                    'text': text,
-                    'method': 'google_free',
-                    'error': None,
-                    'acoustic_features': acoustic,
-                    'linguistic_biomarkers': linguistic,
-                }
-            except sr.UnknownValueError:
-                result['error'] = 'Could not understand the audio.'
-                result['method'] = 'google_free'
-                return result
-            except sr.RequestError as e:
-                result['error'] = f'Speech recognition service unavailable: {e}'
-                result['method'] = 'google_free'
-                return result
-
-        except Exception as e:
-            result['error'] = f'Audio processing error: {str(e)}'
-            result['method'] = 'error'
-            return result
+        result['error'] = (
+            'No local speech-to-text backend available. Install faster-whisper '
+            '(pip install faster-whisper) to enable transcription.'
+        )
+        result['method'] = 'unavailable'
+        return result
 
     def _extract_linguistic_biomarkers(self, text: str, words: list) -> dict:
         """Extract simple transcript statistics; these are not clinical biomarkers."""

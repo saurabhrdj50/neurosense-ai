@@ -1,0 +1,46 @@
+{
+  "dataset": {
+    "recordings": 92,
+    "participants": 51,
+    "control_participants": 18,
+    "dementia_participants": 33
+  },
+  "distilbert_validation": {
+    "accuracy": 0.8235294117647058,
+    "balanced_accuracy": 0.8383838383838383,
+    "dementia_recall": 0.7878787878787878,
+    "control_specificity": 0.8888888888888888,
+    "precision": 0.9285714285714286,
+    "f1": 0.8524590163934426,
+    "true_negative": 16,
+    "false_positive": 2,
+    "false_negative": 7,
+    "true_positive": 26
+  },
+  "linguistic_analysis": {
+    "features_tested": 25,
+    "fdr_significant_features": 1,
+    "significant_feature_names": [
+      "avg_word_length"
+    ]
+  },
+  "avg_word_length": {
+    "control_mean": 3.9735378598728732,
+    "dementia_mean": 3.7484096145047348,
+    "smd": -1.1780321302109202,
+    "raw_p": 0.00017345659765164524,
+    "fdr_p": 0.004336414941291131
+  },
+  "sentiment": {
+    "features": [
+      "polarity",
+      "subjectivity"
+    ]
+  },
+  "error_analysis": {
+    "misclassified_participants": 9,
+    "false_negatives": 7,
+    "false_positives": 2,
+    "high_confidence_errors": 6
+  }
+}

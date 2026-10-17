@@ -21,7 +21,14 @@ class GradCAMExtractor:
         model: 'AlzheimerModel',
         image_path: str,
         target_class: int
-    ) -> Optional[str]:
+    ) -> Optional[dict]:
+        """Produce the Grad-CAM visual layers for interactive rendering.
+
+        Returns ``{'overlay', 'heatmap_rgba', 'original'}`` — base64 PNGs of
+        the pre-blended overlay (backward-compatible with the fixed 55/45
+        blend), the raw jet colormap as a transparent layer the frontend can
+        blend over the scan at any opacity, and the original scan image.
+        """
         try:
             import matplotlib
             matplotlib.use('Agg')
@@ -101,10 +108,28 @@ class GradCAMExtractor:
                 colormap = cm.get_cmap('jet')
             heatmap = colormap(cam_resized)[:, :, :3]
             original_np = np.array(image.resize(original_size)) / 255.0
-            
+
             overlay = 0.55 * original_np + 0.45 * heatmap
             overlay = np.clip(overlay, 0, 1)
-            
+
+            # Transparent heat layer: alpha tracks activation strength so the
+            # frontend can stack it over the original scan with a live opacity
+            # slider instead of being limited to this fixed blend.
+            alpha = np.clip(cam_resized * 0.9, 0, 1)
+            heatmap_rgba = np.dstack([heatmap, alpha])
+
+            def _png_b64(arr_or_img) -> str:
+                buf = io.BytesIO()
+                if isinstance(arr_or_img, Image.Image):
+                    arr_or_img.save(buf, format='PNG')
+                else:
+                    arr = (np.clip(arr_or_img, 0, 1) * 255).astype(np.uint8)
+                    Image.fromarray(arr).save(buf, format='PNG')
+                return base64.b64encode(buf.getvalue()).decode('utf-8')
+
+            original_png = _png_b64(image.convert('RGB').resize(original_size))
+            heatmap_png = _png_b64(heatmap_rgba)
+
             fig, ax = plt.subplots(1, 1, figsize=(5, 5), dpi=100)
             try:
                 ax.imshow(overlay)
@@ -119,7 +144,11 @@ class GradCAMExtractor:
                 plt.close(fig)
             buf.seek(0)
 
-            return base64.b64encode(buf.read()).decode('utf-8')
+            return {
+                'overlay': base64.b64encode(buf.read()).decode('utf-8'),
+                'heatmap_rgba': heatmap_png,
+                'original': original_png,
+            }
             
         except Exception as e:
             logger.warning("GradCAM generation failed: %s", e)

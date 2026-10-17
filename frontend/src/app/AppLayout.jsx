@@ -4,7 +4,11 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, X } from 'lucide-react'
 import Sidebar from '../shared/components/layout/Sidebar'
 import TopBar from '../shared/components/layout/TopBar'
+import OnboardingTour from '../shared/components/OnboardingTour'
 import { useAuth } from '../providers/AuthProvider'
+import { useDataSync } from '../shared/utils/dataSync'
+
+const ONBOARDING_KEY = 'neurosense_onboarding_done'
 
 const ROUTE_TITLES = {
   '/dashboard': 'Dashboard',
@@ -33,6 +37,9 @@ function ROUTE_TITLE_DEFAULTS() {
 export default function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
+  // Delete/analysis propagation: invalidates all caches when clinical data
+  // changes in any session (doctor, admin, or another tab).
+  useDataSync()
   const navigate = useNavigate()
   const location = useLocation()
   const { isAdmin } = useAuth()
@@ -59,6 +66,30 @@ export default function AppLayout() {
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
+
+  // First-run guided tour: only for clinicians, only on the dashboard,
+  // only on wide viewports (the sidebar anchor is hidden below lg).
+  const [tourOpen, setTourOpen] = useState(false)
+  useEffect(() => {
+    if (isAdmin || location.pathname !== '/dashboard') return undefined
+    try {
+      if (localStorage.getItem(ONBOARDING_KEY)) return undefined
+    } catch {
+      return undefined
+    }
+    if (window.innerWidth < 1024) return undefined
+    const t = setTimeout(() => setTourOpen(true), 1500)
+    return () => clearTimeout(t)
+  }, [isAdmin, location.pathname])
+
+  const closeTour = () => {
+    setTourOpen(false)
+    try {
+      localStorage.setItem(ONBOARDING_KEY, '1')
+    } catch {
+      // Storage unavailable — tour simply re-offers next session
+    }
+  }
 
   // Full-screen workspace mode for assessment workflow
   const isAssessmentPage = location.pathname === '/analysis'
@@ -144,6 +175,9 @@ export default function AppLayout() {
           <Plus size={22} strokeWidth={2.5} />
         </motion.button>
       )}
+
+      {/* ── First-run guided tour ─────────────────────────────────────────── */}
+      {!isAdmin && <OnboardingTour open={tourOpen} onClose={closeTour} />}
     </div>
   )
 }

@@ -42,9 +42,21 @@ def test_persist_raw_file(tmp_path):
     Config.UPLOAD_FOLDER = tmp_path
     
     try:
-        from werkzeug.datastructures import FileStorage
         file_stream = io.BytesIO(b"mri_image_data_mock")
-        mock_file = FileStorage(stream=file_stream, filename="mri_scan.nii.gz")
+
+        class _FakeFileStorage:
+            """Werkzeug-FileStorage-compatible stand-in (.stream/.filename/.save)."""
+            def __init__(self, stream, filename):
+                self.stream = stream
+                self.filename = filename
+
+            def save(self, path):
+                self.stream.seek(0)
+                with open(path, 'wb') as f:
+                    f.write(self.stream.read())
+                self.stream.seek(0)
+
+        mock_file = _FakeFileStorage(stream=file_stream, filename="mri_scan.nii.gz")
         
         rel_path = StorageManager.persist_raw_file(doctor_id=99, patient_id="PAT-MRI", file_obj=mock_file, subfolder="mri", filename="mri_scan.nii.gz", doctor_name="doc_jones", patient_name="mri_patient")
         
@@ -93,7 +105,14 @@ def test_patient_repository_create_with_base64(app, tmp_path):
         patient_data = patient_repo.get_by_patient_id(patient_id)
         assert patient_data["photo"] == "/api/patients/photo/PAT-REPO-TEST"
 
-        full_path = tmp_path / "doctors/1_admin/patients/PAT-REPO-TEST_test_storage_patient/profile/avatar.png"
+        # The avatar must live under the owning doctor's immutable storage
+        # key (user id 1 = the test doctor created by the app fixture).
+        from app.shared.models.user import User
+        from app.shared.db_orm import SessionLocal
+        with SessionLocal() as db:
+            owner_key = db.get(User, 1).get_storage_key()
+
+        full_path = tmp_path / f"doctors/{owner_key}/patients/PAT-REPO-TEST_test_storage_patient/profile/avatar.png"
         assert full_path.exists()
     finally:
         Config.UPLOAD_FOLDER = original_upload_folder
@@ -158,16 +177,16 @@ def test_serve_photo_access_control(app, client, tmp_path):
         })
         resp = client.get(f"/api/patients/photo/{patient_id}")
         assert resp.status_code == 200
-        assert resp.data == b"test_image_bytes"
+        assert resp.content == b"test_image_bytes"
         client.post("/api/auth/logout")
 
         client.post("/api/auth/login", json={
             "username": "admin",
-            "password": "Admin@123!"
+            "password": "admin"
         })
         resp = client.get(f"/api/patients/photo/{patient_id}")
         assert resp.status_code == 200
-        assert resp.data == b"test_image_bytes"
+        assert resp.content == b"test_image_bytes"
         client.post("/api/auth/logout")
     finally:
         Config.UPLOAD_FOLDER = original_upload_folder
@@ -272,17 +291,17 @@ def test_serve_report_access_control(app, client, tmp_path):
         })
         resp = client.get(f"/api/patients/session/{session_id}/report")
         assert resp.status_code == 200
-        assert resp.data == b"mock_report_pdf_bytes_data"
+        assert resp.content == b"mock_report_pdf_bytes_data"
         client.post("/api/auth/logout")
         
         # Test 4: Admin
         client.post("/api/auth/login", json={
             "username": "admin",
-            "password": "Admin@123!"
+            "password": "admin"
         })
         resp = client.get(f"/api/patients/session/{session_id}/report")
         assert resp.status_code == 200
-        assert resp.data == b"mock_report_pdf_bytes_data"
+        assert resp.content == b"mock_report_pdf_bytes_data"
         client.post("/api/auth/logout")
         
     finally:

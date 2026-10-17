@@ -9,11 +9,13 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "e2e": "playwright test",
+    "e2e:backend": "sh -c 'cd ../backend && if [ -x venv/bin/python ]; then ./venv/bin/python run.py; else python run.py; fi'"
   },
   "dependencies": {
+    "@niivue/niivue": "^0.69.0",
     "@tanstack/react-query": "^5.101.4",
-    "antd": "^6.6.0",
     "framer-motion": "^12.38.0",
     "lucide-react": "^1.0.1",
     "react": "^19.2.4",
@@ -25,6 +27,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@playwright/test": "^1.63.0",
     "@testing-library/jest-dom": "^7.0.0",
     "@testing-library/react": "^16.3.2",
     "@types/react": "^19.2.14",
@@ -38,8 +41,10 @@
     "globals": "^17.4.0",
     "jsdom": "^29.1.1",
     "postcss": "^8.5.8",
+    "rollup-plugin-visualizer": "^7.1.1",
     "tailwindcss": "^3.4.19",
     "vite": "^6.4.1",
+    "vite-plugin-pwa": "^2.0.0",
     "vitest": "^4.1.10"
   }
 }

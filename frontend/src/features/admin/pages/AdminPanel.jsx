@@ -8,10 +8,11 @@ import DataTable from '../../../shared/components/ui/DataTable'
 import { SectionSkeleton } from '../../../shared/components/ui/Skeleton'
 import Card from '../../../shared/components/ui/Card'
 import { adminApi } from '../api/adminApi'
-import { Modal } from 'antd'
+import ConfirmModal from '../../../shared/components/ui/ConfirmModal'
 import { doctorDisplayName } from '../../../shared/utils/clinicalMappers'
 import { patientsApi } from '../../patients/api/patientsApi'
 import API_URL from '../../../config/api'
+import { DATA_CHANGED_EVENT } from '../../../shared/utils/dataSync'
 
 export default function AdminPanel() {
   const navigate = useNavigate()
@@ -21,6 +22,9 @@ export default function AdminPanel() {
   const [patients, setPatients]     = useState([])
   const [analyses, setAnalyses]     = useState([])
   const [auditLogs, setAuditLogs]   = useState([])
+  // Row totals from the paginated endpoints — tab counts stay truthful even
+  // when the walked pages were capped before the end of the table.
+  const [totals, setTotals]         = useState({ patients: null, analyses: null, audit: null })
   const [health, setHealth]         = useState(null)
   const [activeTab, setActiveTab]   = useState('doctors')
   const [selectedDoctorId, setSelectedDoctorId] = useState(null)
@@ -72,6 +76,11 @@ export default function AdminPanel() {
       setAnalyses(analysesData.sessions || [])
       setAuditLogs(auditData.logs || [])
       setHealth(healthData)
+      setTotals({
+        patients: patientsData.total ?? patientsData.patients?.length ?? null,
+        analyses: analysesData.total ?? analysesData.sessions?.length ?? null,
+        audit: auditData.total ?? auditData.logs?.length ?? null,
+      })
     } catch (err) {
       toast.error('Failed to load data')
       console.error(err)
@@ -82,53 +91,29 @@ export default function AdminPanel() {
 
   useEffect(() => { loadData() }, [loadData])
 
-  const handleDeleteDoctor = useCallback(async (id) => {
-    if (!confirm('Delete this doctor and all their data?')) return
-    try {
-      await adminApi.deleteDoctor(id)
-      toast.success('Doctor deleted')
-      loadData()
-    } catch (err) {
-      toast.error(err.message)
-    }
+  // Cross-session integrity: when clinical data mutates anywhere else (a
+  // doctor deleting a patient, a new analysis), refetch this panel too.
+  useEffect(() => {
+    window.addEventListener(DATA_CHANGED_EVENT, loadData)
+    return () => window.removeEventListener(DATA_CHANGED_EVENT, loadData)
   }, [loadData])
 
-  const handleDeletePatient = useCallback((id) => {
-    Modal.confirm({
-      title: 'Delete this patient?',
-      content: 'All clinical records and session histories for this patient will be permanently removed.',
-      okText: 'Delete',
-      okButtonProps: { danger: true },
-      cancelText: 'Cancel',
-      onOk: async () => {
-        try {
-          await adminApi.deletePatient(id)
-          toast.success('Patient deleted')
-          loadData()
-        } catch (err) {
-          toast.error(err.message)
-        }
-      },
-    })
-  }, [loadData])
+  // Single state-driven confirmation flow for every destructive action —
+  // requestDelete() opens the shared ConfirmModal, which runs the delete and
+  // keeps itself open (with the error shown) if the request fails.
+  const [confirmRequest, setConfirmRequest] = useState(null)
 
-  const handleDeleteSession = useCallback((id) => {
-    Modal.confirm({
-      title: 'Delete this analysis session?',
-      content: 'This assessment record and its files cannot be recovered.',
-      okText: 'Delete',
-      okButtonProps: { danger: true },
-      cancelText: 'Cancel',
-      onOk: async () => {
-        try {
-          await adminApi.deleteSession(id)
-          toast.success('Session deleted')
-          loadData()
-        } catch (err) {
-          toast.error(err.message)
-        }
-      },
-    })
+  const requestDelete = useCallback((kind, id, label) => {
+    setConfirmRequest({ kind, id, label })
+  }, [])
+
+  const runConfirmedDelete = useCallback(async ({ kind, id }) => {
+    const api = kind === 'doctor' ? adminApi.deleteDoctor
+      : kind === 'session' ? adminApi.deleteSession
+      : adminApi.deletePatient
+    await api(id)
+    toast.success(kind === 'doctor' ? 'Doctor deleted' : kind === 'session' ? 'Session deleted' : 'Patient deleted')
+    loadData()
   }, [loadData])
 
   const filteredPatients = useMemo(() => {
@@ -149,9 +134,9 @@ export default function AdminPanel() {
 
   const TABS = [
     { id: 'doctors',   label: `Doctors (${doctors.length})`,   icon: UserCog },
-    { id: 'patients',  label: `Patients (${filteredPatients.length})`, icon: Users },
-    { id: 'analyses',  label: `Analyses (${analyses.length})`, icon: FileText },
-    { id: 'audit',     label: `Audit Trail (${auditLogs.length})`, icon: Shield },
+    { id: 'patients',  label: `Patients (${totals.patients ?? filteredPatients.length})`, icon: Users },
+    { id: 'analyses',  label: `Analyses (${totals.analyses ?? analyses.length})`, icon: FileText },
+    { id: 'audit',     label: `Audit Trail (${totals.audit ?? auditLogs.length})`, icon: Shield },
   ]
 
   const doctorColumns = useMemo(() => [
@@ -239,7 +224,7 @@ export default function AdminPanel() {
             <Users size={13} aria-hidden="true" />
           </button>
           <button
-            onClick={() => handleDeleteDoctor(row.id)}
+            onClick={() => requestDelete('doctor', row.id, row.full_name || row.username)}
             aria-label={`Delete ${row.full_name || row.username}`}
             className="p-1.5 rounded-md text-red-500 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 hover:bg-red-100 dark:hover:bg-red-950/50 transition-colors"
           >
@@ -248,7 +233,7 @@ export default function AdminPanel() {
         </div>
       )
     }
-  ], [handleDeleteDoctor, setSelectedDoctorId, setSelectedDoctorName, setActiveTab])
+  ], [requestDelete, setSelectedDoctorId, setSelectedDoctorName, setActiveTab])
 
   const patientColumns = useMemo(() => [
     {
@@ -343,7 +328,7 @@ export default function AdminPanel() {
             <Download size={13} aria-hidden="true" />
           </button>
           <button
-            onClick={() => handleDeletePatient(row.patient_id)}
+            onClick={() => requestDelete('patient', row.patient_id, row.name)}
             aria-label={`Delete ${row.name}`}
             className="p-1.5 rounded-md text-red-500 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 hover:bg-red-100 dark:hover:bg-red-950/50 transition-colors"
           >
@@ -352,7 +337,7 @@ export default function AdminPanel() {
         </div>
       )
     }
-  ], [handleDeletePatient, navigate])
+  ], [requestDelete, navigate])
 
   const analysisColumns = useMemo(() => [
     {
@@ -438,7 +423,7 @@ export default function AdminPanel() {
             <Eye size={13} aria-hidden="true" />
           </button>
           <button
-            onClick={() => handleDeleteSession(row.id || row.session_id)}
+            onClick={() => requestDelete('session', row.id || row.session_id, row.patient_name || row.patient_id)}
             title="Delete Session"
             className="p-1.5 rounded-md text-red-500 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 hover:bg-red-100 dark:hover:bg-red-950/50 transition-colors"
           >
@@ -447,7 +432,7 @@ export default function AdminPanel() {
         </div>
       )
     }
-  ], [handleDeleteSession, navigate])
+  ], [requestDelete, navigate])
 
   const auditColumns = useMemo(() => [
     {
@@ -619,7 +604,7 @@ export default function AdminPanel() {
                         View Patients
                       </button>
                       <button
-                        onClick={() => handleDeleteDoctor(doc.id)}
+                        onClick={() => requestDelete('doctor', doc.id, doc.full_name || doc.username)}
                         className="p-2 rounded-xl text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 border border-transparent hover:border-red-200 dark:hover:border-red-900/30 transition-colors"
                         title="Delete Doctor"
                       >
@@ -766,7 +751,7 @@ export default function AdminPanel() {
                                 <Download size={14} />
                               </button>
                               <button
-                                onClick={() => handleDeletePatient(pat.patient_id)}
+                                onClick={() => requestDelete('patient', pat.patient_id, pat.name)}
                                 className="p-2 rounded-xl text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 border border-transparent hover:border-red-200 dark:hover:border-red-900/30 transition-colors"
                                 title="Delete Patient"
                               >
@@ -813,12 +798,26 @@ export default function AdminPanel() {
       </div>
 
       {/* Permanent deletion warning */}
-      <div className="flex items-start gap-3 px-4 py-3.5 rounded-2xl bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800/50">
-        <AlertTriangle size={16} className="text-red-500 shrink-0 mt-0.5" aria-hidden="true" />
-        <p className="text-xs text-red-700 dark:text-red-400 font-medium leading-relaxed">
+      <div className="flex items-start gap-3 px-4 py-3.5 rounded-2xl bg-danger/10 border border-danger/20">
+        <AlertTriangle size={16} className="text-danger shrink-0 mt-0.5" aria-hidden="true" />
+        <p className="text-xs text-danger font-medium leading-relaxed">
           Administrative deletions are permanent. All associated clinical records and session histories will be unrecoverable.
         </p>
       </div>
+
+      <ConfirmModal
+        open={confirmRequest !== null}
+        onClose={() => setConfirmRequest(null)}
+        onConfirm={() => runConfirmedDelete(confirmRequest)}
+        title={confirmRequest?.kind === 'doctor' ? 'Delete this doctor?' : confirmRequest?.kind === 'session' ? 'Delete this analysis session?' : 'Delete this patient?'}
+        message={
+          confirmRequest?.kind === 'doctor'
+            ? `All clinical records for ${confirmRequest?.label} will be permanently removed.`
+            : confirmRequest?.kind === 'session'
+            ? 'This assessment record and its files cannot be recovered.'
+            : `All clinical records and session histories for ${confirmRequest?.label} will be permanently removed.`
+        }
+      />
     </div>
   )
 }

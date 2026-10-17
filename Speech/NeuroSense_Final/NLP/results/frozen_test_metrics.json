@@ -1,0 +1,54 @@
+{
+  "recording_level": {
+    "n_recordings": 69,
+    "accuracy": 0.6521739130434783,
+    "balanced_accuracy": 0.7255102040816326,
+    "dementia_recall": 0.5510204081632653,
+    "control_recall": 0.9,
+    "precision": 0.9310344827586207,
+    "f1": 0.6923076923076923,
+    "roc_auc": 0.7846938775510204,
+    "pr_auc": 0.9100660377746066,
+    "confusion_matrix": [
+      [
+        18,
+        2
+      ],
+      [
+        22,
+        27
+      ]
+    ]
+  },
+  "participant_level": {
+    "n_participants": 37,
+    "accuracy": 0.7837837837837838,
+    "balanced_accuracy": 0.8620689655172413,
+    "dementia_recall": 0.7241379310344828,
+    "control_recall": 1.0,
+    "precision": 1.0,
+    "f1": 0.84,
+    "roc_auc": 0.8793103448275862,
+    "pr_auc": 0.9687780374054478,
+    "confusion_matrix": [
+      [
+        8,
+        0
+      ],
+      [
+        8,
+        21
+      ]
+    ]
+  },
+  "protocol": {
+    "model": "DistilBERT embeddings + Logistic Regression",
+    "embedding_model": "distilbert-base-uncased",
+    "threshold": 0.5,
+    "n_test_recordings": 69,
+    "test_controls": 20,
+    "test_dementia": 49,
+    "retraining_on_test": false,
+    "threshold_tuning_on_test": false
+  }
+}

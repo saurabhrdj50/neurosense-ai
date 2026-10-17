@@ -1,13 +1,18 @@
-import os
+"""NeuroSense AI server entrypoint (uvicorn).
+
+    python run.py                # dev server on $PORT (default 10000)
+    uvicorn app.main:app ...     # equivalent explicit form used in Docker
+
+Runs as a single process by design: the background-job registry is in-memory
+and ML models are process singletons. Concurrency comes from uvicorn's async
+event loop plus FastAPI's threadpool for the blocking (sync) endpoints, and
+from ML_JOB_WORKERS for heavyweight analysis jobs.
+"""
 import logging
+import os
 
-# Suppress TensorFlow C++ log messages and oneDNN warnings before TF import
-os.environ.setdefault('TF_ENABLE_ONEDNN_OPTS', '0')
-os.environ.setdefault('TF_CPP_MIN_LOG_LEVEL', '2')
+import uvicorn
 
-from app import create_app
-
-# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
@@ -20,19 +25,20 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 os.makedirs(os.path.join(BASE_DIR, 'app', 'uploads'), exist_ok=True)
 os.makedirs(os.path.join(BASE_DIR, 'app', 'models'), exist_ok=True)
 
-app = create_app()
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
 
     logger.info("=" * 60)
-    logger.info("Starting NeuroSense AI Server")
+    logger.info("Starting NeuroSense AI Server (FastAPI)")
     logger.info(f"Running on port: {port}")
     logger.info("=" * 60)
 
-    app.run(
+    uvicorn.run(
+        'app.main:app',
         host='0.0.0.0',
         port=port,
-        debug=False,
-        threaded=True
+        workers=1,
+        proxy_headers=bool(os.environ.get('TRUST_PROXY')),
+        server_header=False,
     )

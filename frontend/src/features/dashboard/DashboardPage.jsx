@@ -4,7 +4,7 @@ import { CountUp, StaggerGrid, StaggerCell } from '../../shared/motion';
 import { useNavigate } from 'react-router-dom';
 import {
   AlertTriangle, ArrowRight, Plus, RefreshCw, ChevronRight, CheckCircle2,
-  ArrowUpDown, ChevronUp, ChevronDown
+  ArrowUpDown, ChevronUp, ChevronDown, Users, FileText, HeartPulse, CalendarClock, Sparkles
 } from 'lucide-react';
 import { patientsApi } from '../patients/api/patientsApi';
 import { historyApi } from '../history/api/historyApi';
@@ -14,6 +14,7 @@ import {
 } from 'recharts';
 import Button from '../../shared/components/ui/Button';
 import Badge from '../../shared/components/ui/Badge';
+import { Skeleton } from '../../shared/components/ui/Skeleton';
 import { useTheme } from '../../providers/ThemeProvider';
 import { useAuth } from '../../providers/AuthProvider';
 import {
@@ -50,23 +51,24 @@ export default function DashboardPage() {
   const { isDark } = useTheme();
   const { user } = useAuth();
   // Server state via TanStack Query; derived metrics are a pure computation
-  // over the two cached datasets.
+  // over the two cached datasets. Query errors are NOT swallowed here —
+  // failures surface in the error banner below. Keys are namespaced so the
+  // dashboard's payload shape never collides with PatientsPage's under the
+  // same cache entry (prefix invalidation via ['patients'] still matches).
   const patientsQuery = useQuery({
-    queryKey: ['patients'],
-    queryFn: async () => {
-      const res = await patientsApi.getAll().catch(() => null);
-      return res?.patients || null;
-    },
+    queryKey: ['patients', 'dashboard'],
+    queryFn: () => patientsApi.getAll(),
   });
   const analysesQuery = useQuery({
-    queryKey: ['analyses'],
-    queryFn: async () => {
-      const res = await historyApi.getAllAnalyses().catch(() => null);
-      return res?.analyses || null;
-    },
+    queryKey: ['analyses', 'dashboard'],
+    queryFn: () => historyApi.getAllAnalyses(),
   });
-  const patients = useMemo(() => patientsQuery.data || [], [patientsQuery.data]);
-  const analyses = useMemo(() => analysesQuery.data || [], [analysesQuery.data]);
+  const patients = useMemo(() => patientsQuery.data?.patients || [], [patientsQuery.data]);
+  // API-reported total, not the (row-capped) array length.
+  const patientsTotal = patientsQuery.data?.total ?? patients.length;
+  const analyses = useMemo(() => analysesQuery.data?.analyses || [], [analysesQuery.data]);
+  const analysesTotal = analysesQuery.data?.total ?? analyses.length;
+  const analysesTruncated = Boolean(analysesQuery.data?.truncated);
   const refreshing = patientsQuery.isFetching || analysesQuery.isFetching;
   const ready = !patientsQuery.isLoading && !analysesQuery.isLoading;
   const lastRefreshed = useMemo(() => {
@@ -97,22 +99,24 @@ export default function DashboardPage() {
 
   // Pure computation over the cached datasets — no fetching, no setState.
   const derived = useMemo(() => {
-    const riskCounts = { Normal: 0, Mild: 0, Moderate: 0, High: 0, Unknown: 0 };
+    // 3-stage cohort buckets mirroring the 3-class MRI model (CN / MCI / AD).
+    // Legacy 4-stage labels from older records fold into their nearest bucket.
+    const riskCounts = { Normal: 0, Mild: 0, AD: 0, Unknown: 0 };
       analyses.forEach((a) => {
-        const stage = getAnalysisStage(a);
-        if (stage.includes('Non') || stage.includes('Very Mild')) riskCounts.Normal++;
-        else if (stage.includes('Mild')) riskCounts.Mild++;
-        else if (stage.includes('Moderate')) riskCounts.Moderate++;
-        else if (getRiskLevel(stage) === 'High') riskCounts.High++;
+        const stage = getAnalysisStage(a).toLowerCase();
+        if (stage.includes('non') || stage.includes('cognitively normal') || stage === 'cn'
+            || stage.includes('normal cognition')) riskCounts.Normal++;
+        else if (stage.includes('mild') || stage.includes('mci')) riskCounts.Mild++;
+        else if (stage.includes('moderate') || stage.includes('severe')
+            || stage.includes('alzheimer') || stage === 'ad') riskCounts.AD++;
         else riskCounts.Unknown++;
       });
 
-      const totalRisk = riskCounts.Normal + riskCounts.Mild + riskCounts.Moderate + riskCounts.High + riskCounts.Unknown;
+      const totalRisk = riskCounts.Normal + riskCounts.Mild + riskCounts.AD + riskCounts.Unknown;
       const distribution = totalRisk > 0 ? [
         { name: 'Normal', value: Math.round((riskCounts.Normal / totalRisk) * 100), count: riskCounts.Normal, color: RISK_COLORS.Normal },
         { name: 'Mild (MCI)', value: Math.round((riskCounts.Mild / totalRisk) * 100), count: riskCounts.Mild, color: RISK_COLORS.Mild },
-        { name: 'Moderate', value: Math.round((riskCounts.Moderate / totalRisk) * 100), count: riskCounts.Moderate, color: RISK_COLORS.Moderate },
-        { name: 'Severe AD', value: Math.round((riskCounts.High / totalRisk) * 100), count: riskCounts.High, color: RISK_COLORS.High },
+        { name: "Alzheimer's (AD)", value: Math.round((riskCounts.AD / totalRisk) * 100), count: riskCounts.AD, color: RISK_COLORS.AD },
         ...(riskCounts.Unknown > 0 ? [{ name: 'Unknown', value: Math.round((riskCounts.Unknown / totalRisk) * 100), count: riskCounts.Unknown, color: UNKNOWN_RISK_COLOR }] : []),
       ] : [];
 
@@ -147,38 +151,41 @@ export default function DashboardPage() {
           label: date.toLocaleDateString('en-US', { month: 'short' }),
         };
       });
-      const monthlyData = monthKeys.map(({ key, label }) => ({ key, month: label, normal: 0, mild: 0, moderate: 0 }));
+      const monthlyData = monthKeys.map(({ key, label }) => ({ key, month: label, normal: 0, mild: 0, ad: 0 }));
       analyses.forEach((a) => {
-        const stage = getAnalysisStage(a);
+        const stage = getAnalysisStage(a).toLowerCase();
         const date = new Date(a.created_at || nowTs);
         const monthIdx = monthKeys.findIndex((m) => m.key === `${date.getFullYear()}-${date.getMonth()}`);
         if (monthIdx >= 0 && monthIdx < 6) {
-          if (stage.includes('Non') || stage.includes('Very Mild')) monthlyData[monthIdx].normal++;
-          else if (stage.includes('Mild')) monthlyData[monthIdx].mild++;
-          else if (stage.includes('Moderate')) monthlyData[monthIdx].moderate++;
+          if (stage.includes('non') || stage.includes('cognitively normal') || stage === 'cn'
+              || stage.includes('normal cognition')) monthlyData[monthIdx].normal++;
+          else if (stage.includes('mild') || stage.includes('mci')) monthlyData[monthIdx].mild++;
+          else if (stage.includes('moderate') || stage.includes('severe')
+              || stage.includes('alzheimer') || stage === 'ad') monthlyData[monthIdx].ad++;
         }
       });
-      const hasTrendData = monthlyData.some((m) => m.normal > 0 || m.mild > 0 || m.moderate > 0);
+      const hasTrendData = monthlyData.some((m) => m.normal > 0 || m.mild > 0 || m.ad > 0);
 
       return {
         stats: {
-          totalPatients: patients.length,
-          totalAnalyses: analyses.length,
-          highRiskCount: riskCounts.High,
+          totalPatients: patientsTotal,
+          totalAnalyses: analysesTotal,
+          highRiskCount: riskCounts.AD,
           recentActivity: analyses.filter((a) => {
             const created = new Date(a.created_at);
             const dayAgo = new Date(nowTs - 24 * 60 * 60 * 1000);
             return created > dayAgo;
           }).length,
         },
+        truncatedFeed: analysesTruncated,
         riskDistribution: distribution,
         recentAnalyses: recent,
         priorityAnalyses: priority,
         trendData: hasTrendData ? monthlyData : [],
       };
-  }, [patients, analyses]);
+  }, [analyses, analysesTotal, analysesTruncated, patientsTotal]);
 
-  const { stats, riskDistribution, recentAnalyses, priorityAnalyses, trendData } = derived;
+  const { stats, truncatedFeed, riskDistribution, recentAnalyses, priorityAnalyses, trendData } = derived;
 
   /* Sorted Datasets */
   const sortedRecentAnalyses = useMemo(() => {
@@ -227,16 +234,33 @@ export default function DashboardPage() {
   const gridColor = isDark ? '#1F2937' : '#E2E8F0';
   const textColor = isDark ? '#9CA3AF' : '#64748B';
 
+  // Time-of-day greeting — wall-clock by design; re-evaluated on data refresh
+  const greeting = useMemo(() => {
+    const h = new Date().getHours();
+    if (h < 12) return 'Good morning';
+    if (h < 18) return 'Good afternoon';
+    return 'Good evening';
+     
+  }, []);
+  const displayName = user?.full_name || user?.username || 'Doctor';
+
   return (
     <div className="space-y-5 max-w-7xl mx-auto pb-8">
 
       {/* ── Header ───────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-border">
-        <div>
-          <h1 className="text-2xl font-extrabold text-foreground tracking-tight">Clinical Dashboard</h1>
-          <p className="text-sm text-foreground-muted mt-0.5 font-medium">
-            {user?.institution ? `${user.institution} • ` : ''}Last synced at {lastRefreshed}
-          </p>
+        <div className="flex items-center gap-3.5">
+          <div className="hidden sm:flex w-11 h-11 rounded-2xl bg-gradient-to-br from-primary to-primary-hover text-primary-foreground items-center justify-center shadow-sm shadow-primary/25 shrink-0">
+            <Sparkles size={20} aria-hidden="true" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-extrabold text-foreground tracking-tight">
+              {greeting}, <span className="text-primary">{displayName}</span>
+            </h1>
+            <p className="text-sm text-muted mt-0.5 font-medium">
+              {user?.institution ? `${user.institution} • ` : ''}Last synced at {lastRefreshed}
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap shrink-0">
@@ -254,11 +278,45 @@ export default function DashboardPage() {
             Patient List
           </Button>
 
-          <Button variant="primary" size="md" icon={Plus} onClick={() => navigate('/analysis')}>
+          <Button variant="primary" size="md" icon={Plus} data-tour="new-assessment" onClick={() => navigate('/analysis')}>
             New Assessment
           </Button>
         </div>
       </div>
+
+      {/* ── First-Run Onboarding: empty registry gets a path forward ─────── */}
+      {/* Suppressed while a fetch failed — "your registry is empty" would be
+          a lie when the data simply didn't load. */}
+      {ready && patients.length === 0 && !fetchError && (
+        <StaggerGrid className="relative overflow-hidden rounded-2xl border border-primary/25 bg-card p-8 sm:p-10 text-center space-y-4 shadow-xs">
+          <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-[360px] h-[180px] bg-primary/10 blur-[80px] rounded-full pointer-events-none" aria-hidden="true" />
+          <StaggerCell>
+            <div className="w-14 h-14 mx-auto rounded-2xl bg-primary-soft border border-primary/25 text-primary flex items-center justify-center" aria-hidden="true">
+              <Users size={26} />
+            </div>
+          </StaggerCell>
+          <StaggerCell>
+            <h2 className="text-xl sm:text-2xl font-extrabold text-foreground tracking-tight">
+              Welcome, {displayName.split(' ')[0]} — let's set up your workspace
+            </h2>
+            <p className="text-sm text-muted font-medium mt-1.5 max-w-md mx-auto">
+              Your patient registry is empty. Register your first patient, or load a fully
+              pre-filled sample case to explore the assessment workflow end-to-end.
+            </p>
+          </StaggerCell>
+          <StaggerCell className="flex flex-col sm:flex-row items-center justify-center gap-2.5 pt-1">
+            <Button variant="primary" size="md" icon={Plus} onClick={() => navigate('/patients', { state: { openAddModal: true } })}>
+              Register First Patient
+            </Button>
+            <Button variant="secondary" size="md" icon={Sparkles} onClick={() => navigate('/analysis', { state: { loadSample: true } })}>
+              Load Sample Case
+            </Button>
+            <Button variant="ghost" size="md" icon={ArrowRight} onClick={() => navigate('/analysis')}>
+              Start an Assessment
+            </Button>
+          </StaggerCell>
+        </StaggerGrid>
+      )}
 
       {/* ── Data Load Error Banner ───────────────────────────────────────── */}
       {fetchError && (
@@ -400,16 +458,23 @@ export default function DashboardPage() {
       {/* ── Compact Information-Dense KPI Grid ───────────────────────────── */}
       <StaggerGrid className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4.5">
         {[
-          { label: 'Total Patients', value: stats.totalPatients, sub: 'Active registry', color: 'text-foreground' },
-          { label: 'Evaluations Run', value: stats.totalAnalyses, sub: 'Full assessments', color: 'text-foreground' },
-          { label: 'High-Risk Alerts', value: stats.highRiskCount, sub: stats.highRiskCount > 0 ? 'Action required' : 'All clear', color: stats.highRiskCount > 0 ? 'text-rose-600 dark:text-rose-400 font-extrabold' : 'text-emerald-600 dark:text-emerald-400 font-bold' },
-          { label: '24h New Cases', value: stats.recentActivity, sub: 'Recent evaluations', color: 'text-primary font-extrabold' },
+          { label: 'Total Patients', value: stats.totalPatients, sub: 'Active registry', icon: Users, tile: 'bg-primary-soft text-primary border-primary/20' },
+          { label: 'Evaluations Run', value: stats.totalAnalyses, sub: 'Full assessments', icon: FileText, tile: 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20' },
+          { label: 'High-Risk Alerts', value: stats.highRiskCount, sub: stats.highRiskCount > 0 ? 'Action required' : 'All clear', icon: HeartPulse, tile: stats.highRiskCount > 0 ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' },
+          { label: '24h New Cases', value: stats.recentActivity, sub: 'Recent evaluations', icon: CalendarClock, tile: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' },
         ].map((kpi, idx) => (
-          <StaggerCell key={idx} className="p-6 rounded-2xl bg-card border border-border space-y-3 shadow-xs hover:border-border-strong transition-all duration-150">
-            <span className="text-lg font-bold text-foreground block truncate">{kpi.label}</span>
+          <StaggerCell key={idx} className="p-5 rounded-2xl bg-card border border-border shadow-xs hover:border-border-strong hover:-translate-y-0.5 hover:shadow-sm transition-all duration-200 flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm font-bold text-muted">{kpi.label}</span>
+              <span className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 ${kpi.tile}`} aria-hidden="true">
+                <kpi.icon size={17} />
+              </span>
+            </div>
             <div className="flex items-baseline justify-between gap-2">
-              <span className={`text-3xl sm:text-4xl font-extrabold font-mono tracking-tight ${kpi.color}`}>{ready ? <CountUp value={kpi.value} /> : '...'}</span>
-              <span className="text-[15px] font-semibold text-foreground-muted shrink-0">{kpi.sub}</span>
+              <span className={`text-3xl sm:text-4xl font-extrabold font-mono tracking-tight ${idx === 2 && stats.highRiskCount > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-foreground'}`}>
+                {ready ? <CountUp value={kpi.value} /> : <Skeleton width={64} height={34} rounded={8} />}
+              </span>
+              <span className="text-xs font-semibold text-muted shrink-0">{kpi.sub}</span>
             </div>
           </StaggerCell>
         ))}
@@ -430,17 +495,31 @@ export default function DashboardPage() {
           {trendData.length > 0 ? (
             <ResponsiveContainer width="100%" height={180}>
               <AreaChart data={trendData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="gradNormal" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#10B981" stopOpacity={0.35} />
+                    <stop offset="100%" stopColor="#10B981" stopOpacity={0.02} />
+                  </linearGradient>
+                  <linearGradient id="gradMild" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#F59E0B" stopOpacity={0.35} />
+                    <stop offset="100%" stopColor="#F59E0B" stopOpacity={0.02} />
+                  </linearGradient>
+                  <linearGradient id="gradModerate" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#EF4444" stopOpacity={0.35} />
+                    <stop offset="100%" stopColor="#EF4444" stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
                 <XAxis dataKey="month" tick={{ fill: textColor, fontSize: 13, fontWeight: 500 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: textColor, fontSize: 13, fontWeight: 500 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: textColor, fontSize: 13, fontWeight: 500 }} axisLine={false} tickLine={false} allowDecimals={false} />
                 <Tooltip content={<ChartTooltip />} />
-                <Area type="monotone" dataKey="normal" name="Normal" stroke="#10B981" strokeWidth={2} fill="#10B981" fillOpacity={0.15} />
-                <Area type="monotone" dataKey="mild" name="Mild (MCI)" stroke="#F59E0B" strokeWidth={2} fill="#F59E0B" fillOpacity={0.15} />
-                <Area type="monotone" dataKey="moderate" name="Moderate/Severe" stroke="#EF4444" strokeWidth={2} fill="#EF4444" fillOpacity={0.15} />
+                <Area type="monotone" dataKey="normal" name="Normal" stroke="#10B981" strokeWidth={2.5} fill="url(#gradNormal)" animationDuration={900} animationEasing="ease-out" />
+                <Area type="monotone" dataKey="mild" name="Mild (MCI)" stroke="#F59E0B" strokeWidth={2.5} fill="url(#gradMild)" animationDuration={900} animationEasing="ease-out" animationBegin={120} />
+                <Area type="monotone" dataKey="ad" name="Alzheimer's (AD)" stroke="#EF4444" strokeWidth={2.5} fill="url(#gradModerate)" animationDuration={900} animationEasing="ease-out" animationBegin={240} />
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div className="py-10 text-center text-sm font-medium text-foreground-muted">No trend data available</div>
+            <div className="py-10 text-center text-sm font-medium text-muted">No trend data available</div>
           )}
         </div>
 
@@ -461,6 +540,9 @@ export default function DashboardPage() {
                       outerRadius={60}
                       dataKey="value"
                       strokeWidth={0}
+                      animationDuration={800}
+                      animationEasing="ease-out"
+                      animationBegin={150}
                     >
                       {riskDistribution.map((d, i) => (
                         <Cell key={i} fill={d.color} />
@@ -498,6 +580,11 @@ export default function DashboardPage() {
           <h3 className="text-[15px] font-extrabold text-foreground uppercase tracking-wider">
             Recent Patient Assessments ({recentAnalyses.length})
           </h3>
+          {truncatedFeed && (
+            <span className="text-[11px] font-semibold text-foreground-muted">
+              KPIs &amp; charts cover the latest 1,000 sessions
+            </span>
+          )}
           <button
             onClick={() => navigate('/patients')}
             className="text-sm font-bold text-primary hover:underline flex items-center gap-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-sm"
@@ -603,8 +690,17 @@ export default function DashboardPage() {
             </table>
           </div>
         ) : (
-          <div className="py-8 text-center text-sm font-medium text-foreground-muted">
-            No recent patient assessments found.
+          <div className="py-10 px-4 flex flex-col items-center gap-3 text-center">
+            <div className="w-12 h-12 rounded-2xl bg-primary-soft border border-primary/20 text-primary flex items-center justify-center" aria-hidden="true">
+              <FileText size={22} />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-foreground">No recent assessments</p>
+              <p className="text-xs text-muted mt-0.5">Run a new assessment to see results appear here.</p>
+            </div>
+            <Button variant="outline" size="sm" icon={Plus} onClick={() => navigate('/analysis')}>
+              Start New Assessment
+            </Button>
           </div>
         )}
       </section>

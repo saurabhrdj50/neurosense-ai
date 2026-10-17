@@ -1,12 +1,16 @@
 /**
- * @fileoverview Clinical dialog modal with ARIA support and focus management.
+ * @fileoverview Clinical dialog modal with ARIA support, focus management,
+ * theme tokens, and spring entrance/exit animation.
  */
 import React, { useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
+import { motion, AnimatePresence } from 'framer-motion'
 import { X } from 'lucide-react'
 
 /**
  * Clinical dialog modal.
  * Closes on Escape or backdrop click. Focus is trapped to modal content.
+ * Rendered through a portal so parent stacking contexts cannot clip it.
  *
  * @param {boolean}         props.open
  * @param {function}        props.onClose
@@ -43,49 +47,65 @@ export default function Modal({ open, onClose, title, children, maxWidth = 560 }
   useEffect(() => {
     if (open && panelRef.current) {
       const first = panelRef.current.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')
-      setTimeout(() => first?.focus(), 50)
+      const t = setTimeout(() => first?.focus(), 80)
+      return () => clearTimeout(t)
     }
   }, [open])
 
-  if (!open) return null
+  if (typeof document === 'undefined') return null
 
-  return (
-    <>
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-slate-950/50 dark:bg-slate-950/70 z-50"
-        aria-hidden="true"
-        onClick={onClose}
-      />
-
-      {/* Panel */}
-      <div
-        ref={panelRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={title ? 'modal-title' : undefined}
-        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 max-h-[90vh] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-50 overflow-hidden flex flex-col"
-        style={{ width: `min(${maxWidth}px, 92vw)` }}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-          {title && (
-            <h3 id="modal-title" className="text-sm font-bold text-slate-900 dark:text-white tracking-tight">
-              {title}
-            </h3>
-          )}
-          <button
+  return createPortal(
+    <AnimatePresence>
+      {open && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-[90]"
+            aria-hidden="true"
             onClick={onClose}
-            aria-label="Close dialog"
-            className="p-1.5 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors ml-auto"
-          >
-            <X size={15} aria-hidden="true" />
-          </button>
-        </div>
+          />
 
-        {/* Body */}
-        <div className="p-5 overflow-y-auto">{children}</div>
-      </div>
-    </>
+          {/* Centering wrapper — panel animates inside without fighting translate */}
+          <div className="fixed inset-0 z-[91] flex items-center justify-center p-4 pointer-events-none">
+            <motion.div
+              ref={panelRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby={title ? 'modal-title' : undefined}
+              initial={{ opacity: 0, scale: 0.94, y: 14 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 8 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 380 }}
+              className="pointer-events-auto max-h-[90vh] bg-card border border-border rounded-2xl shadow-lg overflow-hidden flex flex-col"
+              style={{ width: `min(${maxWidth}px, 92vw)` }}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-3.5 border-b border-border bg-surface-secondary/60">
+                {title && (
+                  <h3 id="modal-title" className="text-sm font-bold text-foreground tracking-tight">
+                    {title}
+                  </h3>
+                )}
+                <button
+                  onClick={onClose}
+                  aria-label="Close dialog"
+                  className={`p-1.5 rounded-lg text-muted hover:text-foreground hover:bg-surface-hover transition-colors ${title ? '' : 'ml-auto'}`}
+                >
+                  <X size={15} aria-hidden="true" />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-5 overflow-y-auto">{children}</div>
+            </motion.div>
+          </div>
+        </>
+      )}
+    </AnimatePresence>,
+    document.body
   )
 }

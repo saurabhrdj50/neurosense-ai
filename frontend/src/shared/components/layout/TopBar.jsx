@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Menu, Search, Command, Shield,
+  Menu, Search, Shield,
   Settings, HelpCircle, User, LogOut, ChevronDown
 } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
@@ -95,6 +95,21 @@ export default function TopBar({ onMenuClick }) {
 
         {/* Right Action Controls */}
         <div className="flex items-center gap-2.5 shrink-0">
+          {/* Command Palette trigger — discoverable alternative to Ctrl/⌘+K */}
+          <button
+            onClick={() => setPaletteOpen(true)}
+            data-tour="command-palette"
+            className="hidden sm:flex items-center gap-2 h-9 pl-3 pr-2 rounded-lg bg-surface-secondary border border-border text-foreground-subtle hover:text-foreground hover:border-border-strong transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+            title="Search patients, navigate (Ctrl+K)"
+            aria-label="Open command palette"
+          >
+            <Search size={14} />
+            <span className="text-xs font-medium">Search…</span>
+            <kbd className="ml-2 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md border border-border bg-card text-[10px] font-mono font-bold text-foreground-subtle">
+              {navigator.platform?.toLowerCase().includes('mac') ? '⌘' : 'Ctrl'} K
+            </kbd>
+          </button>
+
           {/* System Admin Role Badge */}
           {isAdmin && (
             <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-semibold">

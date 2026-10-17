@@ -94,9 +94,20 @@ export function ThemeProvider({ children }) {
     }
   })
 
-  // Reflect theme changes onto <html> and persist them.
+  // Reflect theme changes onto <html> and persist them. On user-initiated
+  // changes (not the initial mount) a `theme-anim` class is applied briefly
+  // so every surface crossfades to the new palette instead of snapping.
+  const isFirstThemeApply = React.useRef(true)
   useEffect(() => {
+    const root = document.documentElement
+    const animate = !isFirstThemeApply.current
+    isFirstThemeApply.current = false
+    if (animate) root.classList.add('theme-anim')
     applyThemeToDocument(theme)
+    if (animate) {
+      const t = setTimeout(() => root.classList.remove('theme-anim'), 300)
+      return () => clearTimeout(t)
+    }
     try {
       localStorage.setItem(THEME_STORAGE_KEY, theme)
     } catch {

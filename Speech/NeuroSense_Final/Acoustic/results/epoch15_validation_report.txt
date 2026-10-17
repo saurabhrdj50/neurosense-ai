@@ -1,0 +1,14 @@
+Epoch: 15
+Metrics: {'accuracy': 0.663, 'balanced_acc': 0.6933, 'recall_control': 0.925, 'recall_dementia': 0.4615}
+Confusion matrix:
+[[37  3]
+ [28 24]]
+
+              precision    recall  f1-score   support
+
+     Control     0.5692    0.9250    0.7048        40
+    Dementia     0.8889    0.4615    0.6076        52
+
+    accuracy                         0.6630        92
+   macro avg     0.7291    0.6933    0.6562        92
+weighted avg     0.7499    0.6630    0.6498        92

@@ -1,19 +1,19 @@
-from abc import ABC, abstractmethod
 from typing import Optional, Dict, Any
-from app.shared.database import Database
 
 
-class BaseRepository(ABC):
-    """Abstract base class for all repositories."""
+class BaseRepository:
+    """Base class for all repositories.
 
-    def __init__(self, db_path: Optional[str] = None):
-        self.db = Database.get_instance(db_path)
-        self._init_schema()
+    Repositories are cheap, stateless objects: schema creation and demo-data
+    seeding live in :mod:`app.shared.bootstrap` and run once at startup, so
+    constructing a repository per request does no DDL. ``db_path`` is a legacy
+    test hook that must be set before the engine is first created.
+    """
 
-    @abstractmethod
-    def _init_schema(self) -> None:
-        """Initialize database schema for this repository."""
-        pass
+    def __init__(self, db_path: Optional[str] = None) -> None:
+        if db_path:
+            from app.config.settings import Config
+            Config.DB_PATH = str(db_path)
 
     def _row_to_dict(self, row) -> Dict[str, Any]:
         if row is None:

@@ -4,7 +4,6 @@ import tempfile
 import threading
 import logging
 from typing import Dict, Any, Optional, Callable
-from werkzeug.datastructures import FileStorage
 
 from app.ml.contracts import (
     AnalysisInput,
@@ -62,6 +61,7 @@ class AnalysisOrchestrator:
                 ("mri", self._get_mri),
                 ("sentiment", self._get_sentiment),
                 ("speech", self._get_speech),
+                ("speech_nlp", self._get_speech_nlp),
                 ("fusion", self._get_fusion),
                 ("cognitive", self._get_cognitive),
                 ("risk", self._get_risk),
@@ -123,13 +123,19 @@ class AnalysisOrchestrator:
                     self._speech = SpeechTranscriber()
         return self._speech
 
+    def _get_speech_nlp(self):
+        # The classifier module owns its singleton and failure memo; this only
+        # triggers (warmup-time) construction.
+        from app.ml.speech.nlp_classifier import get_speech_nlp_classifier
+        return get_speech_nlp_classifier()
+
     def _get_session_repo(self):
         if self._session_repo is None:
             from app.features.history.repository import SessionRepository
             self._session_repo = SessionRepository()
         return self._session_repo
     
-    def analyze_mri(self, file: FileStorage, gradcam: bool = True) -> MRIResult:
+    def analyze_mri(self, file, gradcam: bool = True) -> MRIResult:
         temp_path = self._save_temp_file(file)
         try:
             mri = self._get_mri()
@@ -148,7 +154,7 @@ class AnalysisOrchestrator:
     def assess_risk(self, data: Dict[str, Any]) -> RiskResult:
         return self._get_risk().assess(data)
 
-    def transcribe_audio(self, file: FileStorage) -> TranscriptionResult:
+    def transcribe_audio(self, file) -> TranscriptionResult:
         temp_path = self._save_temp_file(file)
         try:
             return self._get_speech().transcribe_file(temp_path)
@@ -161,14 +167,14 @@ class AnalysisOrchestrator:
         sentiment_result: Optional[Dict] = None,
         cognitive_result: Optional[CognitiveResult] = None,
         risk_result: Optional[RiskResult] = None,
-        audio_result: Optional[Dict] = None,
+        speech_nlp_result: Optional[Dict] = None,
     ) -> FusionResult:
         return self._get_fusion().predict(
             mri_result=mri_result,
             sentiment_result=sentiment_result,
             cognitive_result=cognitive_result,
             risk_result=risk_result,
-            audio_result=audio_result,
+            speech_nlp_result=speech_nlp_result,
         )
     
     def run_full_analysis(self, inputs: AnalysisInput, doctor_id: Optional[int] = None,
@@ -213,10 +219,15 @@ class AnalysisOrchestrator:
         run_risk_step(self, inputs, results)
 
         # --- Fusion ---
+        # The speech NLP vote rides on the transcription dict; a transcription
+        # without a classifier verdict (short text, model unavailable) must
+        # not trigger or weight fusion by itself.
+        speech_nlp = results.get('audio_transcription') or {}
+        speech_has_vote = speech_nlp.get('dementia_probability') is not None
         if any([
             results.get('mri'), results.get('cognitive'), results.get('risk_profile'),
             results.get('sentiment')
-        ]):
+        ]) or speech_has_vote:
             report('fusion', 72)
             try:
                 results['final_stage'] = self.fuse_results(
@@ -224,7 +235,7 @@ class AnalysisOrchestrator:
                     sentiment_result=results.get('sentiment'),
                     cognitive_result=results.get('cognitive'),
                     risk_result=results.get('risk_profile'),
-                    audio_result=None,  # Speech is already handled in sentiment
+                    speech_nlp_result=speech_nlp if speech_has_vote else None,
                 )
             except Exception as e:
                 results['fusion_error'] = str(e)
@@ -304,9 +315,13 @@ class AnalysisOrchestrator:
         return results
     
     def save_session(self, patient_id: str, results: Dict, patient_name: str = 'Anonymous', created_by=None) -> int:
-        return self._get_session_repo().save(patient_id, results, patient_name, created_by=created_by)
+        session_id = self._get_session_repo().save(patient_id, results, patient_name, created_by=created_by)
+        # New analysis data exists — other sessions' caches must pick it up.
+        from app.shared.bootstrap import bump_data_version
+        bump_data_version()
+        return session_id
     
-    def _save_temp_file(self, file: FileStorage) -> str:
+    def _save_temp_file(self, file) -> str:
         from app.config.settings import Config
         upload_dir = str(Config.UPLOAD_FOLDER)
         os.makedirs(upload_dir, exist_ok=True)

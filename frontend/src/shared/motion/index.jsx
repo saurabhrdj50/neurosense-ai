@@ -7,8 +7,8 @@
  * `prefers-reduced-motion` setting) by returning no-op variants / static
  * numbers when motion is reduced.
  */
-import { useEffect, useState } from 'react'
-import { animate, motion, useMotionValue, useTransform } from 'framer-motion'
+import { useEffect, useState, useRef } from 'react'
+import { animate, motion, useMotionValue, useSpring, useTransform } from 'framer-motion'
 
 const MOTION_STORAGE_KEY = 'neurosense_motion'
 const MOTION_CHANGE_EVENT = 'neurosense:motion-change'
@@ -195,5 +195,47 @@ export function StaggerCell({ children, className = '', as = 'div', ...props }) 
     <Component variants={item} className={className} {...props}>
       {children}
     </Component>
+  )
+}
+
+/* ─── Magnetic hover (primary CTAs) ──────────────────────────────────────── */
+/**
+ * Wraps a CTA so it drifts a few pixels toward the cursor, springing back on
+ * leave. Subtle by design (≤ strength × half-size ≈ 6-8px). Renders children
+ * statically when motion is reduced.
+ */
+export function Magnetic({ children, strength = 0.22, className = '' }) {
+  const reduced = useReducedMotionPref()
+  const ref = useRef(null)
+  const x = useMotionValue(0)
+  const y = useMotionValue(0)
+  const springX = useSpring(x, { stiffness: 260, damping: 20 })
+  const springY = useSpring(y, { stiffness: 260, damping: 20 })
+
+  if (reduced) {
+    return <div className={className}>{children}</div>
+  }
+
+  const handleMove = (e) => {
+    const rect = ref.current?.getBoundingClientRect()
+    if (!rect) return
+    x.set((e.clientX - (rect.left + rect.width / 2)) * strength)
+    y.set((e.clientY - (rect.top + rect.height / 2)) * strength)
+  }
+  const handleLeave = () => {
+    x.set(0)
+    y.set(0)
+  }
+
+  return (
+    <motion.div
+      ref={ref}
+      onMouseMove={handleMove}
+      onMouseLeave={handleLeave}
+      style={{ x: springX, y: springY, display: 'inline-flex' }}
+      className={className}
+    >
+      {children}
+    </motion.div>
   )
 }

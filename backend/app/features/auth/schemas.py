@@ -58,6 +58,14 @@ def _validate_dob(dob_str: str) -> str:
     return dob_str
 
 
+def _validate_hospital(hospital: str) -> str:
+    """Validate hospital/institution name: optional, free text, length-capped."""
+    hospital = ' '.join(hospital.split())
+    if len(hospital) > 120:
+        raise ValueError('Hospital name must be 120 characters or fewer')
+    return hospital
+
+
 # --------------------------------------------------------------------------- #
 # Schemas                                                                      #
 # --------------------------------------------------------------------------- #
@@ -96,23 +104,29 @@ class RegisterSchema:
         password = data.get('password') or ''
         full_name = (data.get('full_name') or '').strip()
         date_of_birth = (data.get('date_of_birth') or '').strip()
+        hospital = (data.get('hospital') or '').strip()
         # NOTE: role is deliberately not accepted here — the route hardcodes
         # role='doctor' so self-service registration can never grant admin.
 
-        # Username
-        if not username:
-            errors['username'] = 'Username is required'
-        elif not _USERNAME_RE.match(username):
-            errors['username'] = (
-                'Username must be 3–30 characters and may only contain '
-                'letters, numbers, underscores, dots, or hyphens'
-            )
-
-        # Email
+        # Email (validated first — the username falls back to it)
         try:
             email = _validate_email(email)
         except ValueError as e:
             errors['email'] = str(e)
+
+        # Username: optional. When omitted (simplified registration), derive
+        # it from the email local part and sanitize it to the username rules.
+        # '@' is never valid in a username, so a raw email must not be sent.
+        if not username and 'email' not in errors:
+            username = email.split('@')[0].strip().lower()
+            username = re.sub(r'[^a-zA-Z0-9_.\-]', '_', username)[:30]
+            if len(username) < 3:
+                username = f"{username}_user"
+        if not _USERNAME_RE.match(username):
+            errors['username'] = (
+                'Username must be 3–30 characters and may only contain '
+                'letters, numbers, underscores, dots, or hyphens'
+            )
 
         # Password
         if not password:
@@ -129,6 +143,12 @@ class RegisterSchema:
         except ValueError as e:
             errors['date_of_birth'] = str(e)
 
+        # Hospital / institution (optional; stored for the clinician profile)
+        try:
+            hospital = _validate_hospital(hospital)
+        except ValueError as e:
+            errors['hospital'] = str(e)
+
         if errors:
             raise ValueError(errors)
 
@@ -138,6 +158,7 @@ class RegisterSchema:
             'password': password,
             'full_name': full_name,
             'date_of_birth': date_of_birth,
+            'hospital': hospital,
         }
 
 

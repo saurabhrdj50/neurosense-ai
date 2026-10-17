@@ -28,8 +28,12 @@ class Session(Base):
 
     # Composite indexes for common query patterns
     __table_args__ = (
+        Index('idx_sessions_patient_id', 'patient_id'),
         Index('idx_sessions_patient_timestamp', 'patient_id', 'timestamp'),
+        Index('idx_sessions_created_by', 'created_by'),
         Index('idx_sessions_created_by_timestamp', 'created_by', 'timestamp'),
+        # /api/analyses and admin sessions order globally by timestamp DESC
+        Index('idx_sessions_timestamp', 'timestamp'),
     )
 
     def to_dict(self):

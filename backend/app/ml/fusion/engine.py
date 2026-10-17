@@ -7,13 +7,13 @@ import numpy as np
 
 from app.ml.stages import STAGE_ORDER, STAGE_INDEX, risk_to_stage_index, cog_to_stage_index
 
-# Base heuristic weights — sum to 1.0
+# Base heuristic weights — sum to 1.0. The legacy 'audio' slot was removed:
+# speech evidence votes through the 'sentiment' key (speech NLP channel).
 DEFAULT_WEIGHTS = {
     'mri':       0.40,
     'cognitive': 0.25,
-    'sentiment': 0.15,
-    'risk':      0.10,
-    'audio':     0.10,
+    'sentiment': 0.20,
+    'risk':      0.15,
 }
 
 
@@ -24,7 +24,7 @@ class MultimodalFusion:
         sentiment_result=None,
         cognitive_result=None,
         risk_result=None,
-        audio_result=None,
+        speech_nlp_result=None,
         **kwargs,
     ) -> dict:
         modalities = {}
@@ -40,28 +40,36 @@ class MultimodalFusion:
                 'label': f"MRI: {mri_result['stage']} ({raw_conf:.1f}%)",
             }
 
-        # --- Sentiment / Speech ---
-        # Accepts both the new speech pipeline object and legacy cognitive_risk_score
-        if sentiment_result:
-            crs = sentiment_result.get('cognitive_risk_score')
-            if crs is not None:
-                # Legacy path: numeric risk score 0-100
-                sent_idx = self._risk_to_stage_index(float(crs))
-                modalities['sentiment'] = {
-                    'stage_index': sent_idx,
-                    'confidence': min(float(crs) / 100.0, 0.95),
-                    'label': f"Speech: cognitive_risk={crs}",
-                }
-            elif sentiment_result.get('speech_fluency') is not None:
-                # New path: acoustic pipeline gave us speech features but no stage mapping
-                # We can acknowledge the modality contributed but won't invent a stage index
-                pass  # Do not map acoustic features to a spurious stage
+        # --- Speech NLP (research classifier over the transcript) ---
+        # Dedicated channel: the display-only 'sentiment' object never carries
+        # a severity score (pinned by tests); only this explicit input votes.
+        # P(dementia) is mapped through the canonical 0-100 risk policy so the
+        # vote stays monotonic with the model's probability.
+        if speech_nlp_result and speech_nlp_result.get('dementia_probability') is not None:
+            p = max(0.0, min(float(speech_nlp_result['dementia_probability']), 1.0))
+            # Confidence = distance from the 0.5 decision boundary: a vote
+            # near the threshold contributes almost nothing, a decisive one
+            # contributes real signal. The model is binary (control vs
+            # dementia), so confidence is capped well below the MRI's.
+            speech_conf = max(0.1, min(abs(p - 0.5) * 2.0, 0.9))
+            modalities['sentiment'] = {
+                'stage_index': risk_to_stage_index(p * 100.0),
+                'confidence': speech_conf,
+                'label': f"Speech NLP: P(dementia)={p:.2f} (research model)",
+            }
+
+        # --- Sentiment / Speech (display-only) ---
+        # The sentiment parameter is accepted for call-site compatibility but
+        # deliberately never votes: the display object carries no severity
+        # score (pinned by tests), and the speech model's verdict arrives via
+        # the explicit ``speech_nlp_result`` channel above. The former
+        # cognitive_risk_score/audio legacy paths were removed — dead code.
 
         # --- Cognitive ---
         # Gate on actual assessment coverage: composite_score 0 with zero
         # answered questions ("Not Assessed") must never vote — cog_to_stage_index(0)
-        # maps to Moderate Demented, so an empty questionnaire would otherwise
-        # fabricate a severe-dementia vote.
+        # maps to "Alzheimer's Disease (AD)", so an empty questionnaire would
+        # otherwise fabricate a severe-dementia vote.
         if cognitive_result and cognitive_result.get('composite_score') is not None:
             tests_completed = cognitive_result.get('tests_completed')
             if tests_completed is not None:
@@ -106,23 +114,13 @@ class MultimodalFusion:
                     'label': f"Risk Score: {risk_val}/100",
                 }
 
-        # --- Audio (legacy path) ---
-        if audio_result and audio_result.get('cognitive_risk_score') is not None:
-            au_score = float(audio_result['cognitive_risk_score'])
-            au_idx = self._risk_to_stage_index(au_score)
-            modalities['audio'] = {
-                'stage_index': au_idx,
-                'confidence': min(au_score / 100.0, 0.95),
-                'label': f"Audio: cognitive_risk={au_score}",
-            }
-
         if not modalities:
             return self._empty_result()
 
         if len(modalities) == 1:
             key, mod = next(iter(modalities.items()))
             # Sanitize single-modality inputs: production domains always emit
-            # stage_index 0-3 and confidence 0-100, but clamp defensively so a
+            # stage_index 0-2 and confidence 0-100, but clamp defensively so a
             # malformed caller can never produce an out-of-range stage or a
             # confidence like 1000% in the frontend response.
             safe_idx = max(0, min(int(mod['stage_index']), len(STAGE_ORDER) - 1))
@@ -142,9 +140,20 @@ class MultimodalFusion:
                 'explanation': f"Stage interpreted from {key.upper()} analysis only. Not a clinical diagnosis.",
             }
 
-        # Renormalize weights for available modalities
-        total_available_weight = sum(DEFAULT_WEIGHTS.get(k, 0.10) for k in modalities)
-        norm_weights = {k: DEFAULT_WEIGHTS.get(k, 0.10) / total_available_weight for k in modalities}
+        # Base prior heuristic weights
+        base_weights = {k: DEFAULT_WEIGHTS.get(k, 0.10) for k in modalities}
+
+        # Tier 2 Attentive Evidential Gating:
+        # Modulates base priors with each modality's confidence certainty,
+        # adaptively emphasizing high-certainty evidence while softly attenuating noise.
+        atten_weights = {}
+        for k in modalities:
+            conf = float(modalities[k].get('confidence', 0.5))
+            certainty_gain = 1.0 + 0.25 * (conf - 0.5)
+            atten_weights[k] = base_weights[k] * certainty_gain
+
+        total_atten = sum(atten_weights.values())
+        norm_weights = {k: atten_weights[k] / total_atten for k in modalities}
 
         # Weighted average of stage indices
         fused_raw = sum(norm_weights[k] * modalities[k]['stage_index'] for k in modalities)
@@ -181,7 +190,7 @@ class MultimodalFusion:
         method = f"Multimodal Fusion ({' + '.join(method_parts)})"
 
         explanation = (
-            f"Rule-Based Weighted Fusion: '{STAGE_ORDER[fused_idx]}' from "
+            f"Hybrid Multimodal Fusion: '{STAGE_ORDER[fused_idx]}' from "
             f"{len(modalities)} modalities. Modality Agreement: {agreement}. "
             + '; '.join(evidence) + '. '
             + 'Note: Heuristic interpretation only, not a medical diagnosis.'
@@ -194,6 +203,7 @@ class MultimodalFusion:
             'summary': explanation,
             'epistemic_uncertainty': epistemic_uncertainty,
             'method': method,
+            'fusion_architecture': 'hybrid_attentive_evidential',
             'modality_contributions': contributions,
             'modality_agreement': agreement,
             'evidence_summary': evidence,
@@ -239,6 +249,8 @@ class MultimodalFusion:
             factors.append('Cognitive evidence was not available.')
         if 'risk' not in modalities:
             factors.append('Clinical risk profile was not available.')
+        if 'sentiment' not in modalities:
+            factors.append('Speech NLP evidence was not available.')
         if agreement in ('Moderate', 'Low'):
             factors.append(f'Modality agreement is {agreement.lower()}.')
         return factors

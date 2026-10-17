@@ -117,12 +117,14 @@ describe('stageToBadgeVariant', () => {
   it('maps healthy/low stages to success', () => {
     expect(stageToBadgeVariant('Normal')).toBe('success')
     expect(stageToBadgeVariant('Non-Demented')).toBe('success')
+    expect(stageToBadgeVariant('Cognitively Normal (CN)')).toBe('success')
     expect(stageToBadgeVariant('Low')).toBe('success')
   })
 
   it('maps mild/medium stages to warning', () => {
     expect(stageToBadgeVariant('Mild')).toBe('warning')
     expect(stageToBadgeVariant('Mild Demented')).toBe('warning')
+    expect(stageToBadgeVariant('Mild Cognitive Impairment (MCI)')).toBe('warning')
     expect(stageToBadgeVariant('Medium')).toBe('warning')
   })
 
@@ -130,6 +132,7 @@ describe('stageToBadgeVariant', () => {
     expect(stageToBadgeVariant('High')).toBe('danger')
     expect(stageToBadgeVariant('Moderate Demented')).toBe('danger')
     expect(stageToBadgeVariant('Severe Demented')).toBe('danger')
+    expect(stageToBadgeVariant("Alzheimer's Disease (AD)")).toBe('danger')
   })
 
   it('maps empty/unrecognized stages to neutral', () => {
@@ -186,8 +189,8 @@ describe('STAGE_CONFIG / RISK_COLORS', () => {
     expect(STAGE_CONFIG['Pending Assessment'].risk).toBe('Under Evaluation')
   })
 
-  it('exposes the four canonical risk colors', () => {
-    expect(Object.keys(RISK_COLORS)).toEqual(['Normal', 'Mild', 'Moderate', 'High'])
+  it('exposes the three canonical risk colors (CN / MCI / AD model)', () => {
+    expect(Object.keys(RISK_COLORS)).toEqual(['Normal', 'Mild', 'AD'])
   })
 })
 

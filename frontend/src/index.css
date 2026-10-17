@@ -1,4 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+/* Font loading moved to index.html <link> (preconnect + stylesheet) so the
+   browser fetches real weights 800/900 — font-extrabold/font-black previously
+   rendered as synthesized faux-bold — and the display face (Sora) is available. */
 
 @tailwind base;
 @tailwind components;
@@ -180,12 +182,29 @@
   transition-duration: 0.001ms !important;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* ─── Base Reset ─────────────────────────────────────────────────────────── */
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+/* Theme-change crossfade: the ThemeProvider briefly applies `theme-anim` on
+   <html> when the user flips light/dark so every surface eases instead of
+   snapping — without paying a permanent universal-transition tax. */
+html.theme-anim, html.theme-anim *, html.theme-anim *::before, html.theme-anim *::after {
+  transition: background-color 220ms ease, border-color 220ms ease,
+              color 220ms ease, fill 220ms ease, stroke 220ms ease,
+              box-shadow 220ms ease !important;
 }
 
 html {
@@ -205,13 +224,123 @@ body {
 }
 
 /* ─── Custom Scrollbar ───────────────────────────────────────────────────── */
-::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgb(var(--border-strong)); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgb(var(--primary)); }
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--border-strong));
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover { background: rgb(var(--primary)); background-clip: content-box; }
+::-webkit-scrollbar-corner { background: transparent; }
+
+/* Firefox */
+* { scrollbar-width: thin; scrollbar-color: rgb(var(--border-strong)) transparent; }
 
 /* ─── Selection ──────────────────────────────────────────────────────────── */
 ::selection { background: rgba(99, 102, 241, 0.3); color: rgb(var(--text-primary)); }
+
+/* ─── Signature Animations ──────────────────────────────────────────────── */
+@keyframes aurora-drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%      { transform: translate(40px, -30px) scale(1.08); }
+  66%      { transform: translate(-30px, 25px) scale(0.94); }
+}
+
+@keyframes float-y {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-10px); }
+}
+
+@keyframes shine-sweep {
+  0%   { transform: translateX(-120%) skewX(-18deg); }
+  100% { transform: translateX(240%) skewX(-18deg); }
+}
+
+@keyframes fade-slide-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-ring {
+  0%   { box-shadow: 0 0 0 0 var(--primary-glow); }
+  70%  { box-shadow: 0 0 0 10px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+.animate-aurora   { animation: aurora-drift 18s ease-in-out infinite; }
+.animate-float    { animation: float-y 5s ease-in-out infinite; }
+.animate-fade-up  { animation: fade-slide-up 0.45s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-pulse-ring { animation: pulse-ring 2.2s ease-out infinite; }
+
+/* Sheen sweep for hero CTAs — a ::after gradient slides across on hover */
+.btn-sheen { position: relative; overflow: hidden; }
+.btn-sheen::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 40%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+  transform: translateX(-120%) skewX(-18deg);
+  pointer-events: none;
+}
+.btn-sheen:hover::after { animation: shine-sweep 0.8s ease forwards; }
+
+/* ─── Display Typography ─────────────────────────────────────────────────
+   Sora carries the big headline moments (page h1s, hero, verdict headline);
+   Inter stays the workhorse for UI text. */
+h1 {
+  font-family: 'Sora', 'Inter', system-ui, sans-serif;
+  letter-spacing: -0.02em;
+}
+
+/* Fluid display scale for hero headlines — one declaration instead of three
+   breakpoint jumps, so the landing hero is proportionate at every width. */
+.text-fluid-hero {
+  font-size: clamp(2.5rem, 4.5vw + 1rem, 4.75rem);
+  line-height: 1.06;
+}
+.text-fluid-display {
+  font-size: clamp(1.75rem, 2.2vw + 1rem, 2.75rem);
+  line-height: 1.15;
+}
+
+/* ─── Animated gradient border ───────────────────────────────────────────
+   Conic gradient ring that slowly rotates around the element's border.
+   Degrades to a static gradient ring where @property is unsupported. */
+@property --angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.gradient-border {
+  position: relative;
+}
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: conic-gradient(
+    from var(--angle),
+    rgb(var(--primary)),
+    rgba(168, 85, 247, 0.9),
+    rgba(16, 185, 129, 0.9),
+    rgb(var(--primary))
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+          mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+          mask-composite: exclude;
+  animation: border-spin 7s linear infinite;
+  pointer-events: none;
+}
+@keyframes border-spin {
+  to { --angle: 360deg; }
+}
 
 /* ─── Surface Utility Classes ───────────────────────────────────────────── */
 .glass {
@@ -224,14 +353,6 @@ body {
   background: rgb(var(--surface-card));
   border: 1px solid rgb(var(--border-strong));
   box-shadow: var(--shadow);
-}
-
-.glow-primary, .glow-cyan, .glow-purple, .glow-success {
-  box-shadow: none !important;
-}
-
-.gradient-text-brand {
-  color: rgb(var(--text-primary)) !important;
 }
 
 /* ─── Shimmer / Skeleton (use Tailwind animate-pulse instead) ───────────── */

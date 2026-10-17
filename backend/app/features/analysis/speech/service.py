@@ -1,9 +1,14 @@
 """Speech step of the analysis workflow (mirrors analysis/speech/ in frontend).
 
 Covers both audio transcription (``audio_file``) and the supplementary
-clinical-notes NLP (``patient_text``). Speech is display-only: the produced
-``sentiment`` object intentionally carries no severity score, so fusion
-ignores it (see ``app/ml/fusion/engine.py``).
+clinical-notes NLP (``patient_text``). Two distinct speech outputs:
+
+- ``sentiment``: the display-only biomarker summary. Carries no severity
+  score, so fusion ignores it (see ``app/ml/fusion/engine.py``).
+- ``audio_transcription.dementia_probability``: the research NLP classifier's
+  vote (app/ml/speech/nlp_classifier.py). Deliberately fed to fusion through
+  the separate ``speech_nlp_result`` channel — the display object itself
+  must never vote (pinned by tests).
 """
 import logging
 from typing import Any, Dict, Optional
@@ -39,6 +44,13 @@ def build_sentiment_summary(transcription: Dict[str, Any], has_audio_file: bool)
         'filler_word_count': ling.get('filler_word_count'),
         'pause_frequency': ac.get('pause_frequency'),
         'pitch_variation': ac.get('pitch_variation'),
+        'jitter_percent': ac.get('jitter_percent'),
+        'shimmer_percent': ac.get('shimmer_percent'),
+        'hnr_db': ac.get('hnr_db'),
+        'formant_f1_hz': ac.get('formant_f1_hz'),
+        'formant_f2_hz': ac.get('formant_f2_hz'),
+        'vocal_risk_score': ac.get('vocal_risk_score'),
+        'vocal_impression': ac.get('clinical_impression'),
         'clinical_summary': (
             'Audio transcript available; acoustic summaries are shown only when extraction succeeds.'
             if has_audio_analysis
@@ -57,6 +69,33 @@ def run_notes_step(orch, inputs: AnalysisInput, results: AnalysisResult) -> None
             results['clinical_notes_nlp'] = orch.analyze_sentiment(patient_text)
         except Exception as e:
             results['clinical_notes_error'] = str(e)
+
+
+def _apply_speech_nlp(transcription: Dict[str, Any]) -> None:
+    """Attach the research NLP classifier's vote (if any) to a transcription.
+
+    Mutates ``transcription`` in place. Any failure is recorded as
+    ``nlp_error`` on the transcription — never raised: a missing model,
+    short transcript, or inference error must not break the analysis.
+    """
+    from app.ml.speech import nlp_classifier
+
+    try:
+        import inspect
+        sig = inspect.signature(nlp_classifier.classify_transcript)
+        if 'acoustic_features' in sig.parameters or any(p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values()):
+            vote = nlp_classifier.classify_transcript(
+                transcription.get('text') or '',
+                acoustic_features=transcription.get('acoustic_features'),
+            )
+        else:
+            vote = nlp_classifier.classify_transcript(transcription.get('text') or '')
+    except Exception as e:  # classify_transcript already guards; belt and braces
+        logger.error("Speech NLP classification crashed: %s", e)
+        transcription['nlp_error'] = str(e)
+        return
+    if vote:
+        transcription.update(vote)
 
 
 def run_speech_step(orch, inputs: AnalysisInput, results: AnalysisResult,
@@ -93,6 +132,8 @@ def run_speech_step(orch, inputs: AnalysisInput, results: AnalysisResult,
         results['audio_transcription'] = transcription
 
     if transcription:
+        if transcription.get('text'):
+            _apply_speech_nlp(transcription)
         # Map speech pipeline directly to frontend's expected 'sentiment'
         # object without double-counting it through NLP SentimentAnalyzer.
         results['sentiment'] = build_sentiment_summary(transcription, audio_file is not None)

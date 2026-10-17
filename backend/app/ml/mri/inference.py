@@ -166,18 +166,21 @@ class MRIClassifier:
                     preview_path = cleanup_path
 
             try:
-                gradcam_image = self.gradcam.generate(
+                gradcam_layers = self.gradcam.generate(
                     self.model, preview_path, result['stage_index']
                 )
             except Exception:
-                gradcam_image = None
+                gradcam_layers = None
             finally:
                 if cleanup_path and os.path.exists(cleanup_path):
                     os.remove(cleanup_path)
 
-            if gradcam_image:
-                result['gradcam_image'] = gradcam_image
-                result['gradcam_image_base64'] = gradcam_image
+            if gradcam_layers:
+                result['gradcam_image'] = gradcam_layers['overlay']
+                # Interactive layers: transparent heatmap + original scan so
+                # the results UI can render a live opacity slider and toggle.
+                result['gradcam_heatmap'] = gradcam_layers['heatmap_rgba']
+                result['mri_image'] = gradcam_layers['original']
                 result['heatmap_explanation'] = (
                     'Highlighted regions contributed most to the predicted MRI stage. '
                     'Warmer colors indicate stronger influence on the model output.'

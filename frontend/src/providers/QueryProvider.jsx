@@ -5,7 +5,9 @@ export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5, // 5 minutes cache for clinical static datasets
-      refetchOnWindowFocus: false,
+      // Tab switches revalidate stale queries — part of the cross-session
+      // data-integrity story (deletes by another session appear on focus).
+      refetchOnWindowFocus: true,
       retry: 2,
     },
   },

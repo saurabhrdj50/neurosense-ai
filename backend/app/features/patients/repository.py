@@ -3,90 +3,35 @@ from typing import Optional, List, Dict, Any
 
 from sqlalchemy.exc import IntegrityError
 from app.shared.repository import BaseRepository
-from app.shared.db_orm import SessionLocal, init_db
+from app.shared.db_orm import SessionLocal
 from app.shared.models.patient import Patient
 from app.shared.time_utils import utc_now_iso
 
 logger = logging.getLogger(__name__)
 
-SAMPLE_PATIENTS = [
-    {'name': 'Ramesh Kumar', 'age': 68, 'sex': 'male', 'education_years': 16, 'stage': 'Non-Demented', 'notes': 'Regular check-up'},
-    {'name': 'Sunita Sharma', 'age': 72, 'sex': 'female', 'education_years': 12, 'stage': 'Non-Demented', 'notes': 'Family history of AD'},
-    {'name': 'Mohan Patel', 'age': 75, 'sex': 'male', 'education_years': 10, 'stage': 'Very Mild Demented', 'notes': 'Occasional word-finding difficulty'},
-    {'name': 'Lakshmi Iyer', 'age': 70, 'sex': 'female', 'education_years': 14, 'stage': 'Very Mild Demented', 'notes': 'Mild forgetfulness'},
-    {'name': 'Anand Deshmukh', 'age': 78, 'sex': 'male', 'education_years': 8, 'stage': 'Very Mild Demented', 'notes': 'Repeats questions'},
-    {'name': 'Kamla Devi', 'age': 80, 'sex': 'female', 'education_years': 5, 'stage': 'Mild Demented', 'notes': 'Difficulty managing finances'},
-    {'name': 'Rajendra Singh', 'age': 76, 'sex': 'male', 'education_years': 12, 'stage': 'Mild Demented', 'notes': 'Needs help with daily tasks'},
-    {'name': 'Savita Joshi', 'age': 82, 'sex': 'female', 'education_years': 10, 'stage': 'Mild Demented', 'notes': 'Gets lost in familiar places'},
-    {'name': 'Gopal Verma', 'age': 85, 'sex': 'male', 'education_years': 6, 'stage': 'Moderate Demented', 'notes': 'Significant memory loss'},
-    {'name': 'Pushpa Agarwal', 'age': 79, 'sex': 'female', 'education_years': 8, 'stage': 'Moderate Demented', 'notes': 'Cannot recognise family'},
-]
 
 class PatientRepository(BaseRepository):
-    def __init__(self, db_path: Optional[str] = None):
-        if db_path:
-            from app.config.settings import Config
-            Config.DB_PATH = db_path
-        super().__init__(db_path=db_path)
+    """Patient persistence. Schema and demo seeding live in app.shared.bootstrap."""
 
-    def _init_schema(self) -> None:
-        init_db()
-        self._ensure_seed_data()
-
-    def _ensure_seed_data(self) -> None:
-        if not self._should_seed_demo_patients():
-            return
-            
-        with SessionLocal() as db:
-            from app.shared.database import Database
-            db_mgr = Database.get_instance()
-            if db_mgr.get_meta('patients_seeded') == '1':
-                return
-
-            count = db.query(Patient).count()
-            if count == 0:
-                from app.shared.models.user import User
-                doctor = db.query(User).filter(User.username == 'doctor').first()
-                doctor_id = doctor.id if doctor else None
-
-                now = utc_now_iso()
-                for i, p in enumerate(SAMPLE_PATIENTS):
-                    new_pat = Patient(
-                        patient_id=f"PAT-{1001 + i}",
-                        name=p['name'],
-                        age=p['age'],
-                        sex=p['sex'],
-                        education_years=p['education_years'],
-                        stage=p['stage'],
-                        notes=p['notes'],
-                        created_by=doctor_id,
-                        created_at=now
-                    )
-                    db.add(new_pat)
-                try:
-                    db.commit()
-                    db_mgr.set_meta('patients_seeded', '1')
-                    logger.info("Seeded %d demo patients", len(SAMPLE_PATIENTS))
-                except IntegrityError:
-                    db.rollback()
-            else:
-                db_mgr.set_meta('patients_seeded', '1')
-
-    @staticmethod
-    def _should_seed_demo_patients() -> bool:
-        import os
-        explicit = os.environ.get('SEED_DEMO_DATA')
-        if explicit is not None:
-            return explicit.lower() in ('1', 'true', 'yes')
-        return False
-
-    def get_all(self, created_by: Optional[int] = None) -> List[Dict[str, Any]]:
+    def get_all(self, created_by: Optional[int] = None, limit: Optional[int] = None,
+                offset: int = 0) -> List[Dict[str, Any]]:
         with SessionLocal() as db:
             query = db.query(Patient)
             if created_by is not None:
                 query = query.filter(Patient.created_by == created_by)
-            patients = query.order_by(Patient.name).all()
+            query = query.order_by(Patient.name)
+            if limit is not None:
+                patients = query.offset(max(offset, 0)).limit(limit).all()
+            else:
+                patients = query.all()
             return [p.to_dict() for p in patients]
+
+    def count_all(self, created_by: Optional[int] = None) -> int:
+        with SessionLocal() as db:
+            query = db.query(Patient)
+            if created_by is not None:
+                query = query.filter(Patient.created_by == created_by)
+            return int(query.count())
 
     def get_by_patient_id(self, patient_id: str) -> Optional[Dict[str, Any]]:
         with SessionLocal() as db:

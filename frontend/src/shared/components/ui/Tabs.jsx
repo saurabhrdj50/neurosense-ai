@@ -1,9 +1,11 @@
 /**
  * @fileoverview Enterprise clinical tab strip component.
- * Supports underline-style and segment-style layouts.
+ * Supports underline-style and segment-style layouts with an animated
+ * active-state indicator that slides between tabs (framer-motion layoutId).
  * Keyboard navigable with left/right arrows, Home, End.
  */
-import React, { useRef } from 'react'
+import React, { useRef, useId } from 'react'
+import { motion } from 'framer-motion'
 
 /**
  * Enterprise tab navigation component.
@@ -16,6 +18,7 @@ import React, { useRef } from 'react'
  */
 export default function Tabs({ tabs, activeTab, onChange, variant = 'underline', className = '' }) {
   const containerRef = useRef(null)
+  const layoutId = useId()
 
   const handleKeyDown = (e) => {
     const items = Array.from(containerRef.current?.querySelectorAll('[role="tab"]:not([disabled])') ?? [])
@@ -31,7 +34,7 @@ export default function Tabs({ tabs, activeTab, onChange, variant = 'underline',
       <div
         ref={containerRef}
         role="tablist"
-        className={`inline-flex items-center gap-0.5 p-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 ${className}`}
+        className={`inline-flex items-center gap-0.5 p-1 rounded-xl bg-surface-secondary border border-border ${className}`}
       >
         {tabs.map((tab) => {
           const Icon = tab.icon
@@ -45,14 +48,22 @@ export default function Tabs({ tabs, activeTab, onChange, variant = 'underline',
               disabled={tab.disabled}
               onClick={() => !tab.disabled && onChange(tab.id)}
               onKeyDown={e => handleKeyDown(e)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors duration-150 whitespace-nowrap ${
-                active
-                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm border border-slate-200 dark:border-slate-700'
-                  : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+              className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors duration-150 whitespace-nowrap ${
+                active ? 'text-foreground' : 'text-muted hover:text-foreground'
               } ${tab.disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
             >
-              {Icon && <Icon size={13} className="shrink-0" />}
-              {tab.label}
+              {active && (
+                <motion.span
+                  layoutId={`${layoutId}-segment`}
+                  transition={{ type: 'spring', damping: 30, stiffness: 400 }}
+                  className="absolute inset-0 rounded-lg bg-card border border-border shadow-xs"
+                  aria-hidden="true"
+                />
+              )}
+              <span className="relative z-1 flex items-center gap-1.5">
+                {Icon && <Icon size={13} className="shrink-0" />}
+                {tab.label}
+              </span>
             </button>
           )
         })}
@@ -65,7 +76,7 @@ export default function Tabs({ tabs, activeTab, onChange, variant = 'underline',
     <div
       ref={containerRef}
       role="tablist"
-      className={`flex items-center gap-0 border-b border-slate-200 dark:border-slate-800 overflow-x-auto ${className}`}
+      className={`flex items-center gap-0 border-b border-border overflow-x-auto ${className}`}
     >
       {tabs.map((tab) => {
         const Icon = tab.icon
@@ -79,14 +90,22 @@ export default function Tabs({ tabs, activeTab, onChange, variant = 'underline',
             disabled={tab.disabled}
             onClick={() => !tab.disabled && onChange(tab.id)}
             onKeyDown={e => handleKeyDown(e)}
-            className={`relative flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-semibold whitespace-nowrap transition-colors duration-150 border-b-2 -mb-px ${
+            className={`relative flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-semibold whitespace-nowrap transition-colors duration-150 ${
               active
-                ? 'border-blue-600 text-blue-700 dark:text-blue-400'
-                : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600'
+                ? 'text-primary'
+                : `text-muted hover:text-foreground ${tab.disabled ? '' : 'hover:bg-surface-hover'}`
             } ${tab.disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
           >
             {Icon && <Icon size={13} className="shrink-0" />}
             {tab.label}
+            {active && (
+              <motion.span
+                layoutId={`${layoutId}-underline`}
+                transition={{ type: 'spring', damping: 30, stiffness: 400 }}
+                className="absolute bottom-0 left-2 right-2 h-0.5 rounded-full bg-primary"
+                aria-hidden="true"
+              />
+            )}
           </button>
         )
       })}

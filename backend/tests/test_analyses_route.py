@@ -31,7 +31,7 @@ def test_doctor_can_list_own_analyses(app, client):
 
     response = client.get('/api/analyses')
     assert response.status_code == 200
-    payload = response.get_json()
+    payload = response.json()
 
     assert len(payload['analyses']) == 1
     analysis = payload['analyses'][0]

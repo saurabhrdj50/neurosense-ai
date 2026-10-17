@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, Index
 from sqlalchemy.orm import relationship
 from app.shared.db_orm import Base
+from app.shared.security import EncryptedString
 from app.shared.time_utils import utc_now_iso
 
 
@@ -15,7 +16,7 @@ class Patient(Base):
     education_years = Column(Integer, nullable=True)
     stage = Column(String, nullable=True)
     photo = Column(String, nullable=True)
-    notes = Column(String, default='')
+    notes = Column(EncryptedString, default='')
     created_by = Column(Integer, ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
     created_at = Column(String, default=utc_now_iso)
     updated_at = Column(String, nullable=True)
@@ -28,6 +29,7 @@ class Patient(Base):
 
     # Composite indexes for common query patterns
     __table_args__ = (
+        Index('idx_patients_created_by', 'created_by'),
         Index('idx_patients_created_by_name', 'created_by', 'name'),
     )
 

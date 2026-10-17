@@ -3,7 +3,7 @@ import logging
 from typing import Optional, List, Dict, Any
 
 from app.shared.repository import BaseRepository
-from app.shared.db_orm import SessionLocal, init_db
+from app.shared.db_orm import SessionLocal
 from app.shared.models.audit_log import AuditLog
 from app.shared.time_utils import utc_now_iso
 
@@ -11,8 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class AuditRepository(BaseRepository):
-    def _init_schema(self) -> None:
-        init_db()
+    """Audit-trail persistence. Schema lives in app.shared.bootstrap."""
 
     def log(
         self,

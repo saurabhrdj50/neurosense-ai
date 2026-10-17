@@ -1,16 +1,18 @@
 from dataclasses import dataclass
 from typing import Dict, List
 
-from app.ml.stages import STAGE_ORDER, STAGE_INDEX
+from app.ml.stages import STAGE_ORDER, STAGE_INDEX, normalize_stage_name
 
 # MRI CLASS PROVENANCE (verified from training sources, read-only):
 # The production checkpoint is a 3-class ResNet18 (classifier [3, 512]) from
-# the ADNI CN/MCI/AD lineage (train_mri.py LABEL_MAP, finetuning notebooks,
+# the ADNI CN/MCI/AD lineage (finetuning_restart.ipynb MRIResNet18_32Slice,
 # 5fold_subject_grouped_metadata.csv): index 0 = CN, 1 = MCI, 2 = AD.
-# The display names below are the frozen frontend-contract labels, ordered by
-# severity to match that lineage. Index 3 ('Moderate Demented') is unreachable
-# from the 3-class MRI head; it exists for the fusion-stage vocabulary, which
-# legitimately combines evidence into 4 normalized stages.
+# Byte-identity verified 2026-10-05: backend/app/models/alzheimer_model.pth
+# == Alzheimer_Training/best_mri_resnet18_finetuned.pth (MD5 f36aa42f...),
+# i.e. the classifier-only fine-tune of the SSL-pretrained ResNet18
+# (validation n=95: accuracy 0.5895, macro-F1 0.5725, balanced 0.5660).
+# The display names below are the frozen frontend-contract labels and mirror
+# the model's classes one-to-one: the pipeline is a 3-stage vocabulary.
 
 
 @dataclass(frozen=True)
@@ -25,7 +27,7 @@ class StageDefinition:
 
 STAGES: Dict[int, StageDefinition] = {
     0: StageDefinition(
-        name='Non-Demented',
+        name='Cognitively Normal (CN)',
         label="No Alzheimer's Detected",
         color='#22c55e',
         severity=0,
@@ -38,42 +40,29 @@ STAGES: Dict[int, StageDefinition] = {
         ],
     ),
     1: StageDefinition(
-        name='Very Mild Demented',
-        label='Very Mild Cognitive Impairment',
-        color='#eab308',
+        name='Mild Cognitive Impairment (MCI)',
+        label='Mild Cognitive Impairment',
+        color='#f59e0b',
         severity=1,
-        description='Very subtle cognitive changes detected. Minor memory lapses may be present.',
+        description='Mild cognitive changes detected. Noticeable memory lapses may be present and warrant monitoring and follow-up.',
         recommendations=[
             'Schedule a full neurological evaluation',
             'Start cognitive training exercises',
-            'Consider Mediterranean diet',
+            'Consider Mediterranean or MIND diet',
             'Increase social engagement and physical activity',
         ],
     ),
     2: StageDefinition(
-        name='Mild Demented',
-        label='Mild Alzheimer\'s Disease',
-        color='#f97316',
-        severity=2,
-        description='Mild cognitive impairment detected. Memory loss and confusion may begin to affect daily activities.',
-        recommendations=[
-            'Immediate consultation with a neurologist',
-            'Consider medication options (cholinesterase inhibitors)',
-            'Begin structured cognitive rehabilitation',
-            'Establish caregiver support system',
-        ],
-    ),
-    3: StageDefinition(
-        name='Moderate Demented',
-        label='Moderate Alzheimer\'s Disease',
+        name="Alzheimer's Disease (AD)",
+        label="Alzheimer's Disease Detected",
         color='#ef4444',
-        severity=3,
-        description='Moderate cognitive decline detected. Significant memory loss and functional impairment are likely present.',
+        severity=2,
+        description='Patterns consistent with Alzheimer\'s disease detected. Significant memory loss and functional impairment are likely present.',
         recommendations=[
             'Urgent specialist referral required',
             'Comprehensive care plan with caregiver training',
             'Evaluate safety at home — wandering risk assessment',
-            'Begin music and art therapy programs',
+            'Begin structured cognitive support programs',
         ],
     ),
 }
@@ -91,11 +80,15 @@ class StageMapper:
 
     @classmethod
     def get_index(cls, name: str) -> int:
+        """Resolve a stage name (canonical or legacy) to its model index."""
+        normalized = normalize_stage_name(name)
+        if normalized in cls.STAGE_INDEX:
+            return cls.STAGE_INDEX[normalized]
         return cls.STAGE_INDEX.get(name, 0)
 
     @classmethod
     def format_probabilities(cls, probs: list) -> Dict[str, float]:
-        # Respect the actual number of classes output by the model (e.g. 3 or 4)
+        # Respect the actual number of classes output by the model (3)
         return {
             cls.get_stage(i).name: round(float(probs[i]) * 100, 2)
             for i in range(len(probs)) if i < len(STAGES)

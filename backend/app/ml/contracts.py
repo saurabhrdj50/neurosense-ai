@@ -20,7 +20,6 @@ class MRIResult(TypedDict, total=False):
     probabilities: Dict[str, float]
     decision_summary: str
     gradcam_image: str  # base64 PNG overlay (absent when unavailable)
-    gradcam_image_base64: str
     heatmap_explanation: str
     success: bool  # False only on the explicit model-unavailable error result
     model_available: bool
@@ -29,10 +28,16 @@ class MRIResult(TypedDict, total=False):
 
 class TranscriptionResult(TypedDict, total=False):
     text: str
-    method: str  # e.g. 'whisper_turbo', 'google_free', 'unavailable', 'error'
+    method: str  # e.g. 'whisper_base'/'whisper_turbo' (faster-whisper or openai), 'unavailable', 'error'
     error: Optional[str]
     acoustic_features: Dict[str, Any]
     linguistic_biomarkers: Dict[str, Any]
+    # Speech NLP research classifier (app/ml/speech/nlp_classifier.py).
+    # Absent/None means "no vote available" — never interpreted as zero risk.
+    dementia_probability: Optional[float]  # 0-1 P(dementia), threshold 0.5
+    dementia_prediction: Optional[str]  # 'dementia' | 'control'
+    nlp_classifier: Optional[str]  # model identifier, e.g. 'distilbert-base-uncased+logreg'
+    nlp_error: Optional[str]
 
 
 class SpeechSummary(TypedDict, total=False):
@@ -95,8 +100,8 @@ class AnalysisInput(TypedDict, total=False):
 
     patient_info: Dict[str, Any]
     patient_notes: str
-    mri_file: Any  # werkzeug FileStorage or None
-    audio_file: Any  # werkzeug FileStorage or None
+    mri_file: Any  # uploaded file object (FileLike) or None
+    audio_file: Any  # uploaded file object (FileLike) or None
     audio_text: str
     cognitive_data: Optional[Dict[str, Any]]
     risk_data: Optional[Dict[str, Any]]

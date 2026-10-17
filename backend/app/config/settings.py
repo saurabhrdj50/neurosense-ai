@@ -23,9 +23,11 @@ class Config:
 
     # Single source of truth for "is this a production deployment".
     # Unsafe-by-default behaviors (demo seeding, reset-token echo) key off
-    # their own explicit env vars — never off FLASK_ENV alone.
-    FLASK_ENV = os.environ.get('FLASK_ENV', 'development').lower()
-    IS_PRODUCTION = FLASK_ENV == 'production'
+    # their own explicit env vars — never off APP_ENV alone.
+    APP_ENV = (
+        os.environ.get('APP_ENV') or os.environ.get('FLASK_ENV') or 'development'
+    ).lower()
+    IS_PRODUCTION = APP_ENV == 'production'
     TESTING = _env_bool('TESTING')
 
     SECRET_KEY = os.environ.get('SECRET_KEY') or os.environ.get('FLASK_SECRET_KEY')
@@ -42,7 +44,33 @@ class Config:
 
     DB_PATH = Path(os.environ.get('SQLITE_PATH', ROOT_DIR / 'patient_data.db'))
 
-    MODEL_PATH = BASE_DIR / 'models' / 'alzheimer_model.pth'
+    # Primary database URL. PostgreSQL in production (see docker-compose);
+    # empty → SQLite file at DB_PATH (zero-config dev/test fallback).
+    DATABASE_URL = os.environ.get('DATABASE_URL', '').strip() or None
+
+    MODEL_DIR = BASE_DIR / 'models'
+    MODEL_PATH = MODEL_DIR / 'alzheimer_model.pth'
+
+    # Speech NLP dementia classifier (research model over the Whisper
+    # transcript; runs fully local, no third-party calls). Enabled by
+    # default — the artefact must exist at models/speech/, otherwise the
+    # classifier silently carries no vote.
+    SPEECH_NLP_ENABLED = _env_bool('SPEECH_NLP_ENABLED', 'true')
+    SPEECH_NLP_MIN_WORDS = int(os.environ.get('SPEECH_NLP_MIN_WORDS', '15'))
+
+    # Object Storage (Local disk vs MinIO / S3)
+    STORAGE_BACKEND = os.environ.get('STORAGE_BACKEND', 'local').lower()
+    MINIO_ENDPOINT = os.environ.get('MINIO_ENDPOINT', '').strip()
+    MINIO_ACCESS_KEY = os.environ.get('MINIO_ACCESS_KEY', 'minioadmin')
+    MINIO_SECRET_KEY = os.environ.get('MINIO_SECRET_KEY', 'minioadmin')
+    MINIO_BUCKET = os.environ.get('MINIO_BUCKET', 'neurosense-uploads')
+    MINIO_SECURE = _env_bool('MINIO_SECURE', 'false')
+
+    # Distributed Task Queue (Celery + Redis)
+    REDIS_URL = os.environ.get('REDIS_URL', '').strip()
+    CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', REDIS_URL or 'redis://localhost:6379/0')
+    CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', REDIS_URL or 'redis://localhost:6379/0')
+    USE_CELERY = _env_bool('USE_CELERY', 'false')
 
     ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'tiff'}
     ALLOWED_AUDIO_EXTENSIONS = {'wav', 'mp3', 'flac', 'webm', 'ogg'}
@@ -62,7 +90,8 @@ class Config:
     CORS_HEADERS = 'Content-Type'
 
     # Explicit opt-in flags (all default to the safe direction):
-    SEED_DEMO_USERS = _env_bool('SEED_DEMO_USERS')
+    # NOTE: there is no SEED_DEMO_USERS flag anymore — the fixed admin
+    # (admin/admin) is always provisioned at startup and doctors
+    # self-register. See app/shared/bootstrap.py.
     EXPOSE_RESET_TOKEN = _env_bool('EXPOSE_RESET_TOKEN')
-    ENABLE_GOOGLE_SPEECH_FALLBACK = _env_bool('ENABLE_GOOGLE_SPEECH_FALLBACK')
     TRUST_PROXY = _env_bool('TRUST_PROXY')

@@ -1,19 +1,20 @@
 import React from 'react'
 import {
   CheckCircle2, User, Brain, MessageSquare, Mic, HeartPulse,
-  ShieldCheck, ChevronRight
+  ShieldCheck, ChevronRight, XCircle, Zap
 } from 'lucide-react'
 
 export function ReviewStep({
   patient,
-  _patientText,
   mriFile,
   cognData,
   speechText,
   audioFile,
   risk,
-  onGoToStep,
-  _onSubmit
+  patientText,
+  confirmChecked,
+  onConfirmChange,
+  onGoToStep
 }) {
   /* Compute individual section completion & readiness status */
   const isPatientComplete = !!(patient.name && patient.patient_id && patient.age)
@@ -36,6 +37,41 @@ export function ReviewStep({
   // Count active risk flags
   const activeRiskKeys = Object.keys(risk || {}).filter(k => risk[k] === true)
   const riskFlagCount = activeRiskKeys.length
+
+  /* What the AI will actually use — optional inputs are honest about what
+     the analysis can and cannot conclude without them. */
+  const modalityStatus = [
+    {
+      label: 'Clinical notes & symptoms',
+      provided: !!patientText,
+      ok: 'Included in the linguistic and risk analysis',
+      missing: 'No observations entered — symptom context will be missing',
+    },
+    {
+      label: 'MRI scan',
+      provided: isMriComplete,
+      ok: 'AI staging with Grad-CAM heatmaps will be generated',
+      missing: 'Not provided — MRI-specific staging will be unavailable',
+    },
+    {
+      label: 'Cognitive screening',
+      provided: isCognitiveComplete,
+      ok: `${cognData?.questions_completed || 0} of 15 questions scored`,
+      missing: 'No questions scored — cognitive profiling will be skipped',
+    },
+    {
+      label: 'Speech sample',
+      provided: isSpeechComplete,
+      ok: audioFile ? 'Recorded audio + transcript will be analyzed' : 'Typed transcript will be analyzed',
+      missing: 'Not provided — speech biomarkers will be unavailable',
+    },
+    {
+      label: 'Risk factors',
+      provided: isRiskComplete,
+      ok: `${riskFlagCount} factor${riskFlagCount === 1 ? '' : 's'} flagged`,
+      missing: 'None recorded — the risk profile will rely on other modalities',
+    },
+  ]
 
   return (
     <div className="space-y-5">
@@ -71,6 +107,40 @@ export function ReviewStep({
             </div>
           </div>
         </div>
+      </div>
+
+      {/* ── WHAT WILL BE ANALYZED ─────────────────────────────────────────── */}
+      {/* Optional inputs are honest about what the report can conclude */}
+      <div className="p-4 sm:p-5 rounded-2xl bg-card border border-border space-y-3 shadow-xs">
+        <h3 className="text-xs font-extrabold text-foreground-muted uppercase tracking-wider flex items-center gap-2">
+          <Zap size={14} className="text-primary" />
+          What the AI will analyze
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {modalityStatus.map(({ label, provided, ok, missing }) => (
+            <div
+              key={label}
+              className={`flex items-start gap-2.5 p-3 rounded-xl border text-xs ${
+                provided
+                  ? 'bg-emerald-500/5 border-emerald-500/25'
+                  : 'bg-surface-secondary/50 border-border'
+              }`}
+            >
+              {provided
+                ? <CheckCircle2 size={15} className="text-emerald-500 shrink-0 mt-0.5" />
+                : <XCircle size={15} className="text-foreground-muted/70 shrink-0 mt-0.5" />}
+              <div className="min-w-0">
+                <span className="font-extrabold text-foreground block">{label}</span>
+                <span className={`font-medium ${provided ? 'text-foreground-muted' : 'text-amber-600 dark:text-amber-400'}`}>
+                  {provided ? ok : missing}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+        <p className="text-[11px] text-foreground-muted font-medium">
+          Analysis typically takes 2–4 minutes. You can add missing items later by re-running the assessment for this patient.
+        </p>
       </div>
 
       {/* ── 5 ENHANCED SECTION CARDS (Fills Viewport Comfortably) ──────────── */}
@@ -274,6 +344,30 @@ export function ReviewStep({
           </div>
         </div>
       </div>
+
+      {/* ── FINAL CONFIRMATION ───────────────────────────────────────────── */}
+      <label
+        className={`flex items-start gap-3 p-4 rounded-2xl border cursor-pointer select-none transition-colors ${
+          confirmChecked
+            ? 'bg-emerald-500/5 border-emerald-500/40'
+            : 'bg-card border-border hover:border-primary/40'
+        }`}
+      >
+        <input
+          type="checkbox"
+          checked={confirmChecked}
+          onChange={(e) => onConfirmChange?.(e.target.checked)}
+          className="mt-0.5 w-5 h-5 rounded accent-emerald-500 cursor-pointer shrink-0"
+        />
+        <span className="text-sm">
+          <span className="font-extrabold text-foreground block">
+            I have verified the patient identity and the entered data
+          </span>
+          <span className="text-foreground-muted font-medium">
+            Required before starting the analysis — the report is generated for the patient shown above.
+          </span>
+        </span>
+      </label>
     </div>
   )
 }

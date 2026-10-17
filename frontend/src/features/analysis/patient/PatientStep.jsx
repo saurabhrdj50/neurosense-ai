@@ -1,6 +1,6 @@
-import React, { useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { LabeledInput } from '../SharedComponents'
-import { UserCheck, FileCode, Sparkles, Mic, MicOff, Check, Plus, ShieldAlert, Upload, User, FileText, Zap } from 'lucide-react'
+import { UserCheck, Sparkles, Mic, MicOff, Check, Plus, ShieldAlert, User, FileText, Camera, Trash2 } from 'lucide-react'
 import { useAuth } from '../../../providers/AuthProvider'
 import toast from 'react-hot-toast'
 
@@ -25,54 +25,17 @@ const ETHNICITIES = [
   'Other / Mixed Ancestry'
 ]
 
-const CLINICAL_PRESETS = [
-  {
-    label: '72yo F - Amnestic MCI Profile',
-    data: {
-      name: 'Eleanor Vance',
-      patient_id: 'DOC-PAT-7042',
-      age: '72',
-      sex: 'F',
-      education_years: '16',
-      ethnicity: 'Caucasian / European',
-      handedness: 'Right',
-      notes: 'Progressive short-term memory loss over 14 months. Frequent word-finding pauses and spatial disorientation when driving at night. Family reports repetitive questions.'
-    }
-  },
-  {
-    label: '78yo M - Early AD Profile',
-    data: {
-      name: 'Robert Chen',
-      patient_id: 'DOC-PAT-8194',
-      age: '78',
-      sex: 'M',
-      education_years: '18',
-      ethnicity: 'East Asian',
-      handedness: 'Right',
-      notes: 'Notable executive dysfunction, misplacing household items, and mild agitation in evenings. MoCA impairment suspected.'
-    }
-  },
-  {
-    label: '68yo M - Vascular Risk Profile',
-    data: {
-      name: 'Marcus Brody',
-      patient_id: 'DOC-PAT-6201',
-      age: '68',
-      sex: 'M',
-      education_years: '14',
-      ethnicity: 'African / African American',
-      handedness: 'Right',
-      notes: 'History of poorly controlled hypertension and type 2 diabetes. Reports psychomotor slowing and step-wise cognitive decline.'
-    }
-  }
-]
-
 export function PatientStep({ patient, setPatient, patientText, setPatientText, onSelectRoster, onLoadSample }) {
   const { user } = useAuth()
   const patSet = (k) => (e) => setPatient(p => ({ ...p, [k]: e.target.value }))
   const [isListening, setIsListening] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)
   const recognitionRef = useRef(null)
+  // Required-field errors surface only after the user has interacted with a
+  // field (on blur) — a freshly opened step must not scream "required" at
+  // fields the clinician hasn't reached yet.
+  const [touched, setTouched] = useState({})
+  const markTouched = (k) => () => setTouched(t => ({ ...t, [k]: true }))
 
   // Doctor-scoped Patient ID generator (e.g. DOC-PAT-8492)
   const generateDoctorPatientId = () => {
@@ -80,6 +43,48 @@ export function PatientStep({ patient, setPatient, patientText, setPatientText, 
     const randomNum = Math.floor(1000 + Math.random() * 9000)
     const newId = `${docPrefix}-PAT-${randomNum}`
     setPatient(p => ({ ...p, patient_id: newId }))
+  }
+
+  // One less field to think about: a fresh assessment starts with a valid
+  // Medical ID already filled in (regenerate button stays for overrides;
+  // drafts/prefills with an existing ID are never overwritten).
+  useEffect(() => {
+    if (!patient.patient_id) generateDoctorPatientId()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Photo: downscale client-side (max 512px JPEG) before it enters the draft
+  // — the backend re-encodes avatars anyway, so this just keeps uploads small
+  // and instant even from a phone camera.
+  const MAX_PHOTO_BYTES = 5 * 1024 * 1024
+  const photoInputRef = useRef(null)
+
+  const handlePhotoSelect = (file) => {
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please choose an image file (JPG, PNG, …)')
+      return
+    }
+    if (file.size > MAX_PHOTO_BYTES) {
+      toast.error('Photo is too large — please choose an image under 5 MB')
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => {
+      const img = new Image()
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        const scale = Math.min(1, 512 / Math.max(img.width, img.height))
+        canvas.width = Math.max(1, Math.round(img.width * scale))
+        canvas.height = Math.max(1, Math.round(img.height * scale))
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height)
+        setPatient(p => ({ ...p, photo: canvas.toDataURL('image/jpeg', 0.85) }))
+        toast.success('Patient photo added')
+      }
+      img.onerror = () => toast.error('Could not read that image — try another file')
+      img.src = reader.result
+    }
+    reader.readAsDataURL(file)
   }
 
   // Voice-to-Text Speech Recognition Dictation
@@ -223,6 +228,48 @@ export function PatientStep({ patient, setPatient, patientText, setPatientText, 
           Primary Demographic Indicators
         </h3>
 
+        {/* Patient photo — stored with the record and shown in the registry */}
+        <div className="flex items-center gap-4 p-3.5 rounded-xl bg-surface-secondary/50 border border-border/70">
+          <div className="w-16 h-16 rounded-full overflow-hidden bg-primary/10 border-2 border-primary/25 flex items-center justify-center shrink-0">
+            {patient.photo ? (
+              <img src={patient.photo} alt="Patient" className="w-full h-full object-cover" />
+            ) : (
+              <User size={26} className="text-primary/60" />
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-bold text-foreground">Patient Photo</p>
+            <p className="text-[11px] text-foreground-muted font-medium">Optional — shown on the patient record</p>
+          </div>
+          <input
+            ref={photoInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              handlePhotoSelect(e.target.files?.[0])
+              e.target.value = ''
+            }}
+          />
+          {patient.photo ? (
+            <button
+              type="button"
+              onClick={() => setPatient(p => ({ ...p, photo: null }))}
+              className="px-3 py-2 rounded-xl text-xs font-bold border border-rose-500/30 text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors min-h-[38px] flex items-center gap-1.5 cursor-pointer"
+            >
+              <Trash2 size={13} /> Remove
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => photoInputRef.current?.click()}
+              className="px-3 py-2 rounded-xl text-xs font-bold bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition-colors min-h-[38px] flex items-center gap-1.5 cursor-pointer"
+            >
+              <Camera size={13} /> Upload
+            </button>
+          )}
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
           <div className="sm:col-span-2">
             <LabeledInput
@@ -231,8 +278,9 @@ export function PatientStep({ patient, setPatient, patientText, setPatientText, 
               autoFocus
               value={patient.name}
               onChange={patSet('name')}
+              onBlur={markTouched('name')}
               placeholder="e.g. Eleanor Vance"
-              error={!patient.name ? 'Patient name is required' : ''}
+              error={touched.name && !patient.name ? 'Patient name is required' : ''}
             />
           </div>
 
@@ -252,12 +300,13 @@ export function PatientStep({ patient, setPatient, patientText, setPatientText, 
             <input
               value={patient.patient_id}
               onChange={patSet('patient_id')}
+              onBlur={markTouched('patient_id')}
               placeholder="e.g. DOC-PAT-9042"
               className={`w-full px-4 py-2.5 rounded-xl text-base bg-background text-foreground border transition-colors min-h-[44px] focus:outline-none focus:ring-2 focus:ring-primary/50 font-mono ${
-                !patient.patient_id ? 'border-rose-500/50 bg-rose-500/5' : 'border-border'
+                touched.patient_id && !patient.patient_id ? 'border-rose-500/50 bg-rose-500/5' : 'border-border'
               }`}
             />
-            {!patient.patient_id && (
+            {touched.patient_id && !patient.patient_id && (
               <p className="text-xs text-rose-500 font-semibold mt-1">Medical ID is required</p>
             )}
           </div>
@@ -268,9 +317,10 @@ export function PatientStep({ patient, setPatient, patientText, setPatientText, 
               required
               value={patient.age}
               onChange={patSet('age')}
+              onBlur={markTouched('age')}
               placeholder="e.g. 72"
               type="number"
-              error={!patient.age ? 'Age is required' : ''}
+              error={touched.age && !patient.age ? 'Age is required' : ''}
             />
           </div>
 

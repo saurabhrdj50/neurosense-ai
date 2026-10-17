@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean
+from sqlalchemy import Column, Index, Integer, String, Boolean, text
 from sqlalchemy.orm import relationship
 from app.shared.db_orm import Base
 from app.shared.time_utils import utc_now_iso
@@ -14,6 +14,7 @@ class User(Base):
     role = Column(String, nullable=False, default='doctor')
     full_name = Column(String, default='')
     date_of_birth = Column(String, default='')
+    hospital = Column(String, default='')
     # Immutable canonical storage key used as the upload directory name
     storage_key = Column(String, nullable=True)
     created_at = Column(String, default=utc_now_iso)
@@ -24,6 +25,16 @@ class User(Base):
     locked_until = Column(String, nullable=True)
     reset_token = Column(String, nullable=True)
     reset_token_expires = Column(String, nullable=True)
+
+    __table_args__ = (
+        Index('idx_users_reset_token', 'reset_token'),
+        # Token lookups only ever scan rows holding a token — keep the useful
+        # subset small and hot.
+        Index('idx_users_reset_token_active', 'reset_token',
+              postgresql_where=text('reset_token IS NOT NULL'),
+              sqlite_where=text('reset_token IS NOT NULL')),
+        Index('idx_users_storage_key', 'storage_key'),
+    )
 
     # Relationships
     patients = relationship('Patient', back_populates='created_by_user',
@@ -70,6 +81,7 @@ class User(Base):
             'role': self.role,
             'full_name': self.full_name,
             'date_of_birth': self.date_of_birth,
+            'hospital': self.hospital,
             'created_at': self.created_at,
             'updated_at': self.updated_at,
             'last_login': self.last_login,

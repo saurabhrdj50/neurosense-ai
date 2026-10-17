@@ -5,3 +5,8 @@ venv/
 uploads/
 patient_data.db
 pytest_cache/
+# Model checkpoints are bind-mounted at runtime (docker-compose), never baked
+# into the image — a fresh clone without them must fail the healthcheck
+# loudly instead of shipping a silently model-less API.
+app/models/
+data/

@@ -32,17 +32,17 @@ export default function ProgressBar({
       {(label || showPercent) && (
         <div className="flex items-center justify-between mb-1.5">
           {label && (
-            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">{label}</span>
+            <span className="text-xs text-muted font-medium">{label}</span>
           )}
           {showPercent && (
-            <span className="text-xs font-bold text-slate-700 dark:text-slate-300 tabular-nums">
+            <span className="text-xs font-bold text-foreground font-semibold tabular-nums">
               {v.toFixed(1)}%
             </span>
           )}
         </div>
       )}
       <div
-        className="rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+        className="rounded-full overflow-hidden bg-surface-secondary border border-border"
         style={{ height }}
         role="progressbar"
         aria-valuenow={Math.round(v)}

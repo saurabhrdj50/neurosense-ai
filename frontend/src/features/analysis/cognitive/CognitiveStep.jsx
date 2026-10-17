@@ -239,7 +239,6 @@ export function CognitiveStep({ cognData, setCognData }) {
     const rawTotal = answered.reduce((s, q) => s + Number(bd[q.id] || 0), 0)
     const rawMax = answered.reduce((s, q) => s + q.max, 0)
     const comp = rawMax > 0 ? Math.round((rawTotal / rawMax) * 100) : 0
-    const mmse = Math.round(comp * 0.3)
     const stage = computeBrainStage(answered.length, comp)
 
     const domains = {}
@@ -260,8 +259,6 @@ export function CognitiveStep({ cognData, setCognData }) {
         prev.composite_score === comp &&
         prev.questions_completed === answered.length &&
         prev.nia_aa_stage === stage.stage &&
-        prev.mmse === mmse &&
-        prev.moca === mmse &&
         JSON.stringify(prev.domains) === JSON.stringify(domains) &&
         (prev.screening_breakdown || {}) === bd
       if (unchanged) return prev
@@ -272,8 +269,10 @@ export function CognitiveStep({ cognData, setCognData }) {
         composite_score: comp,
         questions_completed: answered.length,
         nia_aa_stage: stage.stage,
-        mmse,
-        moca: mmse,
+        // Deliberately NO fabricated mmse/moca: the backend treats any
+        // mmse/moca value as a clinician-administered instrument score,
+        // which changes report wording and impairment banding. Derived
+        // estimates are the backend's job (evaluator.py, labeled as such).
       }
     })
     // Only re-run when the actual answers change — depending on the whole
@@ -293,6 +292,17 @@ export function CognitiveStep({ cognData, setCognData }) {
     }))
   }
 
+  // One-tap scoring: selecting points on a not-yet-answered question scores
+  // it and glides to the next question — the whole battery becomes tap-tap-tap.
+  // Re-tapping a score on an already-answered question just updates it.
+  const scoreAndAdvance = (questionId, scoreVal) => {
+    const wasAnswered = Object.prototype.hasOwnProperty.call(breakdown, questionId)
+    setQuestionScore(questionId, scoreVal)
+    if (!wasAnswered && currentQIndex < GUIDED_QUESTIONS.length - 1) {
+      window.setTimeout(() => setCurrentQIndex(i => Math.min(GUIDED_QUESTIONS.length - 1, i + 1)), 400)
+    }
+  }
+
   const clearCurrentScore = () => {
     setCognData(prev => {
       const nextBreakdown = { ...(prev.screening_breakdown || {}) }
@@ -307,7 +317,9 @@ export function CognitiveStep({ cognData, setCognData }) {
     setRevealWords(false)
   }
 
-  const progressPercentage = Math.round(((currentQIndex + 1) / GUIDED_QUESTIONS.length) * 100)
+  // Clinically meaningful progress: how much of the battery is SCORED,
+  // not just which question is on screen.
+  const scoredPercentage = Math.round((questionsCompleted / GUIDED_QUESTIONS.length) * 100)
 
   /* ── Right-column reference visual for the current question ────────── */
   const renderReferenceVisual = () => {
@@ -734,10 +746,10 @@ export function CognitiveStep({ cognData, setCognData }) {
 
           <div className="flex items-center gap-3">
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-secondary border border-border text-xs font-mono font-bold text-foreground">
-              <div className="w-20 h-2 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+              <div className="w-20 h-2 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden" title={`${questionsCompleted} of ${GUIDED_QUESTIONS.length} questions scored`}>
                 <div
-                  className="h-full rounded-full bg-primary transition-all duration-300"
-                  style={{ width: `${progressPercentage}%` }}
+                  className="h-full rounded-full bg-emerald-500 transition-all duration-300"
+                  style={{ width: `${scoredPercentage}%` }}
                 />
               </div>
               <span>{currentQIndex + 1} / {GUIDED_QUESTIONS.length}</span>
@@ -835,9 +847,9 @@ export function CognitiveStep({ cognData, setCognData }) {
                       <button
                         key={score}
                         type="button"
-                        onClick={() => setQuestionScore(currentQ.id, score)}
+                        onClick={() => scoreAndAdvance(currentQ.id, score)}
                         aria-pressed={active}
-                        className={`min-h-[44px] min-w-[44px] px-3 rounded-xl text-sm font-extrabold border transition-colors cursor-pointer ${
+                        className={`min-h-[48px] min-w-[48px] px-3 rounded-xl text-sm font-extrabold border transition-colors cursor-pointer ${
                           active
                             ? 'bg-primary text-primary-foreground border-primary shadow-sm'
                             : 'bg-background text-foreground border-border hover:border-primary hover:text-primary'
@@ -848,20 +860,6 @@ export function CognitiveStep({ cognData, setCognData }) {
                     )
                   })}
                 </div>
-                <select
-                  aria-label={`Points for ${currentQ.label} (dropdown)`}
-                  value={isCurrentAnswered ? String(currentScore) : ''}
-                  onChange={(event) => {
-                    if (event.target.value === '') return
-                    setQuestionScore(currentQ.id, Number(event.target.value))
-                  }}
-                  className="min-h-[48px] min-w-[210px] rounded-xl border border-border bg-background px-3 text-sm font-extrabold text-foreground cursor-pointer outline-none focus:border-primary focus:ring-2 focus:ring-primary/25"
-                >
-                  <option value="" disabled>Select score (0–{currentQ.max})</option>
-                  {Array.from({ length: currentQ.max + 1 }, (_, score) => (
-                    <option key={score} value={String(score)}>{score} / {currentQ.max} {score === currentQ.max ? '(Full points)' : ''}</option>
-                  ))}
-                </select>
                 {isCurrentAnswered && (
                   <button
                     type="button"

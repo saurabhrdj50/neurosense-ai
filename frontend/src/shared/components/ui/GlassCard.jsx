@@ -21,7 +21,7 @@ export default function GlassCard({
   className = '',
   style = {},
   hover = false,
-  glow: _glow = false,
+  glow = false,
   onClick,
   onKeyDown,
   children,
@@ -43,6 +43,7 @@ export default function GlassCard({
   }
 
   const selectedVariant = VARIANTS[variant] || VARIANTS.default
+  const glowClass = glow ? 'ring-1 ring-primary/30 shadow-[0_0_32px_-6px_var(--primary-glow)]' : ''
   const hoverClass = hover && (variant === 'default' || variant === 'secondary' || variant === 'primary') 
     ? 'hover:border-primary/40 hover:bg-surface-hover/80 transition-all duration-150' 
     : ''
@@ -65,7 +66,7 @@ export default function GlassCard({
       onKeyDown={onClick || onKeyDown ? handleKeyDown : undefined}
       tabIndex={onClick || variant === 'interactive' ? 0 : undefined}
       role={onClick || variant === 'interactive' ? 'button' : undefined}
-      className={`rounded-xl transition-all duration-150 ${selectedVariant} ${hoverClass} ${cursorClass} ${className}`}
+      className={`rounded-xl transition-all duration-150 ${selectedVariant} ${glowClass} ${hoverClass} ${cursorClass} ${className}`}
       style={style}
       {...props}
     >

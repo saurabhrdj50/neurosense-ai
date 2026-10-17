@@ -13,22 +13,17 @@ class RecommendationService:
     """Generate personalized recommendations based on analysis results."""
 
     MEDICAL_REFERRALS = {
-        'Non-Demented': [
+        'Cognitively Normal (CN)': [
             {'specialist': 'Primary Care Physician', 'reason': 'Regular wellness check', 'urgency': 'routine'},
             {'specialist': 'Neurologist', 'reason': 'Baseline cognitive evaluation', 'urgency': 'optional'}
         ],
-        'Very Mild Demented': [
-            {'specialist': 'Neurologist', 'reason': 'Early-stage cognitive assessment', 'urgency': 'recommended'},
+        'Mild Cognitive Impairment (MCI)': [
+            {'specialist': 'Neurologist', 'reason': 'Early-stage cognitive assessment and treatment planning', 'urgency': 'recommended'},
             {'specialist': 'Memory Clinic', 'reason': 'Comprehensive cognitive evaluation', 'urgency': 'recommended'},
+            {'specialist': 'Geriatric Specialist', 'reason': 'Comprehensive geriatric assessment', 'urgency': 'recommended'},
             {'specialist': 'Psychiatrist', 'reason': 'Mood and behavioral assessment', 'urgency': 'optional'}
         ],
-        'Mild Demented': [
-            {'specialist': 'Neurologist', 'reason': 'Confirm diagnosis and treatment planning', 'urgency': 'important'},
-            {'specialist': 'Memory Clinic', 'reason': 'Detailed neuropsychological testing', 'urgency': 'important'},
-            {'specialist': 'Geriatric Specialist', 'reason': 'Comprehensive geriatric assessment', 'urgency': 'recommended'},
-            {'specialist': 'Psychiatrist', 'reason': 'Address behavioral and emotional changes', 'urgency': 'recommended'}
-        ],
-        'Moderate Demented': [
+        "Alzheimer's Disease (AD)": [
             {'specialist': 'Neurologist', 'reason': 'Urgent neurological evaluation', 'urgency': 'urgent'},
             {'specialist': 'Memory Clinic', 'reason': 'Comprehensive assessment and care planning', 'urgency': 'urgent'},
             {'specialist': 'Geriatric Specialist', 'reason': 'Coordinate overall care', 'urgency': 'important'},
@@ -38,28 +33,22 @@ class RecommendationService:
     }
 
     LIFESTYLE_TIPS = {
-        'Non-Demented': [
+        'Cognitively Normal (CN)': [
             {'category': 'Cognitive', 'tip': 'Engage in regular mental stimulation - puzzles, reading, learning new skills'},
             {'category': 'Physical', 'tip': 'Maintain 150 minutes of moderate exercise per week'},
             {'category': 'Social', 'tip': 'Stay socially active with friends and family'},
             {'category': 'Diet', 'tip': 'Follow a Mediterranean-style diet rich in vegetables and fish'},
             {'category': 'Sleep', 'tip': 'Aim for 7-8 hours of quality sleep each night'}
         ],
-        'Very Mild Demented': [
-            {'category': 'Cognitive', 'tip': 'Increase cognitive activities - consider brain training apps'},
-            {'category': 'Physical', 'tip': 'Regular aerobic exercise (walking, swimming)'},
+        'Mild Cognitive Impairment (MCI)': [
+            {'category': 'Cognitive', 'tip': 'Structured daily routines with meaningful activities and brain training'},
+            {'category': 'Physical', 'tip': 'Regular aerobic exercise such as walking, swimming, or tai chi'},
             {'category': 'Diet', 'tip': 'Adopt MIND diet - leafy greens, berries, nuts, olive oil'},
-            {'category': 'Social', 'tip': 'Join a social group or community activity'},
-            {'category': 'Memory', 'tip': 'Use memory aids - calendars, notes, phone reminders'}
-        ],
-        'Mild Demented': [
-            {'category': 'Cognitive', 'tip': 'Structured daily routines with meaningful activities'},
-            {'category': 'Physical', 'tip': 'Gentle exercise like walking, tai chi, or water aerobics'},
-            {'category': 'Diet', 'tip': 'Focus on nutrient-dense foods; consider nutritional supplements'},
+            {'category': 'Memory', 'tip': 'Use memory aids - calendars, notes, phone reminders'},
             {'category': 'Safety', 'tip': 'Home safety evaluation and modifications'},
             {'category': 'Caregiver', 'tip': 'Involve family in care planning and daily support'}
         ],
-        'Moderate Demented': [
+        "Alzheimer's Disease (AD)": [
             {'category': 'Care', 'tip': 'Consider professional caregiving support'},
             {'category': 'Safety', 'tip': '24-hour supervision may be necessary'},
             {'category': 'Physical', 'tip': 'Assistive devices for mobility; regular gentle movement'},
@@ -95,7 +84,7 @@ class RecommendationService:
         confidence = final_stage.get('confidence', 0)
 
         if not stage:
-            # A missing/failed fusion must NOT default to 'Non-Demented' — a
+            # A missing/failed fusion must NOT default to 'Cognitively Normal (CN)' — a
             # failed assessment silently producing healthy-patient advice is
             # the worst possible failure mode for a clinical tool.
             return {
@@ -144,7 +133,7 @@ class RecommendationService:
         risk_profile: Dict
     ) -> Dict[str, Any]:
         """Generate medical referral recommendations."""
-        referrals = self.MEDICAL_REFERRALS.get(stage, self.MEDICAL_REFERRALS['Non-Demented'])
+        referrals = self.MEDICAL_REFERRALS.get(stage, self.MEDICAL_REFERRALS['Cognitively Normal (CN)'])
         
         adjusted_referrals = []
         for ref in referrals:
@@ -170,20 +159,18 @@ class RecommendationService:
     def _get_urgency_level(self, stage: str) -> str:
         """Determine urgency level based on stage."""
         urgency_map = {
-            'Non-Demented': 'Routine (annual)',
-            'Very Mild Demented': '6-12 months',
-            'Mild Demented': '3-6 months',
-            'Moderate Demented': 'Immediate'
+            'Cognitively Normal (CN)': 'Routine (annual)',
+            'Mild Cognitive Impairment (MCI)': '6-12 months',
+            "Alzheimer's Disease (AD)": 'Immediate'
         }
         return urgency_map.get(stage, 'Routine')
 
     def _get_follow_up_schedule(self, stage: str) -> str:
         """Get recommended follow-up schedule."""
         schedule_map = {
-            'Non-Demented': 'Annual cognitive screening',
-            'Very Mild Demented': 'Every 6-12 months',
-            'Mild Demented': 'Every 3-6 months',
-            'Moderate Demented': 'As needed, or monthly'
+            'Cognitively Normal (CN)': 'Annual cognitive screening',
+            'Mild Cognitive Impairment (MCI)': 'Every 6 months',
+            "Alzheimer's Disease (AD)": 'As needed, or monthly'
         }
         return schedule_map.get(stage, 'As recommended by physician')
 
@@ -193,7 +180,7 @@ class RecommendationService:
         risk_profile: Dict
     ) -> Dict[str, Any]:
         """Generate lifestyle recommendations."""
-        base_tips = self.LIFESTYLE_TIPS.get(stage, self.LIFESTYLE_TIPS['Non-Demented'])
+        base_tips = self.LIFESTYLE_TIPS.get(stage, self.LIFESTYLE_TIPS['Cognitively Normal (CN)'])
         
         factor_details = risk_profile.get('factor_details', {})
         prioritized_tips = self._prioritize_by_risk_factors(base_tips, factor_details)
@@ -265,46 +252,42 @@ class RecommendationService:
         elif modifiable > 30:
             focus_areas.append('Moderate lifestyle changes recommended')
         
-        if stage in ['Mild Demented', 'Moderate Demented']:
+        if stage in ['Mild Cognitive Impairment (MCI)', "Alzheimer's Disease (AD)"]:
             focus_areas.append('Caregiver support and planning')
             focus_areas.append('Safety considerations')
-        
-        if stage == 'Non-Demented':
+
+        if stage == 'Cognitively Normal (CN)':
             focus_areas.append('Prevention and maintenance')
-        
+
         return focus_areas if focus_areas else ['General wellness']
 
     def _set_lifestyle_goals(self, stage: str) -> List[Dict]:
         """Set achievable lifestyle goals."""
         goals_map = {
-            'Non-Demented': [
+            'Cognitively Normal (CN)': [
                 {'goal': 'Maintain cognitive engagement', 'timeline': 'Ongoing'},
                 {'goal': 'Regular exercise routine', 'timeline': 'Weekly'},
                 {'goal': 'Social activity participation', 'timeline': 'Weekly'}
             ],
-            'Very Mild Demented': [
+            'Mild Cognitive Impairment (MCI)': [
                 {'goal': 'Daily cognitive exercises', 'timeline': 'Daily'},
                 {'goal': 'Increase physical activity', 'timeline': 'Within 1 month'},
-                {'goal': 'Memory aid implementation', 'timeline': 'Within 2 weeks'}
+                {'goal': 'Memory aid implementation', 'timeline': 'Within 2 weeks'},
+                {'goal': 'Establish daily routine', 'timeline': 'Within 1 week'}
             ],
-            'Mild Demented': [
-                {'goal': 'Establish daily routine', 'timeline': 'Within 1 week'},
-                {'goal': 'Caregiver training', 'timeline': 'Within 1 month'},
-                {'goal': 'Home safety assessment', 'timeline': 'Within 2 weeks'}
-            ],
-            'Moderate Demented': [
+            "Alzheimer's Disease (AD)": [
                 {'goal': 'Care plan implementation', 'timeline': 'Immediate'},
                 {'goal': 'Safety modifications', 'timeline': 'Immediate'},
                 {'goal': 'Caregiver support network', 'timeline': 'Immediate'}
             ]
         }
-        return goals_map.get(stage, goals_map['Non-Demented'])
+        return goals_map.get(stage, goals_map['Cognitively Normal (CN)'])
 
     def _get_resources(self, stage: str) -> List[Dict]:
         """Get helpful resources."""
         resources = self.ADDITIONAL_RESOURCES.copy()
         
-        if stage in ['Mild Demented', 'Moderate Demented']:
+        if stage in ['Mild Cognitive Impairment (MCI)', "Alzheimer's Disease (AD)"]:
             resources.append({
                 'type': 'Caregiver',
                 'name': 'Caregiver Training Programs',

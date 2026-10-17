@@ -6,13 +6,15 @@ import {
 } from 'lucide-react'
 import Badge from '../../../shared/components/ui/Badge'
 import Button from '../../../shared/components/ui/Button'
-import ProgressBar from '../../../shared/components/ui/ProgressBar'
 
 const STAGE_CONFIG = {
+  'Cognitively Normal (CN)': { label: 'Normal / Healthy (CN)', variant: 'success', color: '#10B981' },
   'Non-Demented':       { label: 'Normal / Healthy', variant: 'success', color: '#10B981' },
   'Non Demented':       { label: 'Normal / Healthy', variant: 'success', color: '#10B981' },
   'Very Mild Demented': { label: 'Very Mild Decline', variant: 'purple',  color: '#7C3AED' },
+  'Mild Cognitive Impairment (MCI)': { label: 'Mild Impairment (MCI)', variant: 'warning', color: '#F59E0B' },
   'Mild Demented':      { label: 'Mild Impairment (MCI)', variant: 'warning', color: '#F59E0B' },
+  "Alzheimer's Disease (AD)": { label: "Alzheimer's Disease (AD)", variant: 'danger',  color: '#EF4444' },
   'Moderate Demented':  { label: 'Moderate Decline', variant: 'danger',  color: '#EF4444' },
   'Severe Demented':    { label: 'Severe Decline', variant: 'danger',  color: '#EF4444' },
   'Unknown':            { label: 'Pending Assessment', variant: 'neutral', color: '#94A3B8' },

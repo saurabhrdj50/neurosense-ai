@@ -156,3 +156,13 @@ frontend/node_modules/
 backend/__pycache__/
 # Serialized model artifacts (loaded at runtime, never versioned)
 backend/app/models/alzheimer_model/
+backend/app/models/speech/
+*.joblib
+
+# Whitelist production runtime models
+!backend/app/models/alzheimer_model.pth
+!backend/app/models/speech/
+!backend/app/models/speech/distilbert_only_model.joblib
+
+backups/
+.zcode/

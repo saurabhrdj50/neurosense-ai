@@ -1,131 +1,92 @@
-import functools
-from typing import Optional, Callable, Any
-from flask import session, redirect, url_for, request, jsonify
+"""Security primitives: password hashing and PHI field encryption.
 
-from werkzeug.security import generate_password_hash, check_password_hash
+These helpers are framework-independent (no HTTP-layer imports) and depend
+only on the Python standard library.
 
-try:
-    from flask_login import current_user as flask_current_user, login_required as flask_login_required
-    HAS_FLASK_LOGIN = True
-except ImportError:
-    HAS_FLASK_LOGIN = False
-    flask_current_user = None
-    flask_login_required = None
+Password hashes are stored in Werkzeug's format (``method$salt$hash``) for
+backward compatibility with existing accounts:
+
+  * ``scrypt:32768:8:1$<salt>$<hex>``  (current default)
+  * ``pbkdf2:sha256:<iterations>$<salt>$<hex>``  (legacy rows)
+
+The derivation parameters are identical to the historical implementation, so
+every existing hash verifies unchanged. New hashes use scrypt with per-hash
+random salts.
+
+The Fernet key derives from SECRET_KEY exactly as it did historically —
+changing that KDF would make every encrypted PHI value unreadable.
+
+HTTP auth (session cookie handling, role guards) lives in app.api.deps.
+"""
+import base64
+import hashlib
+import hmac
+import secrets
+import string
+
+from cryptography.fernet import Fernet
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+
+_SALT_CHARS = string.ascii_letters + string.digits
+SCRYPT_N = 2 ** 15
+SCRYPT_R = 8
+SCRYPT_P = 1
+PBKDF2_ITERATIONS = 600000
+
+
+def _gen_salt(length: int = 16) -> str:
+    return ''.join(secrets.choice(_SALT_CHARS) for _ in range(length))
 
 
 def hash_password(password: str) -> str:
-    return generate_password_hash(password)
+    """Hash with scrypt in the historical storage format."""
+    salt = _gen_salt(16)
+    digest = hashlib.scrypt(
+        password.encode(),
+        salt=salt.encode(),
+        n=SCRYPT_N,
+        r=SCRYPT_R,
+        p=SCRYPT_P,
+        maxmem=132 * SCRYPT_N * SCRYPT_R * SCRYPT_P,
+    ).hex()
+    return f"scrypt:{SCRYPT_N}:{SCRYPT_R}:{SCRYPT_P}${salt}${digest}"
 
 
 def verify_password(password: str, password_hash: str) -> bool:
-    return check_password_hash(password_hash, password)
+    """Constant-time verification of scrypt and legacy pbkdf2 hash formats."""
+    try:
+        method, salt, expected = password_hash.split('$', 2)
+    except (ValueError, AttributeError):
+        return False
 
+    name, *args = method.split(':')
+    try:
+        if name == 'scrypt':
+            n, r, p = (int(a) for a in args) if len(args) == 3 else (SCRYPT_N, SCRYPT_R, SCRYPT_P)
+            computed = hashlib.scrypt(
+                password.encode(),
+                salt=salt.encode(),
+                n=n, r=r, p=p,
+                maxmem=132 * n * r * p,
+            ).hex()
+        elif name == 'pbkdf2':
+            hash_name = args[0] if args else 'sha256'
+            iterations = int(args[1]) if len(args) > 1 else PBKDF2_ITERATIONS
+            computed = hashlib.pbkdf2_hmac(
+                hash_name, password.encode(), salt.encode(), iterations
+            ).hex()
+        else:
+            return False
+    except (ValueError, TypeError):
+        return False
 
-def login_required(f: Callable[..., Any]) -> Callable[..., Any]:
-    decorator = flask_login_required if HAS_FLASK_LOGIN else None
-    
-    if decorator is not None:
-        return decorator(f)
-    
-    @functools.wraps(f)
-    def decorated_function(*args: Any, **kwargs: Any) -> Any:
-        if 'user_id' not in session:
-            return redirect(url_for('auth.login'))
-        return f(*args, **kwargs)
-    return decorated_function
-
-
-def role_required(*allowed_roles: str):
-    """
-    Decorator to restrict access based on user roles.
-    
-    Usage:
-        @role_required("admin")
-        @role_required("admin", "doctor")
-    """
-    def decorator(f: Callable[..., Any]) -> Callable[..., Any]:
-        @functools.wraps(f)
-        def decorated_function(*args: Any, **kwargs: Any) -> Any:
-            user = get_current_user()
-
-            # API consumers always get structured JSON (a 302 redirect to a
-            # login page is meaningless for fetch/XHR and window.open flows).
-            wants_json = request.is_json or request.path.startswith('/api')
-            
-            if not user:
-                if wants_json:
-                    return jsonify({'success': False, 'message': 'Authentication required'}), 401
-                return redirect(url_for('auth.login'))
-            
-            if user.role not in allowed_roles:
-                if wants_json:
-                    return jsonify({'success': False, 'message': 'Access denied. Insufficient permissions.'}), 403
-                return redirect(url_for('auth.login'))
-            
-            return f(*args, **kwargs)
-        return decorated_function
-    return decorator
-
-
-def admin_required(f: Callable[..., Any]) -> Callable[..., Any]:
-    """Decorator to restrict access to admin only."""
-    return role_required("admin")(f)
-
-
-def doctor_required(f: Callable[..., Any]) -> Callable[..., Any]:
-    """Decorator to restrict access to doctors and admins."""
-    return role_required("admin", "doctor")(f)
-
-
-def get_current_user() -> Optional[Any]:
-    if HAS_FLASK_LOGIN and flask_current_user is not None:
-        try:
-            if getattr(flask_current_user, 'is_authenticated', False):
-                return flask_current_user
-        except Exception:
-            pass
-    
-    if 'user_id' in session:
-        from app.features.auth.repository import UserRepository
-        repo = UserRepository()
-        return repo.get_by_id(session['user_id'])
-    
-    return None
-
-
-def get_current_user_id() -> Optional[int]:
-    if HAS_FLASK_LOGIN and flask_current_user is not None:
-        if hasattr(flask_current_user, 'is_authenticated') and flask_current_user.is_authenticated:
-            return flask_current_user.id
-    
-    return session.get('user_id')
-
-
-def login_user(user: Any, remember: bool = True) -> bool:
-    if HAS_FLASK_LOGIN:
-        from flask_login import login_user as flask_login_user
-        return flask_login_user(user, remember=remember)
-    else:
-        session['user_id'] = user.id
-        return True
-
-
-def logout_user() -> None:
-    if HAS_FLASK_LOGIN:
-        from flask_login import logout_user as flask_logout_user
-        flask_logout_user()
-    else:
-        session.pop('user_id', None)
+    return hmac.compare_digest(computed, expected)
 
 
 # ─────────────────────────────────────────────
 # HIPAA COMPLIANCE & PHI FIELD ENCRYPTION
 # ─────────────────────────────────────────────
-import base64
-from cryptography.fernet import Fernet
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-
 _FERNET_INSTANCE = None
 
 
@@ -164,3 +125,28 @@ def decrypt_phi(token: str) -> str:
     except Exception:
         return token
 
+
+try:
+    from sqlalchemy.types import TypeDecorator, Text
+
+    class EncryptedString(TypeDecorator):
+        """SQLAlchemy TypeDecorator for transparent encryption of PHI at rest.
+
+        Data is encrypted with AES-128-CBC + HMAC-SHA256 (Fernet) before writing
+        to the database, and automatically decrypted when loaded. Legacy unencrypted
+        strings pass through seamlessly via decrypt_phi's exception fallback.
+        """
+        impl = Text
+        cache_ok = True
+
+        def process_bind_param(self, value, dialect):
+            if value is not None and value != '':
+                return encrypt_phi(str(value))
+            return value
+
+        def process_result_value(self, value, dialect):
+            if value is not None and value != '':
+                return decrypt_phi(str(value))
+            return value
+except ImportError:
+    pass

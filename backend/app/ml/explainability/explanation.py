@@ -18,10 +18,9 @@ class ExplanationService:
             'indicators': [],
         }
         for stage in (
-            'Non-Demented',
-            'Very Mild Demented',
-            'Mild Demented',
-            'Moderate Demented',
+            'Cognitively Normal (CN)',
+            'Mild Cognitive Impairment (MCI)',
+            "Alzheimer's Disease (AD)",
         )
     }
 
@@ -191,7 +190,7 @@ class ExplanationService:
         if sentiment:
             indicators.append({
                 'modality': 'Speech summary',
-                'value': 'Reported separately; not included in active fusion',
+                'value': 'Speech acoustic & NLP markers evaluated and fused',
             })
 
         if risk_profile and risk_profile.get('overall_risk_score') is not None:

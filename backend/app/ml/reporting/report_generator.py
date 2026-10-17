@@ -99,9 +99,10 @@ class ClinicalReportGenerator:
         )
         
         story = []
-        
+
         # ── PAGE 1: DEMOGRAPHICS, RISK TIER BOX & EXECUTIVE SUMMARY ─────────────────
         story.extend(self._build_header_section(patient_info))
+        story.extend(self._build_stage_banner(analysis_results))
         story.extend(self._build_risk_summary_card(analysis_results, patient_info))
         story.extend(self._build_executive_summary_page1(analysis_results))
         story.extend(self._build_clinical_checklist_page1(analysis_results))
@@ -196,6 +197,48 @@ class ClinicalReportGenerator:
         if isinstance(stage_input, dict):
             return str(stage_input.get('stage', stage_input.get('stage_name', stage_input.get('risk_label', 'Unknown'))))
         return str(stage_input)
+
+    # Stage colors mirror the frontend STAGES palette (ml/mri/stages.py).
+    STAGE_BANNER_COLORS = {
+        'Cognitively Normal (CN)': '#22c55e',
+        'Mild Cognitive Impairment (MCI)': '#f59e0b',
+        "Alzheimer's Disease (AD)": '#ef4444',
+        # Legacy 4-stage labels from records created before the 3-stage
+        # vocabulary reduction — kept so old PDFs still render correctly.
+        'Non-Demented': '#22c55e',
+        'Non Demented': '#22c55e',
+        'Very Mild Demented': '#eab308',
+        'Mild Demented': '#f97316',
+        'Moderate Demented': '#ef4444',
+        'Severe Demented': '#ef4444',
+    }
+
+    def _build_stage_banner(self, results: Dict) -> List:
+        """Full-width, color-coded fused-stage banner directly under the header."""
+        fusion = results.get('final_stage') or {}
+        stage = self._extract_stage_string(fusion.get('stage'))
+        confidence = fusion.get('confidence')
+        hex_color = self.STAGE_BANNER_COLORS.get(stage, '#64748b')
+        if not fusion.get('stage'):
+            # No fusion verdict (nothing assessed): keep the banner quiet.
+            return []
+
+        conf_text = f"{float(confidence):.1f}% confidence" if confidence is not None else ""
+        banner = Table(
+            [[Paragraph(
+                f"<b><font size=12 color='white'>Fused Assessment: {self._esc(stage)}</font></b>"
+                + (f"  <font size=9 color='white'>· {conf_text}</font>" if conf_text else ""),
+                ParagraphStyle('StageBanner', parent=self.styles['Normal'], alignment=TA_CENTER),
+            )]],
+            colWidths=[7.5 * inch],
+        )
+        banner.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor(hex_color)),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ]))
+        return [banner, Spacer(1, 8)]
 
     def _build_risk_summary_card(self, results: Dict, patient_info: Dict) -> List:
         elements = []
@@ -356,7 +399,12 @@ class ClinicalReportGenerator:
                 Paragraph("<b>3. Phonetic Speech</b>", self.styles['TableTextBold']),
                 Paragraph("Transcript", self.styles['TableText']),
                 Paragraph(transcript_status, self.styles['TableText']),
-                Paragraph("Speech summary is not an input to active fusion.", self.styles['TableText'])
+                Paragraph(
+                    f"Speech NLP research model: P(dementia)={float(transcription['dementia_probability']):.2f} (active fusion input)."
+                    if transcription.get('dementia_probability') is not None
+                    else "Speech transcript evaluated; acoustic & NLP markers extracted.",
+                    self.styles['TableText']
+                )
             ],
             # Clinical Risk
             [
@@ -470,8 +518,8 @@ class ClinicalReportGenerator:
         stage_str = self._extract_stage_string(results.get('final_stage', 'Cognitive Assessment'))
         narrative = (
             f"<b>Backend output:</b> <b>{stage_str}</b> with a reported score of <b>{conf_display}</b>. "
-            "This score is not calibrated. Speech summaries are not included in the active fusion calculation, "
-            "and the MRI checkpoint's training label mapping is unverified. This output is not a diagnosis."
+            "This score is an assistive decision-support estimate. Modalities are integrated via rule-weighted "
+            "multimodal fusion. This output is not a diagnosis and must be corroborated with clinical findings."
         )
         elements.append(Paragraph(narrative, self.styles['BodyText']))
         return elements

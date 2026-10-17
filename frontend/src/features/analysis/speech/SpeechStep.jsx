@@ -7,6 +7,7 @@ import {
   Type, Sun, Moon, Image as ImageIcon, RotateCcw, Trash2
 } from 'lucide-react'
 import DropZone from '../../../shared/components/ui/DropZone'
+import { mergeAudioBlobs } from './audioMerger'
 
 const GUIDED_TASKS = [
   { id: 1, title: 'Introduce Yourself', prompt: 'Please state your full name, age, and where you live.', sampleText: 'My name is Arthur Pendelton, I am 68 years old, and I live in Boston, Massachusetts.' },
@@ -117,6 +118,13 @@ export function SpeechStep({ speechText, setSpeechText, audioFile, setAudioFile 
   const [lastRecordedTask, setLastRecordedTask] = useState(null)
   const [selectedLanguage, setSelectedLanguage] = useState('auto')
   const [availableVoices, setAvailableVoices] = useState([])
+
+  // Recording duration: the backend transcriber caps clips at
+  // WHISPER_MAX_AUDIO_SEC (default 120s) — mirror it so the clinician is
+  // never surprised by a silently truncated recording.
+  const MAX_RECORDING_SEC = 120
+  const WARN_RECORDING_SEC = 90
+  const [recordingSeconds, setRecordingSeconds] = useState(0)
 
   /* Fullscreen Patient Mode Accessibility States */
   const [isSpeakingPrompt, setIsSpeakingPrompt] = useState(false)
@@ -276,9 +284,11 @@ export function SpeechStep({ speechText, setSpeechText, audioFile, setAudioFile 
             const allBlobs = Object.keys(updated)
               .sort((a, b) => Number(a) - Number(b))
               .map(k => updated[k])
-            const combinedBlob = new Blob(allBlobs, { type: recorder.mimeType || 'audio/webm' })
-            const combinedFile = new File([combinedBlob], `patient_speech_all_tasks.webm`, { type: combinedBlob.type })
-            setAudioFile(combinedFile)
+            mergeAudioBlobs(allBlobs, `patient_speech_task_${activeTaskId}.webm`).then(combinedFile => {
+              if (combinedFile) {
+                setAudioFile(combinedFile)
+              }
+            })
             return updated
           })
         }
@@ -382,6 +392,28 @@ export function SpeechStep({ speechText, setSpeechText, audioFile, setAudioFile 
       stopMediaRecorder()
     }
   }
+
+  /* ── Recording timer & hard stop ────────────────────────────────────── */
+  // Latest-ref pattern so the interval/effect always call the current
+  // render's stop handler with its fresh state closures.
+  const stopMediaRecorderRef = useRef(null)
+  useEffect(() => { stopMediaRecorderRef.current = stopMediaRecorder })
+
+  useEffect(() => {
+    if (!isRecording) return
+    setRecordingSeconds(0)
+    const id = setInterval(() => setRecordingSeconds(s => s + 1), 1000)
+    return () => clearInterval(id)
+  }, [isRecording])
+
+  useEffect(() => {
+    if (isRecording && recordingSeconds >= MAX_RECORDING_SEC) {
+      stopMediaRecorderRef.current?.()
+      toast('Recording stopped at the 2-minute limit — the transcription pipeline caps clips at this length.', { icon: '⏱️', duration: 6000 })
+    }
+  }, [recordingSeconds, isRecording])
+
+  const formatRecordingTime = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 
   // Play individual task recording
   const handlePlayTaskAudio = (targetTaskId = activeTaskId) => {
@@ -968,6 +1000,35 @@ export function SpeechStep({ speechText, setSpeechText, audioFile, setAudioFile 
             </div>
           </div>
 
+          {/* Speech battery checklist — where am I, what's left */}
+          <div className="flex flex-wrap items-center gap-2 p-2.5 rounded-xl bg-background border border-border/60" role="group" aria-label="Speech task checklist">
+            {GUIDED_TASKS.map(t => {
+              const done = completedTaskIds.includes(t.id)
+              const active = t.id === activeTaskId
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setActiveTaskId(t.id)}
+                  aria-current={active}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold border transition-colors cursor-pointer min-h-[32px] ${
+                    active
+                      ? 'bg-primary/15 text-primary border-primary/40'
+                      : done
+                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                      : 'bg-surface text-foreground-muted border-border hover:border-border-strong'
+                  }`}
+                >
+                  {done ? <CheckCircle2 size={12} /> : <span className={`w-3.5 h-3.5 rounded-full border ${active ? 'border-primary' : 'border-current opacity-50'}`} />}
+                  Task {t.id}: {t.title}
+                </button>
+              )
+            })}
+            <span className="ml-auto text-[11px] font-bold text-foreground-muted">
+              {completedTaskIds.length} of {GUIDED_TASKS.length} recorded
+            </span>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
             {/* Prominent Record & Playback Controls */}
             <div className="p-3.5 rounded-xl bg-background border border-border/80 flex items-center justify-between min-h-[58px]">
@@ -990,6 +1051,21 @@ export function SpeechStep({ speechText, setSpeechText, audioFile, setAudioFile 
                     ? `Retake Task ${activeTaskId} Recording`
                     : `Start Task ${activeTaskId} Voice Test`}
                 </button>
+
+                {/* Elapsed / max recording time — amber as the transcription
+                    cap approaches, hard stop at the limit */}
+                {isRecording && (
+                  <span
+                    className={`px-2.5 py-1.5 rounded-lg text-xs font-mono font-extrabold border ${
+                      recordingSeconds >= WARN_RECORDING_SEC
+                        ? 'text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/30'
+                        : 'text-foreground-muted bg-surface border-border'
+                    }`}
+                    title={`Transcription supports up to ${MAX_RECORDING_SEC} seconds per recording`}
+                  >
+                    {formatRecordingTime(recordingSeconds)} / {formatRecordingTime(MAX_RECORDING_SEC)}
+                  </span>
+                )}
               </div>
 
               {/* Animated Waveform Visualizer or Replay Player */}
@@ -1014,11 +1090,7 @@ export function SpeechStep({ speechText, setSpeechText, audioFile, setAudioFile 
                     {isPlayingBack ? 'Playing...' : 'Listen Back'}
                   </button>
                 </div>
-              ) : (
-                <div className="text-xs font-semibold text-emerald-500 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">
-                  High SNR
-                </div>
-              )}
+              ) : null}
             </div>
 
             {/* Audio File Dropzone */}

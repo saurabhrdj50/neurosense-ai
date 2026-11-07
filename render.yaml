@@ -1,0 +1,69 @@
+# NeuroSense AI — Render deploy (simplified free-tier profile).
+#
+# One free Web Service running the FastAPI backend as Native Python (NOT
+# Docker: backend/.dockerignore excludes app/models/, so a Docker deploy
+# would ship without alzheimer_model.pth and /api/health would report
+# "degraded"). The git checkout includes the tracked model file.
+#
+# No worker / Redis / MinIO service in v1 — background jobs run in-process
+# (USE_CELERY=false) and uploads are local + ephemeral. MRI / voice
+# inference is OFF (ENABLE_MRI / ENABLE_VOICE = false): Render free has
+# 512 MB RAM and cannot hold Whisper / DistilBERT.
+#
+# Secrets (SECRET_KEY, DATABASE_URL, CORS_ORIGINS, GITHUB_*) are set in the
+# Render dashboard (sync: false) — never in this file. DATABASE_URL comes
+# from a free Neon Postgres (primary) or Supabase (fallback); do NOT use
+# Render's free Postgres, which is deleted after ~90 days.
+#
+# No healthCheckPath here on purpose: /api/health returns 503 while the
+# database is not yet wired, which would fail Render's health check on the
+# very first deploy. Render still verifies the service by its open port.
+services:
+  - type: web
+    name: neurosense-ai
+    env: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: ENABLE_EAGER_WARMUP
+        value: "false"
+      - key: ENABLE_MRI
+        value: "false"
+      - key: ENABLE_VOICE
+        value: "false"
+      - key: SPEECH_NLP_ENABLED
+        value: "false"
+      - key: USE_CELERY
+        value: "false"
+      - key: RATELIMIT_STORAGE
+        value: memory://
+      - key: STORAGE_BACKEND
+        value: local
+      - key: EXPOSE_RESET_TOKEN
+        value: "false"
+      - key: SESSION_COOKIE_SAMESITE
+        value: None
+      - key: SESSION_COOKIE_SECURE
+        value: "true"
+      - key: TRUST_PROXY
+        value: "true"
+      - key: ML_JOB_WORKERS
+        value: "1"
+      - key: SECRET_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: GITHUB_CLIENT_ID
+        sync: false
+      - key: GITHUB_CLIENT_SECRET
+        sync: false
+      - key: GITHUB_REDIRECT_URI
+        sync: false
+      - key: FRONTEND_URL
+        sync: false

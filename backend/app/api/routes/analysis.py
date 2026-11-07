@@ -12,11 +12,35 @@ from app.api.deps import is_admin, require_user
 from app.api.ratelimit import limiter
 from app.api.errors import ApiError
 from app.api.multipart import UploadedFileAdapter, _valid_mri_upload, parse_analyze_request
+from app.config.settings import Config
 from app.features.history.repository import SessionRepository
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix='/api/analysis', tags=['analysis'])
+
+# Simplified (free-tier) deploy: heavy MRI / voice inference is off, so
+# requests that would run those models answer 503 with a clear message
+# instead of loading multi-hundred-MB models into a 512 MB container.
+# Cognitive + risk analysis is unaffected — fusion re-normalises over the
+# modalities that are present.
+MRI_DISABLED = 'MRI analysis is disabled in this demo deploy.'
+VOICE_DISABLED = 'Voice analysis is disabled in this demo deploy.'
+
+
+def _disabled_response(message: str) -> JSONResponse:
+    return JSONResponse(
+        {'success': False, 'error': message, 'disabled': True}, status_code=503
+    )
+
+
+def _check_modality_enabled(inputs: dict):
+    """Return a 503 response when a disabled modality was requested, else None."""
+    if inputs.get('mri_file') and not Config.ENABLE_MRI:
+        return _disabled_response(MRI_DISABLED)
+    if inputs.get('audio_file') and not Config.ENABLE_VOICE:
+        return _disabled_response(VOICE_DISABLED)
+    return None
 
 
 def _orchestrator():
@@ -32,6 +56,9 @@ def analyze(request: Request,
 ):
     from app.api.multipart import parse_analyze_request  # noqa: F401 (doc clarity)
     inputs, patient_info, input_errors = parsed
+    disabled = _check_modality_enabled(inputs)
+    if disabled is not None:
+        return disabled
     orchestrator = _orchestrator()
 
     results = orchestrator.run_full_analysis(inputs, doctor_id=user.id)
@@ -64,6 +91,10 @@ def analyze_async(request: Request,
     from app.shared.jobs import get_job_manager
     from app.config.settings import Config
     inputs, patient_info, input_errors = parsed
+
+    disabled = _check_modality_enabled(inputs)
+    if disabled is not None:
+        return disabled
 
     if getattr(Config, 'USE_CELERY', False):
         try:
@@ -109,6 +140,8 @@ def analysis_job_status(job_id: str, request: Request, user=Depends(require_user
 @router.post('/mri/preview')
 async def mri_preview(request: Request, user=Depends(require_user)):
     """Render a displayable PNG preview slice from an uploaded MRI volume."""
+    if not Config.ENABLE_MRI:
+        return _disabled_response(MRI_DISABLED)
     form = await request.form()
     file = form.get('mri_image')
     if not (file and isinstance(file, UploadFile) and file.filename):
@@ -216,6 +249,11 @@ def retry_session_modality(
     """Re-run one failed modality (mri|audio) for a stored session from its
     persisted raw upload, then refresh fusion, explanation and the PDF."""
     modality = (body.get('modality') or '').strip().lower()
+
+    if modality == 'mri' and not Config.ENABLE_MRI:
+        return _disabled_response(MRI_DISABLED)
+    if modality == 'audio' and not Config.ENABLE_VOICE:
+        return _disabled_response(VOICE_DISABLED)
 
     from app.features.analysis.retry import retry_modality
     try:

@@ -311,6 +311,7 @@ def create_app() -> FastAPI:
 
     # ── Routes ────────────────────────────────────────────────────────────
     from app.api.routes.auth import router as auth_router
+    from app.api.routes.github_auth import router as github_auth_router
     from app.api.routes.patients import router as patients_router
     from app.api.routes.history import router as analyses_router
     from app.api.routes.admin import router as admin_router
@@ -318,6 +319,7 @@ def create_app() -> FastAPI:
     from app.api.routes.meta import router as meta_router
 
     app.include_router(auth_router)
+    app.include_router(github_auth_router)
     app.include_router(patients_router)
     app.include_router(analyses_router)
     app.include_router(admin_router)

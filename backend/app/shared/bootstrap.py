@@ -4,11 +4,13 @@ Runs exactly once per process at startup (the FastAPI lifespan). Request-path
 code must never run DDL or seed checks — repositories are plain session
 consumers.
 
-The admin account is a fixed deployment constant (username ``admin``,
-password ``admin``): it is created on first boot and its credential is
-re-enforced on every startup, so the login can never drift. It deliberately
-bypasses the user-facing password-strength rules and never participates in
-the forgot-password flow. Doctors are never seeded — they self-register via
+The admin account is env-configurable (ADMIN_USERNAME / ADMIN_PASSWORD /
+ADMIN_EMAIL, or INITIAL_ADMIN_PASSWORD as an alias for the password). In
+production, if no admin password is set in the environment, NO fixed admin
+account is created — a hardcoded admin/admin must never exist on a public
+deployment. In development/test, the password falls back to 'admin' as a
+local convenience constant. The admin never participates in the
+forgot-password flow. Doctors are never seeded — they self-register via
 /api/auth/register. Demo patient data is an explicit opt-in via
 ``SEED_DEMO_DATA`` and latched in the ``app_meta`` table so a manual wipe of
 demo patients is not undone on restart.
@@ -33,10 +35,28 @@ from app.shared.models.session import AnalysisSession  # noqa: E402,F401
 from app.shared.models.audit_log import AuditLog  # noqa: E402,F401
 from app.shared.models.app_meta import AppMeta  # noqa: E402,F401
 
-# Fixed system-admin credential (deployment constant — see module docstring).
-FIXED_ADMIN_USERNAME = 'admin'
-FIXED_ADMIN_PASSWORD = os.getenv('INITIAL_ADMIN_PASSWORD') or os.getenv('ADMIN_PASSWORD') or 'admin'
-FIXED_ADMIN_EMAIL = 'admin@neurosense.ai'
+# Admin account identity — overridable via environment. The password is
+# resolved lazily (see _admin_password) because production must be able to
+# refuse to create the account when no password is configured.
+FIXED_ADMIN_USERNAME = os.getenv('ADMIN_USERNAME') or 'admin'
+FIXED_ADMIN_EMAIL = os.getenv('ADMIN_EMAIL') or 'admin@neurosense.ai'
+
+
+def _admin_password() -> Optional[str]:
+    """Resolve the fixed-admin password, or None if none is configured.
+
+    Precedence: INITIAL_ADMIN_PASSWORD, then ADMIN_PASSWORD. In production
+    with neither set, returns None — the caller must NOT create the fixed
+    admin account. In development/test, falls back to 'admin' so local
+    setups and the test suite keep working without extra configuration.
+    """
+    env_password = os.getenv('INITIAL_ADMIN_PASSWORD') or os.getenv('ADMIN_PASSWORD')
+    if env_password:
+        return env_password
+    from app.config.settings import Config
+    if Config.IS_PRODUCTION:
+        return None
+    return 'admin'
 
 SAMPLE_PATIENTS = [
     {'name': 'Ramesh Kumar', 'age': 68, 'sex': 'male', 'education_years': 16, 'stage': 'Cognitively Normal (CN)', 'notes': 'Regular check-up'},
@@ -151,8 +171,20 @@ def _ensure_new_columns() -> None:
     engine = get_engine()
     inspector = inspect(engine)
     expected = {
-        'users': {'hospital': 'VARCHAR'},
+        'users': {
+            'hospital': 'VARCHAR',
+            'github_id': 'VARCHAR',
+            'github_login': 'VARCHAR',
+            'avatar_url': 'VARCHAR',
+            'auth_provider': 'VARCHAR',
+        },
     }
+    # Value existing rows read back for a newly added column. auth_provider
+    # must be 'password' (the account predates GitHub login) and hospital
+    # keeps its '' semantics. github_id / github_login / avatar_url get NO
+    # default — they must stay NULL for password accounts, otherwise every
+    # legacy row would share one '' github_id and break the unique index.
+    column_defaults = {'auth_provider': 'password', 'hospital': ''}
     try:
         for table, columns in expected.items():
             if not inspector.has_table(table):
@@ -163,9 +195,17 @@ def _ensure_new_columns() -> None:
                     if col not in present:
                         logger.info("Backfilling missing column %s.%s", table, col)
                         conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {col_type}"))
-                        # Rows predating the column read back as NULL; empty
-                        # string keeps the Python-side default semantics.
-                        conn.execute(text(f"UPDATE {table} SET {col} = '' WHERE {col} IS NULL"))
+                        if col in column_defaults:
+                            # NOTE: password_hash nullability is NOT backfilled
+                            # here — SQLite cannot ALTER a column's nullability
+                            # and GitHub accounts always store a random unusable
+                            # hash, so no NULL is ever written. Alembic-managed
+                            # deployments apply the nullable change via the
+                            # b7c3e9a1f2d4 migration.
+                            conn.execute(
+                                text(f"UPDATE {table} SET {col} = :default WHERE {col} IS NULL"),
+                                {'default': column_defaults[col]},
+                            )
     except Exception:
         logger.exception("Column backfill failed — schema may be out of date")
         # Non-fatal: Alembic-managed deployments apply the column themselves.
@@ -174,18 +214,28 @@ def _ensure_new_columns() -> None:
 def _ensure_fixed_admin(db) -> None:
     """Guarantee the system-admin account exists.
 
-    Created on first boot. On subsequent boots, account active state and roles
-    are verified, but existing passwords are NOT overwritten unless
+    Created on first boot (unless production has no ADMIN_PASSWORD set —
+    see _admin_password). On subsequent boots, account active state and
+    roles are verified, but existing passwords are NOT overwritten unless
     FORCE_RESET_ADMIN_PASSWORD is set.
     """
     from app.shared.security import hash_password
+
+    admin_password = _admin_password()
+    if admin_password is None:
+        logger.warning(
+            "No ADMIN_PASSWORD / INITIAL_ADMIN_PASSWORD set in production — "
+            "fixed admin account will NOT be created. Set ADMIN_PASSWORD "
+            "to provision an admin, or use GitHub / self-registered accounts."
+        )
+        return
 
     admin = db.query(User).filter(User.username == FIXED_ADMIN_USERNAME).first()
     if admin is None:
         admin = User(
             username=FIXED_ADMIN_USERNAME,
             email=FIXED_ADMIN_EMAIL,
-            password_hash=hash_password(FIXED_ADMIN_PASSWORD),
+            password_hash=hash_password(admin_password),
             role='admin',
             full_name='System Admin',
             date_of_birth='',
@@ -201,9 +251,10 @@ def _ensure_fixed_admin(db) -> None:
             logger.warning("Fixed admin provisioning hit a conflict — already present?")
         return
 
-    # In development/test mode (IS_PRODUCTION=False), admin/admin acts as a
-    # convenience constant. In production (IS_PRODUCTION=True) or when
-    # PRESERVE_ADMIN_PASSWORD is set, passwords are never wiped on container restart.
+    # In development/test mode (IS_PRODUCTION=False), the admin password
+    # acts as a convenience constant. In production (IS_PRODUCTION=True) or
+    # when PRESERVE_ADMIN_PASSWORD is set, passwords are never wiped on
+    # container restart.
     from app.config.settings import Config
     preserve_admin_password = (
         Config.IS_PRODUCTION
@@ -212,7 +263,7 @@ def _ensure_fixed_admin(db) -> None:
     force_reset = os.getenv('FORCE_RESET_ADMIN_PASSWORD', '').lower() in ('1', 'true', 'yes')
 
     if not preserve_admin_password or force_reset:
-        admin.password_hash = hash_password(FIXED_ADMIN_PASSWORD)
+        admin.password_hash = hash_password(admin_password)
 
     admin.role = 'admin'
     admin.is_active = True

@@ -10,8 +10,19 @@ class User(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     username = Column(String, unique=True, nullable=False)
     email = Column(String, unique=True, nullable=False)
-    password_hash = Column(String, nullable=False)
+    # Nullable: GitHub-only accounts never set a password — they get a
+    # random unusable hash at creation instead of a real one. Password
+    # login for such an account always fails (see check_password).
+    password_hash = Column(String, nullable=True)
     role = Column(String, nullable=False, default='doctor')
+    # GitHub OAuth identity (all nullable — password accounts have none).
+    github_id = Column(String, unique=True, nullable=True)
+    github_login = Column(String, nullable=True)
+    avatar_url = Column(String, nullable=True)
+    # 'password' | 'github' — which flow created the account. Existing rows
+    # backfill to 'password' (server_default + Alembic migration).
+    auth_provider = Column(String, nullable=False, default='password',
+                           server_default='password')
     full_name = Column(String, default='')
     date_of_birth = Column(String, default='')
     hospital = Column(String, default='')
@@ -34,6 +45,12 @@ class User(Base):
               postgresql_where=text('reset_token IS NOT NULL'),
               sqlite_where=text('reset_token IS NOT NULL')),
         Index('idx_users_storage_key', 'storage_key'),
+        # GitHub lookups are by github_id; NULLs (password accounts) are
+        # distinct in both PostgreSQL and SQLite, so the unique index only
+        # ever constrains real GitHub identities.
+        Index('idx_users_github_id', 'github_id', unique=True,
+              postgresql_where=text('github_id IS NOT NULL'),
+              sqlite_where=text('github_id IS NOT NULL')),
     )
 
     # Relationships
@@ -55,6 +72,10 @@ class User(Base):
         return self.role == 'admin'
 
     def check_password(self, password: str) -> bool:
+        # GitHub-only accounts have no usable password (random hash) — and
+        # legacy rows always have one. A missing hash can never verify.
+        if not self.password_hash:
+            return False
         from app.shared.security import verify_password
         return verify_password(password, self.password_hash)
 
@@ -86,4 +107,7 @@ class User(Base):
             'updated_at': self.updated_at,
             'last_login': self.last_login,
             'is_active': self.is_active,
+            'github_login': self.github_login,
+            'avatar_url': self.avatar_url,
+            'auth_provider': self.auth_provider,
         }

@@ -58,6 +58,27 @@ class Config:
     SPEECH_NLP_ENABLED = _env_bool('SPEECH_NLP_ENABLED', 'true')
     SPEECH_NLP_MIN_WORDS = int(os.environ.get('SPEECH_NLP_MIN_WORDS', '15'))
 
+    # GitHub OAuth login (optional — unset = GitHub login disabled, password
+    # login still works). Set these from the GitHub OAuth App created for
+    # this deployment; GITHUB_REDIRECT_URI must match the app's callback URL
+    # exactly, e.g. https://<render-service>.onrender.com/api/auth/github/callback
+    GITHUB_CLIENT_ID = os.environ.get('GITHUB_CLIENT_ID', '').strip()
+    GITHUB_CLIENT_SECRET = os.environ.get('GITHUB_CLIENT_SECRET', '').strip()
+    GITHUB_REDIRECT_URI = os.environ.get('GITHUB_REDIRECT_URI', '').strip()
+    # Public frontend origin the OAuth flow redirects back to after login.
+    FRONTEND_URL = os.environ.get('FRONTEND_URL', '').strip()
+
+    # Simplified (free-tier) deploy flags. Heavy MRI / voice inference is
+    # OFF by default in this deploy profile — Render free (512 MB) cannot
+    # hold Whisper (~1.5 GB) / DistilBERT. When a flag is false the
+    # corresponding routes answer 503 with a clear "disabled" message
+    # instead of running the model; cognitive + risk analysis still runs
+    # and fusion re-normalises over the modalities that are present.
+    # Defaults are true so local dev and the test suite keep full behaviour;
+    # the simplified deploy sets both to false (see render.yaml).
+    ENABLE_MRI = _env_bool('ENABLE_MRI', 'true')
+    ENABLE_VOICE = _env_bool('ENABLE_VOICE', 'true')
+
     # Object Storage (Local disk vs MinIO / S3)
     STORAGE_BACKEND = os.environ.get('STORAGE_BACKEND', 'local').lower()
     MINIO_ENDPOINT = os.environ.get('MINIO_ENDPOINT', '').strip()
@@ -90,8 +111,10 @@ class Config:
     CORS_HEADERS = 'Content-Type'
 
     # Explicit opt-in flags (all default to the safe direction):
-    # NOTE: there is no SEED_DEMO_USERS flag anymore — the fixed admin
-    # (admin/admin) is always provisioned at startup and doctors
-    # self-register. See app/shared/bootstrap.py.
+    # NOTE: there is no SEED_DEMO_USERS flag anymore — the fixed admin is
+    # provisioned at startup from ADMIN_USERNAME / ADMIN_PASSWORD /
+    # ADMIN_EMAIL (see app.shared.bootstrap); in production with no
+    # ADMIN_PASSWORD set, no fixed admin is created at all. Doctors
+    # self-register.
     EXPOSE_RESET_TOKEN = _env_bool('EXPOSE_RESET_TOKEN')
     TRUST_PROXY = _env_bool('TRUST_PROXY')

@@ -20,14 +20,17 @@ export default function App() {
             position="top-right"
             gutter={10}
             toastOptions={{
-              duration: 4000,
+              duration: 4500,
               style: {
+                maxWidth: '440px',
+                wordBreak: 'break-word',
+                lineHeight: '1.45',
                 background: 'rgb(var(--surface-card))',
                 color: 'rgb(var(--text-primary))',
                 border: '1px solid rgb(var(--border))',
                 borderRadius: '16px',
                 fontSize: '13px',
-                fontFamily: 'Inter, sans-serif',
+                fontFamily: 'Noto Sans, Figtree, system-ui, sans-serif',
                 backdropFilter: 'blur(20px)',
                 boxShadow: 'var(--shadow-lg)',
                 padding: '12px 16px',

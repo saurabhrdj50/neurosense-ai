@@ -389,6 +389,18 @@ function GradCAMPanel({ mri }) {
                 </p>
               )}
             </div>
+
+            {/* Anatomical Context Reference */}
+            <div className="p-3 rounded-xl border border-indigo-500/20 bg-indigo-500/5 space-y-2">
+              <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Brain size={12} /> Anatomical Regions of Clinical Interest
+              </p>
+              <div className="space-y-1.5 text-[11px] text-foreground-muted leading-relaxed">
+                <p><strong className="text-foreground">Hippocampus & Medial Temporal:</strong> Primary center for memory consolidation. High activation indicates focal atrophy patterns.</p>
+                <p><strong className="text-foreground">Lateral Ventricles:</strong> Fluid spaces that enlarge compensatory to surrounding gray matter changes.</p>
+                <p><strong className="text-foreground">Temporoparietal Cortex:</strong> Governs word retrieval, language fluency, and spatial reasoning.</p>
+              </div>
+            </div>
           </div>
         </div>
       ) : (

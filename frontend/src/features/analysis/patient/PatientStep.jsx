@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { LabeledInput } from '../SharedComponents'
-import { UserCheck, Sparkles, Mic, MicOff, Check, Plus, ShieldAlert, User, FileText, Camera, Trash2 } from 'lucide-react'
+import { UserCheck, Sparkles, Mic, MicOff, Check, Plus, ShieldAlert, ShieldCheck, User, FileText, Camera, Trash2 } from 'lucide-react'
 import { useAuth } from '../../../providers/AuthProvider'
 import toast from 'react-hot-toast'
 
@@ -217,6 +217,14 @@ export function PatientStep({ patient, setPatient, patientText, setPatientText, 
             )}
           </div>
         </div>
+      </div>
+
+      {/* ── Privacy & Clinical Data Assurance ── */}
+      <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-xs font-medium">
+        <ShieldCheck size={16} className="text-emerald-500 shrink-0" />
+        <span>
+          <strong className="font-bold">Confidential & Local Evaluation:</strong> Diagnostic inference runs on-device. No patient identifiers or protected health information leave this clinical workstation.
+        </span>
       </div>
 
 

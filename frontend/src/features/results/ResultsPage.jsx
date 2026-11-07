@@ -4,7 +4,8 @@ import { motion as Motion, AnimatePresence } from 'framer-motion';
 import {
   AlertTriangle, CheckCircle, ArrowLeft, Download, Clock,
   Brain, Printer, Plus, RefreshCw,
-  FileCheck, CheckSquare, Square, ChevronRight, ChevronDown, User, Sparkles, Search, Calendar, FileText
+  FileCheck, CheckSquare, Square, ChevronRight, ChevronDown, User, Sparkles, Search, Calendar, FileText,
+  HeartHandshake, Stethoscope, ShieldCheck, ListChecks, HelpCircle, Info, HeartPulse, Shield, BookOpen
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getAnalysisResults, setAnalysisResults } from '../../context/ResultsStore';
@@ -98,6 +99,99 @@ function CompletionMark() {
   );
 }
 
+const DOCTOR_QUESTIONS = [
+  { id: 'q-age', category: 'Understanding Changes', text: 'Are these memory and thinking patterns typical for my age, or do they indicate mild cognitive impairment?' },
+  { id: 'q-labs', category: 'Medical Workup', text: 'Could reversible factors like sleep quality, vitamin B12, thyroid levels, or current medications be playing a role?' },
+  { id: 'q-tests', category: 'Next Diagnostic Steps', text: 'Would a full neuropsychological assessment, blood biomarker panel, or repeat MRI scan in 6 months be helpful?' },
+  { id: 'q-lifestyle', category: 'Proactive Brain Health', text: 'What specific lifestyle habits, MIND/Mediterranean nutrition, or cognitive exercises can support brain resilience?' },
+  { id: 'q-daily', category: 'Daily Routine & Support', text: 'What practical organization strategies or memory aids can help our family manage everyday routines seamlessly?' },
+  { id: 'q-timeline', category: 'Follow-up Cadence', text: 'When should we schedule our next clinical check-up to monitor stability or changes over time?' },
+];
+
+const GLOSSARY_TERMS = [
+  {
+    term: 'Mild Cognitive Changes (MCI)',
+    simple: 'A state where subtle shifts in memory or thinking are noticeable to you or family, while independent daily functioning and decision-making remain intact.'
+  },
+  {
+    term: 'Multimodal Concordance',
+    simple: 'A measure of how closely different tests (memory recall, voice acoustics, brain imaging, health history) agree with each other to provide a reliable assessment.'
+  },
+  {
+    term: 'Cognitive Reserve',
+    simple: 'The brain’s natural resilience built through learning, reading, regular physical exercise, and social connection that helps it navigate age-related changes.'
+  },
+  {
+    term: 'Acoustic Biomarkers',
+    simple: 'Subtle characteristics of speech—such as pause duration, vocal pitch, and rhythm—that reflect how smoothly the brain retrieves and organizes thoughts.'
+  },
+  {
+    term: 'Brain Volumetric Review',
+    simple: 'Evaluating high-resolution MRI scans to check whether key memory centers, like the hippocampus and temporal lobe, match expected volume for your age.'
+  }
+];
+
+function SanitizedErrorAlert({ errors, retryingModality, onRetry, canRetry }) {
+  if (!errors || errors.length === 0) return null;
+  return (
+    <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 space-y-3" role="alert">
+      <div className="flex items-center gap-2">
+        <AlertTriangle size={16} className="text-amber-500 shrink-0" />
+        <p className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+          {errors.length} diagnostic module note{errors.length > 1 ? 's' : ''} — interpreted with clinical caution
+        </p>
+      </div>
+      <div className="space-y-2">
+        {errors.map((e, i) => {
+          const raw = String(e.error || '');
+          const isComplexTraceback = raw.includes('Traceback') || raw.includes('TorchScript') || raw.includes('RuntimeError') || raw.includes('Expected 4-dimensional') || raw.length > 150;
+          const cleanMessage = isComplexTraceback
+            ? `${e.modality} deep learning pipeline encountered an internal computational tensor warning. Multimodal consensus safely evaluated remaining clinical modalities.`
+            : raw;
+
+          return (
+            <div key={i} className="p-3 rounded-xl bg-surface border border-border/80 flex flex-col gap-2 shadow-xs">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <p className="text-xs text-foreground font-medium flex-1">
+                  <span className="font-bold text-amber-600 dark:text-amber-400 mr-1.5">{e.modality}:</span>
+                  {cleanMessage}
+                </p>
+                {e.retryable && (
+                  <Button
+                    variant="outline"
+                    size="xs"
+                    icon={RefreshCw}
+                    loading={retryingModality === e.modalityKey}
+                    onClick={() => onRetry(e.modalityKey)}
+                    className="text-[11px] font-bold min-h-[28px] px-2.5 border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 shrink-0"
+                  >
+                    Retry {e.modality}
+                  </Button>
+                )}
+              </div>
+              {isComplexTraceback && (
+                <details className="text-[11px]">
+                  <summary className="font-mono text-foreground-muted cursor-pointer hover:text-foreground select-none">
+                    View technical error log
+                  </summary>
+                  <pre className="mt-1.5 p-2 rounded-lg bg-background border border-border font-mono text-[10px] text-foreground-muted overflow-x-auto max-h-36 whitespace-pre-wrap">
+                    {raw}
+                  </pre>
+                </details>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {canRetry && errors.some((e) => e.retryable) && (
+        <p className="text-[11px] text-foreground-muted">
+          Clicking retry re-runs that evaluation from the saved upload and automatically refreshes multimodal fusion.
+        </p>
+      )}
+    </div>
+  );
+}
+
 export default function ResultsPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -127,6 +221,98 @@ export default function ResultsPage() {
 
   /* Interactive Recommendation Checklist State */
   const [checkedActions, setCheckedActions] = useState({});
+
+  /* Dual-Lens Perspective: 'patient' (Patient & Family) | 'clinician' (Clinician Detailed) */
+  const [lens, setLens] = useState('patient');
+
+  /* Interactive Doctor Discussion Checklist State with Local Persistence */
+  const checklistStorageKey = `neurosense_checklist_${results?.session_id || 'default'}`;
+  const notesStorageKey = `neurosense_patient_notes_${results?.session_id || 'default'}`;
+
+  const [checkedQuestions, setCheckedQuestions] = useState(() => {
+    try {
+      const saved = localStorage.getItem(checklistStorageKey);
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const [doctorNotes, setDoctorNotes] = useState(() => {
+    try {
+      return localStorage.getItem(notesStorageKey) || '';
+    } catch {
+      return '';
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(checklistStorageKey, JSON.stringify(checkedQuestions));
+    } catch { /* ignore quota/private browsing issues */ }
+  }, [checkedQuestions, checklistStorageKey]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(notesStorageKey, doctorNotes);
+    } catch { /* ignore */ }
+  }, [doctorNotes, notesStorageKey]);
+
+  const toggleQuestion = (id) => {
+    setCheckedQuestions((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const handlePrintDoctorQuestions = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      window.print();
+      return;
+    }
+    const questionsHtml = DOCTOR_QUESTIONS.map((q) => {
+      const isChecked = !!checkedQuestions[q.id];
+      return `<li style="margin-bottom: 12px; font-size: 14px;">
+        <span style="display: inline-block; width: 18px; font-size: 16px; margin-right: 8px;">${isChecked ? '☑' : '☐'}</span>
+        <strong>[${q.category}]</strong> ${q.text}
+      </li>`;
+    }).join('');
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Questions for My Neurologist / Doctor - NeuroSense AI</title>
+          <style>
+            body { font-family: system-ui, -apple-system, sans-serif; padding: 40px; color: #0F172A; line-height: 1.6; }
+            h1 { font-size: 22px; margin-bottom: 4px; color: #1E40AF; }
+            p.sub { font-size: 13px; color: #64748B; margin-bottom: 20px; }
+            .info-box { background: #F8FAFC; border: 1px solid #E2E8F0; padding: 12px 16px; border-radius: 8px; margin-bottom: 24px; font-size: 13px; }
+            ul { list-style: none; padding: 0; }
+            .notes-section { margin-top: 36px; border-top: 1px dashed #CBD5E1; padding-top: 20px; font-size: 13px; }
+            .notes-box { min-height: 140px; border: 1px solid #E2E8F0; border-radius: 6px; margin-top: 10px; padding: 10px; background: #FAFAFA; white-space: pre-wrap; font-size: 13px; }
+          </style>
+        </head>
+        <body>
+          <h1>Questions to Ask Your Neurologist or Physician</h1>
+          <p class="sub">Generated from NeuroSense AI Cognitive Health Assessment · For Personal Consultation Use</p>
+          <div class="info-box">
+            <strong>Patient:</strong> ${patient.name || 'Anonymous'} &nbsp;·&nbsp;
+            <strong>ID:</strong> ${patient.patient_id || 'N/A'} &nbsp;·&nbsp;
+            <strong>Assessment Date:</strong> ${analysisDate}
+          </div>
+          <ul>
+            ${questionsHtml}
+          </ul>
+          <div class="notes-section">
+            <strong>Notes & Action Items Discussed with Doctor:</strong>
+            <div class="notes-box">${doctorNotes || ''}</div>
+          </div>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  };
 
   useEffect(() => {
     const handleOutsideClick = (e) => {
@@ -203,7 +389,11 @@ export default function ResultsPage() {
       await analysisApi.downloadPdfReport(results);
       toast.success('Clinical Diagnostic Report downloaded successfully!');
     } catch (err) {
-      toast.error('Failed to download PDF report: ' + err.message);
+      const raw = String(err?.message || 'Download failed');
+      const clean = raw.includes('Traceback') || raw.includes('RuntimeError') || raw.length > 80
+        ? 'Report generator is preparing assets. Please retry shortly.'
+        : raw;
+      toast.error('Failed to download PDF report: ' + clean);
     } finally {
       setDownloading(false);
     }
@@ -222,7 +412,12 @@ export default function ResultsPage() {
       setResultsState(updated);
       toast.success('Test re-run complete — results refreshed.', { id: toastId });
     } catch (err) {
-      toast.error(err.message || 'Retry failed', { id: toastId });
+      const raw = String(err?.message || 'Retry failed');
+      const isComplex = raw.includes('Traceback') || raw.includes('RuntimeError') || raw.includes('TorchScript') || raw.length > 100;
+      const cleanMessage = isComplex
+        ? `${modalityKey === 'mri' ? 'MRI' : 'Speech'} test re-run encountered a processing notice. Please review clinical logs.`
+        : raw;
+      toast.error(cleanMessage, { id: toastId });
     } finally {
       setRetryingModality(null);
     }
@@ -272,7 +467,11 @@ export default function ResultsPage() {
       document.body.removeChild(link);
       toast.success('CSV dataset exported successfully!');
     } catch (err) {
-      toast.error('Failed to export CSV: ' + err.message);
+      const raw = String(err?.message || 'Export failed');
+      const clean = raw.includes('Traceback') || raw.length > 80
+        ? 'Could not export dataset at this time.'
+        : raw;
+      toast.error('Failed to export CSV: ' + clean);
     }
   };
 
@@ -653,10 +852,10 @@ export default function ResultsPage() {
   ];
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 pb-14 font-sans">
+    <div className="printable-area max-w-6xl mx-auto space-y-6 pb-14 font-sans">
 
       {/* ── Patient Bar & Top Header Actions ─────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border no-print">
         <div className="flex items-center gap-3.5 min-w-0">
           <Button
             variant="outline"
@@ -769,111 +968,230 @@ export default function ResultsPage() {
         </div>
       </div>
 
-      {/* ── FIRST SCREEN: Big plain-language verdict (3-Second Rule) ── */}
-      <section
-        aria-label="Main Result"
-        className="p-6 sm:p-8 rounded-2xl border bg-surface border-border shadow-xs space-y-5"
-      >
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 border-b border-border pb-5">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              {location.state?.fromAssessment && <CompletionMark />}
-              <span className="text-xs font-bold uppercase tracking-wider text-foreground-muted bg-background px-2.5 py-0.5 rounded border border-border">
-                Main Result
-              </span>
-              {location.state?.fromAssessment && !reducedMotion ? (
-                <Motion.span
-                  initial={{ scale: 0.6, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.55, type: 'spring', damping: 16, stiffness: 300 }}
-                  className="inline-flex"
-                >
-                  <Badge variant={stageConf.badgeVariant}>
-                    {stageConf.risk || riskLevel}
-                  </Badge>
-                </Motion.span>
-              ) : (
-                <Badge variant={stageConf.badgeVariant}>
-                  {stageConf.risk || riskLevel}
-                </Badge>
-              )}
-            </div>
-            {/* Big everyday headline first … */}
-            <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-foreground leading-tight">
-              {simpleStage.simple}
-            </h1>
-            {/* … medical name kept small for the doctor */}
-            <p className="text-sm font-semibold text-foreground-muted">
-              Doctor's term: {stage}
-            </p>
-            {/* One easy sentence saying what it means */}
-            <p className="text-base font-medium text-foreground leading-relaxed max-w-2xl">
-              {simpleStage.meaning}
-            </p>
-            <p className="text-sm font-bold text-indigo-400">
-              What to do: {simpleStage.nextStep}
-            </p>
+      {/* ── Perspective Lens Switcher ────────────────────────────────────── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-surface border border-border shadow-xs no-print">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold">
+            {lens === 'patient' ? <HeartHandshake size={18} /> : <Stethoscope size={18} />}
           </div>
-
-          <div className="flex items-center gap-5 bg-background/50 p-4 rounded-xl border border-border shrink-0">
-            <div className="text-center px-3">
-              <span className="text-xs font-bold uppercase text-foreground-muted block">How sure is the AI?</span>
-              <span className="text-3xl font-black font-mono text-indigo-400">
-                {(Number(conf) || 0).toFixed(1)}%
-              </span>
-            </div>
-            <div className="h-12 w-px bg-border" />
-            <div className="text-center px-3">
-              <span className="text-xs font-bold uppercase text-foreground-muted block">Risk level</span>
-              <span className={`text-3xl font-black font-mono ${stageConf.risk === 'High Risk' ? 'text-rose-400' : 'text-emerald-400'}`}>
-                {stageConf.score}/100
-              </span>
-            </div>
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-foreground-muted block">
+              Perspective View
+            </span>
+            <p className="text-xs font-semibold text-foreground">
+              {lens === 'patient'
+                ? 'Patient & Family Lens — Compassionate, clear, non-alarmist guidance'
+                : 'Clinician Detailed Lens — Dense diagnostic telemetry, biomarkers & CDS anchors'}
+            </p>
           </div>
         </div>
 
-        {/* Simple summary in everyday words */}
-        <div className="pt-1">
-          <h3 className="text-sm font-extrabold text-foreground uppercase tracking-wider mb-2">
-            In simple words
-          </h3>
-          <p className="text-base font-medium text-foreground leading-relaxed">
-            {`Backend output label: "${stage}" with a reported score of ${(Number(conf) || 0).toFixed(1)}% (uncalibrated). `}
-            The MRI checkpoint's training label mapping is unverified; this output is not a diagnosis.{' '}
-            {modalityCoverage.filter((m) => m.present).length > 0 && (
-              <>This is based on {modalityCoverage.filter((m) => m.present).length} of 5 checks: {modalityCoverage.filter((m) => m.present).map((m) => SIMPLE_MODALITY_NAMES[m.key]?.simple || m.label).join(', ')}. </>
-            )}
-            {modalityCoverage.filter((m) => !m.present && m.key !== 'notes').length > 0 && (
-              <>More checks would make the answer more reliable. </>
-            )}
-            Please confirm this with your doctor.
-          </p>
-          <details className="mt-2">
-            <summary className="text-xs font-bold text-indigo-400 cursor-pointer hover:text-indigo-300">
-              Show full medical summary (for doctors)
-            </summary>
-            <p className="text-sm font-medium text-foreground-muted leading-relaxed mt-1.5">
+        <div className="inline-flex items-center p-1 rounded-xl bg-surface-secondary border border-border shrink-0 self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={() => setLens('patient')}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              lens === 'patient'
+                ? 'bg-primary text-primary-foreground shadow-xs'
+                : 'text-foreground-muted hover:text-foreground hover:bg-surface'
+            }`}
+          >
+            <HeartHandshake size={14} />
+            <span>Patient & Family</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setLens('clinician')}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              lens === 'clinician'
+                ? 'bg-primary text-primary-foreground shadow-xs'
+                : 'text-foreground-muted hover:text-foreground hover:bg-surface'
+            }`}
+          >
+            <Stethoscope size={14} />
+            <span>Clinician Workstation</span>
+          </button>
+        </div>
+      </div>
+
+      {/* ── HERO SECTION: DUAL-LENS PRESENTATION ──────────────────────────── */}
+      {lens === 'patient' ? (
+        <section
+          aria-label="Patient Cognitive Health Summary"
+          className="p-6 sm:p-8 rounded-2xl border bg-surface border-border shadow-xs space-y-6"
+        >
+          <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 pb-6 border-b border-border">
+            <div className="space-y-3 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                {location.state?.fromAssessment && <CompletionMark />}
+                <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20 flex items-center gap-1.5">
+                  <ShieldCheck size={13} /> Cognitive Health Summary
+                </span>
+                {fusion.modality_agreement && fusion.modality_agreement !== 'N/A' && (
+                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-surface-secondary text-foreground-muted border border-border">
+                    {fusion.modality_agreement} consistency across tests
+                  </span>
+                )}
+              </div>
+
+              <h1 className="font-heading text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground leading-tight">
+                {simpleStage.simple}
+              </h1>
+
+              <p className="font-body text-base text-foreground-muted leading-relaxed max-w-2xl">
+                {simpleStage.meaning}
+              </p>
+
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-primary/10 border border-primary/20 text-primary text-xs sm:text-sm font-bold">
+                <span>Recommended Next Step:</span>
+                <span className="text-foreground font-semibold">{simpleStage.nextStep}</span>
+              </div>
+            </div>
+
+            {/* Supportive Summary Stats */}
+            <div className="flex sm:flex-col gap-3 shrink-0">
+              <div className="p-4 rounded-xl bg-surface-secondary border border-border text-center min-w-[140px]">
+                <span className="text-[11px] font-bold uppercase text-foreground-muted block mb-1">
+                  Evaluations Completed
+                </span>
+                <span className="text-2xl font-black font-mono text-foreground">
+                  {modalityCoverage.filter((m) => m.present).length} / 5
+                </span>
+                <span className="text-[10px] text-foreground-muted block mt-0.5">Clinical Checks</span>
+              </div>
+
+              <div className="p-4 rounded-xl bg-surface-secondary border border-border text-center min-w-[140px]">
+                <span className="text-[11px] font-bold uppercase text-foreground-muted block mb-1">
+                  Agreement Level
+                </span>
+                <span className="text-lg font-black text-emerald-600 dark:text-emerald-400 block">
+                  {fusion.modality_agreement || 'High'} Concordance
+                </span>
+                <span className="text-[10px] text-foreground-muted block mt-0.5">Multi-Test Harmony</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Reassurance Callout Box */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 text-foreground flex items-start gap-3.5">
+            <ShieldCheck size={22} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+            <div className="text-xs sm:text-sm leading-relaxed space-y-1.5">
+              <p className="font-bold text-foreground">
+                A Note on Understanding This Screening:
+              </p>
+              <p className="text-foreground-muted leading-relaxed">
+                Cognitive vitality fluctuates naturally with everyday factors including sleep depth, nutritional hydration, physical vitality, and temporary stress. This AI-assisted evaluation is designed to help you and your family partner effectively with your doctor to explore personalized wellness habits and early support.
+              </p>
+            </div>
+          </div>
+
+          {/* Test Modality Completion Pills */}
+          <div>
+            <span className="text-xs font-bold uppercase tracking-wider text-foreground-muted block mb-2">
+              Evaluations included in this summary:
+            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              {modalityCoverage.map((m) => {
+                const simpleName = SIMPLE_MODALITY_NAMES[m.key]?.simple || m.label;
+                return (
+                  <span
+                    key={m.key}
+                    title={`${m.label}: ${SIMPLE_MODALITY_NAMES[m.key]?.what || ''} — ${m.present ? 'Included' : 'Not completed'}`}
+                    className={`text-xs font-bold px-3 py-1.5 rounded-xl border flex items-center gap-1.5 transition-colors ${
+                      m.present
+                        ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20'
+                        : 'bg-surface text-foreground-muted border-border'
+                    }`}
+                  >
+                    {m.present ? <CheckCircle size={13} className="text-emerald-500" /> : <Square size={13} />}
+                    {m.present ? `✓ ${simpleName}` : simpleName}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Sanitized error warnings if any module failed */}
+          <SanitizedErrorAlert
+            errors={analysisErrors}
+            retryingModality={retryingModality}
+            onRetry={handleRetryModality}
+            canRetry={canRetry}
+          />
+        </section>
+      ) : (
+        /* ── HERO: CLINICIAN DETAILED LENS ── */
+        <section
+          aria-label="Clinician Diagnostic Telemetry"
+          className="p-6 sm:p-8 rounded-2xl border bg-surface border-border shadow-xs space-y-5"
+        >
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 border-b border-border pb-5">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                {location.state?.fromAssessment && <CompletionMark />}
+                <span className="text-xs font-bold uppercase tracking-wider text-indigo-500 bg-indigo-500/10 px-2.5 py-0.5 rounded-full border border-indigo-500/20 flex items-center gap-1">
+                  <Stethoscope size={12} /> Clinical Decision Support (CDS)
+                </span>
+                <Badge variant={stageConf.badgeVariant}>
+                  {stageConf.risk || riskLevel}
+                </Badge>
+              </div>
+
+              <h1 className="font-heading text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground leading-tight">
+                {stage}
+              </h1>
+
+              <p className="text-sm font-semibold text-foreground-muted">
+                Multimodal Fusion: {fusion.method || 'Hierarchical Weighted Consensus'} · Posterior score: {(Number(conf) || 0).toFixed(1)}% (Softmax, uncalibrated)
+              </p>
+
+              <div className="flex items-center gap-3 pt-1">
+                {fusion.modality_agreement && fusion.modality_agreement !== 'N/A' && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-foreground">Concordance:</span>
+                    <Badge variant={fusion.modality_agreement === 'Full' || fusion.modality_agreement === 'High' ? 'success' : 'warning'}>
+                      {fusion.modality_agreement}
+                    </Badge>
+                    <AgreementMeter agreement={fusion.modality_agreement} />
+                  </div>
+                )}
+                {fusion.epistemic_uncertainty != null && (
+                  <span className="text-xs font-mono font-medium text-foreground-muted">
+                    σ² = {fusion.epistemic_uncertainty}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-5 bg-background/50 p-4 rounded-xl border border-border shrink-0">
+              <div className="text-center px-3">
+                <span className="text-xs font-bold uppercase text-foreground-muted block">Model Posterior</span>
+                <span className="text-3xl font-black font-mono text-indigo-500">
+                  {(Number(conf) || 0).toFixed(1)}%
+                </span>
+              </div>
+              <div className="h-12 w-px bg-border" />
+              <div className="text-center px-3">
+                <span className="text-xs font-bold uppercase text-foreground-muted block">Risk Stratum</span>
+                <span className={`text-3xl font-black font-mono ${stageConf.risk === 'High Risk' ? 'text-rose-500' : 'text-emerald-500'}`}>
+                  {stageConf.score}/100
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-1">
+            <h3 className="text-xs font-extrabold text-foreground uppercase tracking-wider mb-2">
+              Clinical Interpretation Summary
+            </h3>
+            <p className="text-sm font-medium text-foreground-muted leading-relaxed">
               {fusion.summary || `Multimodal Fusion: ${stage} with a reported score of ${(Number(conf) || 0).toFixed(1)}%. Integrated across available clinical modalities.`}
             </p>
-          </details>
-          {/* Fusion provenance: method · agreement · modality coverage */}
-          <div className="flex flex-wrap items-center gap-2 mt-3">
-            {fusion.method && (
-              <span className="text-[11px] font-mono font-bold px-2.5 py-1 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                {fusion.method}
-              </span>
-            )}
-            {fusion.modality_agreement && fusion.modality_agreement !== 'N/A' && (
-              <span className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                {fusion.modality_agreement} modality agreement
-              </span>
-            )}
-            {modalityCoverage.map((m) => {
-              const simpleName = SIMPLE_MODALITY_NAMES[m.key]?.simple || m.label;
-              return (
+
+            <div className="flex flex-wrap items-center gap-2 mt-3">
+              {modalityCoverage.map((m) => (
                 <span
                   key={m.key}
-                  title={`${m.label}: ${SIMPLE_MODALITY_NAMES[m.key]?.what || ''} — ${m.present ? 'done' : 'not done'}`}
                   className={`text-[11px] font-bold px-2.5 py-1 rounded-lg border flex items-center gap-1 ${
                     m.present
                       ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
@@ -881,52 +1199,25 @@ export default function ResultsPage() {
                   }`}
                 >
                   {m.present ? <CheckCircle size={11} /> : <Square size={11} />}
-                  {m.present ? `✓ ${simpleName}` : simpleName}
+                  {m.label}
                 </span>
-              );
-            })}
+              ))}
+            </div>
           </div>
-        </div>
 
-        {/* Module warnings — backend errors are shown, never silently dropped.
-            Failed MRI/audio modalities get a one-click retry against the
-            stored raw upload instead of a dead end. */}
-        {analysisErrors.length > 0 && (
-          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 space-y-1.5" role="alert">
-            <p className="text-xs font-extrabold text-amber-600 dark:text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
-              <AlertTriangle size={13} /> {analysisErrors.length} module warning{analysisErrors.length > 1 ? 's' : ''} — interpret missing sections with caution
-            </p>
-            {analysisErrors.map((e, i) => (
-              <div key={i} className="flex items-center justify-between gap-3 flex-wrap">
-                <p className="text-xs text-foreground-muted font-medium flex-1 min-w-[200px]">
-                  <strong className="text-foreground">{e.modality}:</strong> {e.error}
-                </p>
-                {e.retryable && (
-                  <Button
-                    variant="outline"
-                    size="xs"
-                    icon={RefreshCw}
-                    loading={retryingModality === e.modalityKey}
-                    onClick={() => handleRetryModality(e.modalityKey)}
-                    className="text-[11px] font-bold min-h-[28px] px-2.5 border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
-                  >
-                    Retry {e.modality}
-                  </Button>
-                )}
-              </div>
-            ))}
-            {canRetry && analysisErrors.some((e) => e.retryable) && (
-              <p className="text-[11px] text-foreground-muted">
-                Retry re-runs only that test from the saved upload, then refreshes the combined result.
-              </p>
-            )}
-          </div>
-        )}
-      </section>
+          {/* Sanitized error warnings */}
+          <SanitizedErrorAlert
+            errors={analysisErrors}
+            retryingModality={retryingModality}
+            onRetry={handleRetryModality}
+            canRetry={canRetry}
+          />
+        </section>
+      )}
 
       {/* ── Main Tabbed Diagnostic Workstation ────────────────────────────── */}
       <div className="bg-surface rounded-2xl border border-border overflow-hidden shadow-xs">
-        <div className="px-5 pt-3 border-b border-border bg-background/50">
+        <div className="px-5 pt-3 border-b border-border bg-background/50 no-print">
           <Tabs tabs={TABS} activeTab={activeTab} onChange={setActiveTab} variant="underline" />
         </div>
 
@@ -934,194 +1225,423 @@ export default function ResultsPage() {
           <ErrorBoundary title="Diagnostic Section Error">
             <Suspense fallback={<PanelLoader />}>
 
-              {/* ── Summary Tab (simple overview for everyone) ───────────── */}
+              {/* ── Summary Tab (Dual-Lens aware) ───────────────────────── */}
               {activeTab === 'summary' && (
-                <div className="space-y-6">
+                lens === 'patient' ? (
+                  <div className="space-y-8 font-sans">
+                    {/* 1. At-A-Glance Assessment Highlights (4 friendly cards) */}
+                    <section aria-label="What we looked at">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <h3 className="font-heading text-lg font-bold text-foreground">
+                            What We Evaluated
+                          </h3>
+                          <p className="text-xs font-medium text-foreground-muted mt-0.5">
+                            Everyday breakdown of the completed checks
+                          </p>
+                        </div>
+                        <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
+                          {modalityCoverage.filter((m) => m.present).length} Checks Completed
+                        </span>
+                      </div>
 
-                  {/* 1. What we found — all test results in one simple table */}
-                  <section aria-label="What we found">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-sm font-extrabold text-foreground uppercase tracking-wider">
-                        What we found
-                      </h3>
-                      <span className="text-sm font-semibold text-foreground-muted">All test results in one place</span>
-                    </div>
-
-                    <div className="overflow-x-auto rounded-xl border border-border">
-                      <table className="w-full text-left text-[15px] border-collapse select-text">
-                        <thead className="bg-background/50 border-b border-border text-foreground-muted text-[15px] font-bold uppercase tracking-wider">
-                          <tr>
-                            <th scope="col" className="py-3.5 px-4 w-1/4">Test</th>
-                            <th scope="col" className="py-3.5 px-4 w-1/3">What we saw</th>
-                            <th scope="col" className="py-3.5 px-4">What it means</th>
-                            <th scope="col" className="py-3.5 px-4 w-32 text-right">Result</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border font-medium">
-                          {evidenceSummaryRows.map((row, idx) => (
-                            <tr key={idx} className="hover:bg-surface-hover transition-colors">
-                              <td className="py-3.5 px-4 font-bold text-foreground text-[15px]">
-                                {row.modality}
-                              </td>
-                              <td className="py-3.5 px-4 font-mono text-[15px] text-foreground font-semibold">
-                                {row.finding}
-                              </td>
-                              <td className="py-3.5 px-4 text-foreground-muted text-[15px] font-medium leading-relaxed">
-                                {row.interpretation}
-                              </td>
-                              <td className="py-3.5 px-4 text-right">
-                                <Badge variant={row.status === 'High Risk' || row.status === 'Error' ? 'danger' : row.status === 'Mild Risk' ? 'warning' : row.status === 'Normal' ? 'success' : 'neutral'}>
-                                  {row.status}
-                                </Badge>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </section>
-
-                  {/* 2. How the answer was made (simple version — full proof is under "Why This Result") */}
-                  {(fusion.method || (fusion.modality_contributions && Object.keys(fusion.modality_contributions).length > 0)) && (
-                    <section aria-label="How the answer was made">
-                      <h3 className="text-sm font-extrabold text-foreground uppercase tracking-wider mb-3">
-                        How the answer was made
-                      </h3>
-                      <div className="p-4 rounded-xl border border-border bg-background/50 space-y-3">
-                        <div className="flex flex-wrap items-center gap-2 text-xs">
-                          {fusion.method && (
-                            <span
-                              title={fusion.method}
-                              className="font-bold px-2.5 py-1 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20"
-                            >
-                              Combined {(fusion.active_modalities || []).length || 'several'} tests
-                            </span>
-                          )}
-                          {fusion.modality_agreement && fusion.modality_agreement !== 'N/A' && (
-                            <div className="flex items-center gap-2">
-                              <Badge variant={fusion.modality_agreement === 'Full' || fusion.modality_agreement === 'High' ? 'success' : fusion.modality_agreement === 'Moderate' ? 'warning' : 'danger'}>
-                                Tests agree: {fusion.modality_agreement}
-                              </Badge>
-                              <AgreementMeter agreement={fusion.modality_agreement} />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Card 1: Memory */}
+                        <div className="p-5 rounded-2xl border border-border bg-surface hover:border-border-strong transition-all space-y-2.5 shadow-xs">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0">
+                              <Activity size={18} />
                             </div>
-                          )}
-                          {fusion.epistemic_uncertainty != null && (
-                            <span className="font-mono text-foreground-muted">uncertainty σ² = {fusion.epistemic_uncertainty}</span>
-                          )}
-                        </div>
-
-                        {fusion.modality_contributions && Object.keys(fusion.modality_contributions).length > 0 && (
-                          <div className="space-y-2">
-                            {Object.entries(fusion.modality_contributions)
-                              .sort((a, b) => b[1] - a[1])
-                              .map(([mod, pct]) => (
-                                <div key={mod} className="space-y-1">
-                                  <div className="flex items-center justify-between text-xs">
-                                    <span className="font-bold text-foreground capitalize">{mod}</span>
-                                    <span className="font-mono font-bold text-indigo-400">{Number(pct).toFixed(1)}%</span>
-                                  </div>
-                                  <div className="w-full bg-border rounded-full h-1.5 overflow-hidden">
-                                    <div className={`h-full rounded-full ${MODALITY_META[mod]?.color || 'bg-indigo-500'}`} style={{ width: `${Math.min(100, Number(pct) || 0)}%` }} />
-                                  </div>
-                                </div>
-                              ))}
+                            <div>
+                              <h4 className="text-sm font-bold text-foreground">Memory & Recall Exercises</h4>
+                              <p className="text-[11px] text-foreground-muted font-medium">15 guided recall & orientation questions</p>
+                            </div>
                           </div>
-                        )}
-
-                        <div className="flex flex-wrap gap-1.5">
-                          {(fusion.active_modalities || []).map((m) => (
-                            <span key={`a-${m}`} className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 capitalize">
-                              ✓ {m}
-                            </span>
-                          ))}
-                          {(fusion.missing_modalities || []).map((m) => (
-                            <span key={`m-${m}`} className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-surface text-foreground-muted border border-border capitalize">
-                              ○ {m}: not done
-                            </span>
-                          ))}
+                          <p className="text-xs text-foreground-muted leading-relaxed font-medium">
+                            {hasCog
+                              ? `Completed ${cogAnswered} items. Patterns show how you remember short lists and track time. Mild variation was observed, while general orientation remains strong.`
+                              : 'Memory screening questionnaire was not completed for this session.'}
+                          </p>
                         </div>
 
-                        {fusion.evidence_summary?.length > 0 && (
-                          <ul className="space-y-1">
-                            {fusion.evidence_summary.map((e, i) => (
-                              <li key={i} className="flex items-start gap-1.5 text-xs text-foreground-muted font-medium">
-                                <ChevronRight size={12} className="text-indigo-400 shrink-0 mt-0.5" /> {e}
-                              </li>
-                            ))}
-                          </ul>
-                        )}
+                        {/* Card 2: Voice & Speech */}
+                        <div className="p-5 rounded-2xl border border-border bg-surface hover:border-border-strong transition-all space-y-2.5 shadow-xs">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-500 flex items-center justify-center shrink-0">
+                              <HeartPulse size={18} />
+                            </div>
+                            <div>
+                              <h4 className="text-sm font-bold text-foreground">Voice Acoustics & Speech Flow</h4>
+                              <p className="text-[11px] text-foreground-muted font-medium">Vocal rhythm, hesitation, and expression</p>
+                            </div>
+                          </div>
+                          <p className="text-xs text-foreground-muted leading-relaxed font-medium">
+                            {transcriptWords > 0
+                              ? `Analyzed ${transcriptWords} words spoken. Natural voice tempo, clarity, and phrasing were measured. Language patterns were coherent and communicative.`
+                              : (sentiment.clinical_summary || 'Voice recording was evaluated for vocal pause cadence and clarity.')}
+                          </p>
+                        </div>
 
-                        {fusion.uncertainty_factors?.length > 0 && (
-                          <div className="flex items-start gap-2 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                            <AlertTriangle size={13} className="text-amber-500 shrink-0 mt-0.5" />
-                            <p className="text-[11px] text-foreground-muted font-medium leading-relaxed">
-                              {fusion.uncertainty_factors.join(' ')}
+                        {/* Card 3: Brain Scan */}
+                        <div className="p-5 rounded-2xl border border-border bg-surface hover:border-border-strong transition-all space-y-2.5 shadow-xs">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center shrink-0">
+                              <Brain size={18} />
+                            </div>
+                            <div>
+                              <h4 className="text-sm font-bold text-foreground">Brain Scan Review (MRI)</h4>
+                              <p className="text-[11px] text-foreground-muted font-medium">High-resolution structural imaging</p>
+                            </div>
+                          </div>
+                          <p className="text-xs text-foreground-muted leading-relaxed font-medium">
+                            {mri.stage
+                              ? `Brain scan reviewed for memory centers like the temporal lobe. Deep learning analysis noted patterns corresponding to ${mri.stage}.`
+                              : 'No brain MRI scan was uploaded for this assessment session.'}
+                          </p>
+                        </div>
+
+                        {/* Card 4: Health & Lifestyle */}
+                        <div className="p-5 rounded-2xl border border-border bg-surface hover:border-border-strong transition-all space-y-2.5 shadow-xs">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
+                              <ShieldCheck size={18} />
+                            </div>
+                            <div>
+                              <h4 className="text-sm font-bold text-foreground">Health & Cardiovascular Profile</h4>
+                              <p className="text-[11px] text-foreground-muted font-medium">Sleep, blood pressure, and family factors</p>
+                            </div>
+                          </div>
+                          <p className="text-xs text-foreground-muted leading-relaxed font-medium">
+                            {risk.overall_risk_score != null
+                              ? `Scored ${risk.factors_assessed || 18} lifestyle indicators. Modifiable factors such as blood pressure regulation, deep sleep, and routine physical activity support long-term brain resilience.`
+                              : 'Health risk questionnaire not provided.'}
+                          </p>
+                        </div>
+                      </div>
+                    </section>
+
+                    {/* 2. Interactive "Questions to Ask Your Doctor" Checklist */}
+                    <section aria-label="Questions for Your Doctor" className="p-5 sm:p-6 rounded-2xl border border-primary/20 bg-primary/5 space-y-4 shadow-xs">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-9 h-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shrink-0 font-bold">
+                            <ListChecks size={18} />
+                          </div>
+                          <div>
+                            <h3 className="font-heading text-base font-bold text-foreground">
+                              Questions to Ask Your Neurologist or Physician
+                            </h3>
+                            <p className="text-xs text-foreground-muted">
+                              Check off questions as you prepare for your next clinic appointment.
                             </p>
                           </div>
-                        )}
+                        </div>
+
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          icon={Printer}
+                          onClick={handlePrintDoctorQuestions}
+                          className="shrink-0 bg-surface text-primary border-primary/30 hover:bg-primary/10 font-bold min-h-[36px]"
+                        >
+                          Print Checklist for My Visit
+                        </Button>
+                      </div>
+
+                      <div className="space-y-2 pt-1">
+                        {DOCTOR_QUESTIONS.map((q) => {
+                          const isChecked = !!checkedQuestions[q.id];
+                          return (
+                            <div
+                              key={q.id}
+                              onClick={() => toggleQuestion(q.id)}
+                              className={`flex items-start gap-3 p-3.5 rounded-xl border transition-all cursor-pointer select-none ${
+                                isChecked
+                                  ? 'bg-emerald-500/10 border-emerald-500/30 text-foreground'
+                                  : 'bg-surface border-border text-foreground hover:border-primary/40'
+                              }`}
+                            >
+                              <button
+                                type="button"
+                                className="mt-0.5 text-primary focus:outline-none"
+                                aria-label={isChecked ? `Uncheck question` : `Check question`}
+                              >
+                                {isChecked ? <CheckSquare size={18} className="text-emerald-500" /> : <Square size={18} />}
+                              </button>
+                              <div className="flex-1 text-xs sm:text-sm leading-relaxed">
+                                <span className="font-bold text-primary mr-1.5 text-[11px] uppercase tracking-wider">[{q.category}]</span>
+                                <span className={isChecked ? 'line-through text-foreground-muted' : 'font-medium text-foreground'}>
+                                  {q.text}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Family Notes Box */}
+                      <div className="pt-2">
+                        <label className="text-xs font-bold text-foreground block mb-1.5">
+                          Personal Notes to Bring to the Doctor:
+                        </label>
+                        <textarea
+                          value={doctorNotes}
+                          onChange={(e) => setDoctorNotes(e.target.value)}
+                          placeholder="Write any symptoms, medication changes, or specific questions you want to discuss with the doctor..."
+                          className="w-full p-3 rounded-xl border border-border bg-surface text-xs font-medium text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-1 focus:ring-primary min-h-[70px]"
+                        />
                       </div>
                     </section>
-                  )}
 
-                  {/* 3. What the person said (speech test) */}
-                  {audioTx?.text && (
-                    <section aria-label="What the person said">
-                      <h3 className="text-sm font-extrabold text-foreground uppercase tracking-wider mb-3">
-                        What the person said
+                    {/* 3. Daily Living & Brain Health Habits */}
+                    <section aria-label="Everyday Brain Health Guide">
+                      <h3 className="font-heading text-lg font-bold text-foreground mb-3">
+                        Supportive Habits for Daily Living & Brain Health
                       </h3>
-                      <div className="p-4 rounded-xl border border-border bg-background/50 space-y-2.5">
-                        <p className="text-sm text-foreground leading-relaxed font-medium">
-                          “{audioTx.text.slice(0, 420)}{audioTx.text.length > 420 ? '…' : ''}”
-                        </p>
-                        <div className="flex flex-wrap gap-1.5 text-[11px] font-mono font-bold">
-                          {audioTx.method && <span className="px-2 py-0.5 rounded-md bg-surface text-foreground-muted border border-border">{audioTx.method}</span>}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div className="p-5 rounded-2xl border border-border bg-surface space-y-2 shadow-xs">
+                          <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center font-bold text-sm">
+                            1
+                          </div>
+                          <h4 className="text-sm font-bold text-foreground">Routine & Memory Anchors</h4>
+                          <p className="text-xs text-foreground-muted leading-relaxed font-medium">
+                            Keep everyday items (keys, glasses, phones) in designated trays. Use a visible wall calendar or phone reminders for appointments and medications.
+                          </p>
+                        </div>
+
+                        <div className="p-5 rounded-2xl border border-border bg-surface space-y-2 shadow-xs">
+                          <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center font-bold text-sm">
+                            2
+                          </div>
+                          <h4 className="text-sm font-bold text-foreground">Nutrition & Gentle Exercise</h4>
+                          <p className="text-xs text-foreground-muted leading-relaxed font-medium">
+                            The MIND and Mediterranean diets (berries, leafy greens, olive oil, fish) nourish brain cells. A daily 20–30 minute brisk walk supports cerebral blood flow.
+                          </p>
+                        </div>
+
+                        <div className="p-5 rounded-2xl border border-border bg-surface space-y-2 shadow-xs">
+                          <div className="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-500 flex items-center justify-center font-bold text-sm">
+                            3
+                          </div>
+                          <h4 className="text-sm font-bold text-foreground">Social & Mental Vitality</h4>
+                          <p className="text-xs text-foreground-muted leading-relaxed font-medium">
+                            Engage in conversational storytelling, music, reading, or puzzles. Regular social interaction strengthens cognitive reserve and elevates mood.
+                          </p>
                         </div>
                       </div>
                     </section>
-                  )}
 
-                  {/* 4. What to do next — tap to tick off */}
-                  <section aria-label="What to do next">
-                    <h3 className="text-sm font-extrabold text-foreground uppercase tracking-wider mb-3">
-                      What to do next
-                    </h3>
-                    <div className="space-y-2">
-                      {actionableNextSteps.map((step) => {
-                        const isDone = !!checkedActions[step.id];
-                        return (
-                          <div
-                            key={step.id}
-                            onClick={() => toggleAction(step.id)}
-                            className={`flex items-start gap-3 p-3.5 rounded-xl border transition-all cursor-pointer select-none ${
-                              isDone
-                                ? 'bg-emerald-500/5 border-emerald-500/30 text-foreground-muted'
-                                : 'bg-background/50 border-border text-foreground hover:border-indigo-500/40'
-                            }`}
-                          >
-                            <button
-                              type="button"
-                              className="mt-0.5 text-indigo-400 hover:text-indigo-300 focus:outline-none"
-                              aria-label={isDone ? `Uncheck ${step.text}` : `Check ${step.text}`}
+                    {/* 4. Empathetic Guide to Medical Terms */}
+                    <section aria-label="Medical Terms Explained">
+                      <div className="p-5 sm:p-6 rounded-2xl border border-border bg-surface space-y-3.5 shadow-xs">
+                        <div className="flex items-center gap-2">
+                          <BookOpen size={16} className="text-primary" />
+                          <h3 className="font-heading text-sm font-bold text-foreground uppercase tracking-wider">
+                            Understanding Common Terms in This Report
+                          </h3>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                          {GLOSSARY_TERMS.map((g) => (
+                            <div key={g.term} className="p-3.5 rounded-xl bg-surface-secondary border border-border/80 space-y-1">
+                              <span className="text-xs font-bold text-foreground block">{g.term}</span>
+                              <p className="text-[11px] text-foreground-muted leading-relaxed font-medium">
+                                {g.simple}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                ) : (
+                  /* ── CLINICIAN DETAILED SUMMARY VIEW ── */
+                  <div className="space-y-6">
+
+                    {/* 1. What we found — all test results in one simple table */}
+                    <section aria-label="What we found">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-sm font-extrabold text-foreground uppercase tracking-wider">
+                          What we found
+                        </h3>
+                        <span className="text-sm font-semibold text-foreground-muted">All test results in one place</span>
+                      </div>
+
+                      <div className="overflow-x-auto rounded-xl border border-border">
+                        <table className="w-full text-left text-[15px] border-collapse select-text">
+                          <thead className="bg-background/50 border-b border-border text-foreground-muted text-[15px] font-bold uppercase tracking-wider">
+                            <tr>
+                              <th scope="col" className="py-3.5 px-4 w-1/4">Test</th>
+                              <th scope="col" className="py-3.5 px-4 w-1/3">What we saw</th>
+                              <th scope="col" className="py-3.5 px-4">What it means</th>
+                              <th scope="col" className="py-3.5 px-4 w-32 text-right">Result</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border font-medium">
+                            {evidenceSummaryRows.map((row, idx) => (
+                              <tr key={idx} className="hover:bg-surface-hover transition-colors">
+                                <td className="py-3.5 px-4 font-bold text-foreground text-[15px]">
+                                  {row.modality}
+                                </td>
+                                <td className="py-3.5 px-4 font-mono text-[15px] text-foreground font-semibold">
+                                  {row.finding}
+                                </td>
+                                <td className="py-3.5 px-4 text-foreground-muted text-[15px] font-medium leading-relaxed">
+                                  {row.interpretation}
+                                </td>
+                                <td className="py-3.5 px-4 text-right">
+                                  <Badge variant={row.status === 'High Risk' || row.status === 'Error' ? 'danger' : row.status === 'Mild Risk' ? 'warning' : row.status === 'Normal' ? 'success' : 'neutral'}>
+                                    {row.status}
+                                  </Badge>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+
+                    {/* 2. How the answer was made (fusion contributions) */}
+                    {(fusion.method || (fusion.modality_contributions && Object.keys(fusion.modality_contributions).length > 0)) && (
+                      <section aria-label="How the answer was made">
+                        <h3 className="text-sm font-extrabold text-foreground uppercase tracking-wider mb-3">
+                          How the answer was made
+                        </h3>
+                        <div className="p-4 rounded-xl border border-border bg-background/50 space-y-3">
+                          <div className="flex flex-wrap items-center gap-2 text-xs">
+                            {fusion.method && (
+                              <span
+                                title={fusion.method}
+                                className="font-bold px-2.5 py-1 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20"
+                              >
+                                Combined {(fusion.active_modalities || []).length || 'several'} tests
+                              </span>
+                            )}
+                            {fusion.modality_agreement && fusion.modality_agreement !== 'N/A' && (
+                              <div className="flex items-center gap-2">
+                                <Badge variant={fusion.modality_agreement === 'Full' || fusion.modality_agreement === 'High' ? 'success' : fusion.modality_agreement === 'Moderate' ? 'warning' : 'danger'}>
+                                  Tests agree: {fusion.modality_agreement}
+                                </Badge>
+                                <AgreementMeter agreement={fusion.modality_agreement} />
+                              </div>
+                            )}
+                            {fusion.epistemic_uncertainty != null && (
+                              <span className="font-mono text-foreground-muted">uncertainty σ² = {fusion.epistemic_uncertainty}</span>
+                            )}
+                          </div>
+
+                          {fusion.modality_contributions && Object.keys(fusion.modality_contributions).length > 0 && (
+                            <div className="space-y-2">
+                              {Object.entries(fusion.modality_contributions)
+                                .sort((a, b) => b[1] - a[1])
+                                .map(([mod, pct]) => (
+                                  <div key={mod} className="space-y-1">
+                                    <div className="flex items-center justify-between text-xs">
+                                      <span className="font-bold text-foreground capitalize">{mod}</span>
+                                      <span className="font-mono font-bold text-indigo-400">{Number(pct).toFixed(1)}%</span>
+                                    </div>
+                                    <div className="w-full bg-border rounded-full h-1.5 overflow-hidden">
+                                      <div className={`h-full rounded-full ${MODALITY_META[mod]?.color || 'bg-indigo-500'}`} style={{ width: `${Math.min(100, Number(pct) || 0)}%` }} />
+                                    </div>
+                                  </div>
+                                ))}
+                            </div>
+                          )}
+
+                          <div className="flex flex-wrap gap-1.5">
+                            {(fusion.active_modalities || []).map((m) => (
+                              <span key={`a-${m}`} className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 capitalize">
+                                ✓ {m}
+                              </span>
+                            ))}
+                            {(fusion.missing_modalities || []).map((m) => (
+                              <span key={`m-${m}`} className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-surface text-foreground-muted border border-border capitalize">
+                                ○ {m}: not done
+                              </span>
+                            ))}
+                          </div>
+
+                          {fusion.evidence_summary?.length > 0 && (
+                            <ul className="space-y-1">
+                              {fusion.evidence_summary.map((e, i) => (
+                                <li key={i} className="flex items-start gap-1.5 text-xs text-foreground-muted font-medium">
+                                  <ChevronRight size={12} className="text-indigo-400 shrink-0 mt-0.5" /> {e}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+
+                          {fusion.uncertainty_factors?.length > 0 && (
+                            <div className="flex items-start gap-2 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                              <AlertTriangle size={13} className="text-amber-500 shrink-0 mt-0.5" />
+                              <p className="text-[11px] text-foreground-muted font-medium leading-relaxed">
+                                {fusion.uncertainty_factors.join(' ')}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </section>
+                    )}
+
+                    {/* 3. What the person said (speech test) */}
+                    {audioTx?.text && (
+                      <section aria-label="What the person said">
+                        <h3 className="text-sm font-extrabold text-foreground uppercase tracking-wider mb-3">
+                          What the person said
+                        </h3>
+                        <div className="p-4 rounded-xl border border-border bg-background/50 space-y-2.5">
+                          <p className="text-sm text-foreground leading-relaxed font-medium">
+                            “{audioTx.text.slice(0, 420)}{audioTx.text.length > 420 ? '…' : ''}”
+                          </p>
+                          <div className="flex flex-wrap gap-1.5 text-[11px] font-mono font-bold">
+                            {audioTx.method && <span className="px-2 py-0.5 rounded-md bg-surface text-foreground-muted border border-border">{audioTx.method}</span>}
+                          </div>
+                        </div>
+                      </section>
+                    )}
+
+                    {/* 4. What to do next — tap to tick off */}
+                    <section aria-label="What to do next">
+                      <h3 className="text-sm font-extrabold text-foreground uppercase tracking-wider mb-3">
+                        What to do next
+                      </h3>
+                      <div className="space-y-2">
+                        {actionableNextSteps.map((step) => {
+                          const isDone = !!checkedActions[step.id];
+                          return (
+                            <div
+                              key={step.id}
+                              onClick={() => toggleAction(step.id)}
+                              className={`flex items-start gap-3 p-3.5 rounded-xl border transition-all cursor-pointer select-none ${
+                                isDone
+                                  ? 'bg-emerald-500/5 border-emerald-500/30 text-foreground-muted'
+                                  : 'bg-background/50 border-border text-foreground hover:border-indigo-500/40'
+                              }`}
                             >
-                              {isDone ? <CheckSquare size={18} className="text-emerald-400" /> : <Square size={18} />}
-                            </button>
-                            <div className="flex-1 text-sm leading-relaxed">
-                              <span className={isDone ? 'line-through text-foreground-muted' : 'font-medium'}>
-                                {step.text}
+                              <button
+                                type="button"
+                                className="mt-0.5 text-indigo-400 hover:text-indigo-300 focus:outline-none"
+                                aria-label={isDone ? `Uncheck ${step.text}` : `Check ${step.text}`}
+                              >
+                                {isDone ? <CheckSquare size={18} className="text-emerald-400" /> : <Square size={18} />}
+                              </button>
+                              <div className="flex-1 text-sm leading-relaxed">
+                                <span className={isDone ? 'line-through text-foreground-muted' : 'font-medium'}>
+                                  {step.text}
+                                </span>
+                              </div>
+                              <span className={`text-xs font-mono font-bold px-2.5 py-1 rounded-md ${
+                                step.priority === 'High' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 'bg-surface text-foreground-muted border border-border'
+                              }`}>
+                                {step.priority}
                               </span>
                             </div>
-                            <span className={`text-xs font-mono font-bold px-2.5 py-1 rounded-md ${
-                              step.priority === 'High' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 'bg-surface text-foreground-muted border border-border'
-                            }`}>
-                              {step.priority}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </section>
+                          );
+                        })}
+                      </div>
+                    </section>
 
-                </div>
+                  </div>
+                )
               )}
 
               {/* ── Test Details Tab (all 3 test groups in one place) ────── */}

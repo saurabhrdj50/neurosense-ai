@@ -372,7 +372,10 @@ def create_app() -> FastAPI:
     from app.shared import bootstrap
     bootstrap.bootstrap_database()
 
-    if os.environ.get('ENABLE_EAGER_WARMUP', 'false').lower() == 'true':
+    # Eager warmup: default ON so first-request cold-start latency is eliminated.
+    # Set ENABLE_EAGER_WARMUP=false to revert to lazy loading (saves RAM on
+    # constrained hosts at the cost of a slow first analysis request).
+    if os.environ.get('ENABLE_EAGER_WARMUP', 'true').lower() != 'false':
         from app.features.analysis.service import AnalysisOrchestrator
         AnalysisOrchestrator().warmup_async()
     else:

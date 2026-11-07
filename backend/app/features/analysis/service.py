@@ -3,6 +3,7 @@ import time
 import tempfile
 import threading
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Dict, Any, Optional, Callable
 
 from app.ml.contracts import (
@@ -188,6 +189,11 @@ class AnalysisOrchestrator:
 
         ``progress(stage, pct)`` is called between steps so background jobs
         can report real pipeline position instead of guessing.
+
+        MRI, notes (sentiment), cognitive, and risk are independent and run
+        in parallel via a thread pool. Speech transcription depends on notes
+        only incidentally (same input text), so it also runs in parallel.
+        Fusion runs after all modalities complete.
         """
         from app.features.analysis.mri.service import run_mri_step
         from app.features.analysis.speech.service import run_notes_step, run_speech_step
@@ -207,16 +213,31 @@ class AnalysisOrchestrator:
         results['patient_info'] = patient_info
         pid = patient_info.get('patient_id', '')
 
-        report('mri', 5)
-        run_mri_step(self, inputs, results, pid, doctor_id)
-        report('notes', 28)
-        run_notes_step(self, inputs, results)
-        report('speech', 32)
-        run_speech_step(self, inputs, results, pid, doctor_id)
-        report('cognitive', 55)
-        run_cognitive_step(self, inputs, results)
-        report('risk', 65)
-        run_risk_step(self, inputs, results)
+        report('parallel', 5)
+
+        # Run all independent modalities concurrently.
+        # max_workers=5: MRI, notes, speech, cognitive, risk — each is I/O or
+        # CPU-bound in its own model; they don't share mutable state.
+        with ThreadPoolExecutor(max_workers=5, thread_name_prefix='modality') as ex:
+            futures = {
+                ex.submit(run_mri_step, self, inputs, results, pid, doctor_id): 'mri',
+                ex.submit(run_notes_step, self, inputs, results): 'notes',
+                ex.submit(run_speech_step, self, inputs, results, pid, doctor_id): 'speech',
+                ex.submit(run_cognitive_step, self, inputs, results): 'cognitive',
+                ex.submit(run_risk_step, self, inputs, results): 'risk',
+            }
+            completed = 0
+            total = len(futures)
+            for future in as_completed(futures):
+                name = futures[future]
+                completed += 1
+                pct = 5 + int(completed / total * 60)  # 5 → 65 %
+                try:
+                    future.result()
+                    report(name, pct)
+                except Exception as exc:
+                    logger.warning("Modality '%s' raised during parallel run: %s", name, exc)
+                    report(name, pct)
 
         # --- Fusion ---
         # The speech NLP vote rides on the transcription dict; a transcription

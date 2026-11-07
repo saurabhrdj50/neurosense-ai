@@ -267,6 +267,17 @@ export default function AnalysisPage() {
     }
   }, [patient, patientText, mriFile, cognData, audioFile, speechText, risk, confirmChecked, step, startAnalysis, stopAnalysis, navigate]);
 
+  /* ── Step Progression Guard ───────────────────────────────────────── */
+  const handleNextStep = useCallback(() => {
+    if (step === 0 && (!patient.name?.trim() || !patient.patient_id?.trim())) {
+      toast.error('Patient Name and Medical ID are required before proceeding.');
+      return;
+    }
+    if (step < STEPS.length - 1) {
+      setStep(s => s + 1);
+    }
+  }, [step, patient.name, patient.patient_id]);
+
   /* ── Keyboard Shortcuts (Arrow Left/Right, Ctrl+S, Ctrl+Enter) ────── */
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -276,12 +287,12 @@ export default function AnalysisPage() {
         e.preventDefault();
         if (loadingRef.current) return; // ignore shortcut while submitting
         if (step < STEPS.length - 1) {
-          setStep(s => s + 1);
+          handleNextStep();
         } else {
           handleSubmit();
         }
       } else if (e.key === 'ArrowRight' && step < STEPS.length - 1) {
-        setStep(s => s + 1);
+        handleNextStep();
       } else if (e.key === 'ArrowLeft' && step > 0) {
         setStep(s => s - 1);
       } else if ((e.ctrlKey || e.metaKey) && e.key === 's') {
@@ -291,7 +302,7 @@ export default function AnalysisPage() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [step, saveDraft, handleSubmit]);
+  }, [step, saveDraft, handleSubmit, handleNextStep]);
 
   /* ── Sample Case Loader ─────────────────────────────────────────────── */
   const loadSampleClinicalCase = async () => {
@@ -491,7 +502,7 @@ export default function AnalysisPage() {
             <div className="h-5 w-px bg-border/80" />
 
             <div className="flex items-center gap-2.5">
-              <h1 className="text-xl font-extrabold text-foreground tracking-tight">
+              <h1 className="text-xl font-extrabold text-foreground tracking-tight font-heading">
                 Examination Workspace
               </h1>
 
@@ -655,7 +666,7 @@ export default function AnalysisPage() {
                 variant="primary"
                 size="md"
                 icon={ChevronRight}
-                onClick={() => setStep(s => s + 1)}
+                onClick={handleNextStep}
                 disabled={loading}
                 className="min-h-[44px] text-base font-bold px-5 shadow-xs"
               >

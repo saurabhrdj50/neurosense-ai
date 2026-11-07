@@ -189,8 +189,8 @@ export default function AdminDashboard() {
             <Activity size={20} aria-hidden="true" />
           </div>
           <div>
-            <h1 className="text-xl font-extrabold text-foreground tracking-tight">Admin Workstation</h1>
-            <p className="text-xs font-medium text-foreground-muted mt-0.5 animate-fade-in">
+            <h1 className="text-xl font-extrabold text-foreground tracking-tight font-heading">Admin Workstation</h1>
+            <p className="text-xs font-medium text-foreground-muted mt-0.5 animate-fade-in font-sans">
               {user?.full_name || user?.username}
               {lastUpdated && (
                 <span className="ml-2 text-foreground-subtle">
@@ -204,13 +204,13 @@ export default function AdminDashboard() {
           <button
             onClick={loadData}
             aria-label="Refresh dashboard data"
-            className="p-2 rounded-xl bg-surface border border-border text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors"
+            className="p-2.5 rounded-xl bg-surface border border-border text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors min-h-[40px] min-w-[40px] flex items-center justify-center"
           >
             <RefreshCw size={16} aria-hidden="true" />
           </button>
           <button
             onClick={() => navigate('/admin/panel')}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-surface border border-border text-foreground hover:bg-surface-hover transition-colors min-h-[40px]"
+            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold bg-surface border border-border text-foreground hover:bg-surface-hover transition-colors min-h-[40px]"
           >
             <Shield size={14} aria-hidden="true" /> Admin Panel <ArrowRight size={14} aria-hidden="true" />
           </button>
@@ -263,13 +263,13 @@ export default function AdminDashboard() {
       {activeTab === 'summary' ? (
         <div className="grid lg:grid-cols-3 gap-5 animate-fade-in">
           {/* Stage Distribution */}
-          <div className="bg-surface border border-border rounded-2xl p-5 lg:col-span-2 space-y-4">
+          <div className="bg-surface border border-border rounded-2xl p-5 lg:col-span-2 space-y-4 shadow-xs">
             <div className="flex items-center gap-2 pb-2 border-b border-border">
               <TrendingUp size={18} className="text-amber-500" aria-hidden="true" />
-              <h2 className="text-sm font-bold text-foreground uppercase tracking-wider">Patient Stage Distribution</h2>
+              <h2 className="text-sm font-bold text-foreground uppercase tracking-wider font-heading">Patient Stage Distribution</h2>
             </div>
             {Object.keys(stageDist).length === 0 ? (
-              <p className="text-xs text-foreground-subtle text-center py-8">No analysis telemetry recorded yet</p>
+              <p className="text-xs text-foreground-subtle text-center py-8 font-medium">No analysis telemetry recorded yet</p>
             ) : (
               <div className="space-y-4">
                 {Object.entries(stageDist).map(([stage, count]) => (
@@ -280,10 +280,10 @@ export default function AdminDashboard() {
           </div>
 
           {/* System Telemetry */}
-          <div className="bg-surface border border-border rounded-2xl p-5 space-y-4">
+          <div className="bg-surface border border-border rounded-2xl p-5 space-y-4 shadow-xs">
             <div className="flex items-center gap-2 pb-2 border-b border-border">
               <Activity size={18} className="text-emerald-500" aria-hidden="true" />
-              <h2 className="text-sm font-bold text-foreground uppercase tracking-wider">System Telemetry</h2>
+              <h2 className="text-sm font-bold text-foreground uppercase tracking-wider font-heading">System Telemetry</h2>
             </div>
             <div className="space-y-2.5">
               {systemStatus.length > 0 ? (
@@ -339,7 +339,7 @@ export default function AdminDashboard() {
                       {doc.full_name?.split(' ').map(n=>n[0]).join('').slice(0, 2).toUpperCase() || doc.username[0].toUpperCase()}
                     </div>
                     <div className="truncate">
-                      <h3 className="text-sm font-bold text-foreground leading-tight truncate">
+                      <h3 className="text-sm font-bold text-foreground leading-tight truncate font-heading">
                         {doctorDisplayName(doc.full_name || doc.username)}
                       </h3>
                       <span className="text-xs text-foreground-subtle font-mono block mt-0.5 truncate">{doc.email}</span>
@@ -369,7 +369,7 @@ export default function AdminDashboard() {
 
                 <button
                   type="button"
-                  className="w-full py-2 px-3 rounded-xl text-xs font-bold bg-surface-secondary hover:bg-primary-subtle text-foreground-muted hover:text-primary border border-border transition-colors flex items-center justify-between"
+                  className="w-full py-2.5 px-3 rounded-xl text-xs font-bold bg-surface-secondary hover:bg-primary-subtle text-foreground-muted hover:text-primary border border-border transition-colors flex items-center justify-between min-h-[40px]"
                 >
                   <span>View Managed Patients</span>
                   <ChevronRight size={14} />
@@ -403,20 +403,20 @@ export default function AdminDashboard() {
                   {selectedDoctor.full_name?.split(' ').map(n=>n[0]).join('').slice(0, 2).toUpperCase() || selectedDoctor.username[0].toUpperCase()}
                 </div>
                 <div>
-                  <h2 className="text-base font-extrabold text-foreground">
+                  <h2 className="text-base font-extrabold text-foreground font-heading">
                     Patient Assignment Roster
                   </h2>
                   <p className="text-sm text-foreground-muted font-semibold mt-0.5">
                     {doctorDisplayName(selectedDoctor.full_name || selectedDoctor.username)} · {selectedDoctor.department}
                   </p>
-                  <p className="text-xs text-foreground-subtle mt-0.5">
+                  <p className="text-xs text-foreground-subtle mt-0.5 font-mono">
                     {selectedDoctor.institution} (ID: {selectedDoctor.id})
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setSelectedDoctor(null)}
-                className="p-2 rounded-xl border border-border text-foreground-muted hover:text-foreground bg-surface-secondary hover:bg-surface-hover transition-colors"
+                className="p-2.5 rounded-xl border border-border text-foreground-muted hover:text-foreground bg-surface-secondary hover:bg-surface-hover transition-colors min-h-[40px] min-w-[40px] flex items-center justify-center"
                 aria-label="Close panel"
               >
                 <X size={16} />
@@ -434,7 +434,7 @@ export default function AdminDashboard() {
               ) : doctorPatients.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 text-center text-foreground-muted">
                   <Users size={32} className="text-foreground-subtle mb-2" />
-                  <p className="text-sm font-semibold">No assigned patients found</p>
+                  <p className="text-sm font-semibold font-heading">No assigned patients found</p>
                   <p className="text-xs text-foreground-subtle mt-1 max-w-[240px]">
                     This clinician has not registered or been assigned any patient profiles yet.
                   </p>
@@ -447,10 +447,10 @@ export default function AdminDashboard() {
                   >
                     <div className="flex items-start justify-between gap-1.5">
                       <div>
-                        <h4 className="text-sm font-bold text-foreground">
+                        <h4 className="text-sm font-bold text-foreground font-heading">
                           {pat.name}
                         </h4>
-                        <p className="text-xs text-foreground-subtle mt-0.5">
+                        <p className="text-xs text-foreground-subtle mt-0.5 font-mono">
                           ID: {pat.patient_id} · Registered {new Date(pat.created_at || Date.now()).toLocaleDateString()}
                         </p>
                       </div>
@@ -459,8 +459,9 @@ export default function AdminDashboard() {
                           setSelectedDoctor(null)
                           navigate(`/history/${pat.patient_id}`)
                         }}
-                        className="p-2 rounded-lg border border-border hover:bg-surface-hover text-foreground-muted hover:text-primary transition-all flex items-center justify-center"
+                        className="p-2 rounded-lg border border-border hover:bg-surface-hover text-foreground-muted hover:text-primary transition-all flex items-center justify-center min-h-[38px] min-w-[38px]"
                         title="View longitudinal clinical workspace"
+                        aria-label={`View clinical history for ${pat.name}`}
                       >
                         <ExternalLink size={14} />
                       </button>
@@ -506,7 +507,7 @@ export default function AdminDashboard() {
                   setSelectedDoctor(null)
                   navigate('/admin/panel', { state: statePayload })
                 }}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-primary hover:bg-primary-hover text-primary-foreground shadow-xs transition-all border border-primary/20 min-h-[38px]"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-primary hover:bg-primary-hover text-primary-foreground shadow-xs transition-all border border-primary/20 min-h-[40px]"
               >
                 Manage Registry <ArrowRight size={13} />
               </button>

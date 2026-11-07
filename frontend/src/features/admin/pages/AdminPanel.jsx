@@ -493,8 +493,8 @@ export default function AdminPanel() {
           <Shield size={20} aria-hidden="true" />
         </div>
         <div>
-          <h1 className="text-xl font-extrabold text-foreground tracking-tight">Admin Panel & Access Governance</h1>
-          <p className="text-xs font-medium text-foreground-muted mt-0.5">Manage clinician accounts, patient rosters & audit logs</p>
+          <h1 className="text-xl font-extrabold text-foreground tracking-tight font-heading">Admin Panel &amp; Access Governance</h1>
+          <p className="text-xs font-medium text-foreground-muted mt-0.5">Manage clinician accounts, patient rosters &amp; audit logs</p>
         </div>
       </div>
 
@@ -571,7 +571,7 @@ export default function AdminPanel() {
                             {initials}
                           </div>
                           <div>
-                            <h3 className="font-bold text-foreground text-sm group-hover:text-primary transition-colors">
+                            <h3 className="font-bold text-foreground text-sm group-hover:text-primary transition-colors font-heading">
                               {doctorDisplayName(doc.full_name || doc.username)}
                             </h3>
                             <span className="text-xs text-foreground-subtle font-mono block mt-0.5">{doc.email}</span>
@@ -598,15 +598,16 @@ export default function AdminPanel() {
                           setSelectedDoctorName(doc.full_name || doc.username)
                           setActiveTab('patients')
                         }}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-primary-subtle hover:bg-primary/20 border border-primary/20 text-primary transition-colors min-h-[36px]"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-primary-subtle hover:bg-primary/20 border border-primary/20 text-primary transition-colors min-h-[40px]"
                       >
                         <Users size={14} />
                         View Patients
                       </button>
                       <button
                         onClick={() => requestDelete('doctor', doc.id, doc.full_name || doc.username)}
-                        className="p-2 rounded-xl text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 border border-transparent hover:border-red-200 dark:hover:border-red-900/30 transition-colors"
+                        className="p-2.5 rounded-xl text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 border border-transparent hover:border-red-200 dark:hover:border-red-900/30 transition-colors min-h-[40px] min-w-[40px] flex items-center justify-center"
                         title="Delete Doctor"
+                        aria-label={`Delete doctor ${doc.full_name || doc.username}`}
                       >
                         <Trash2 size={15} />
                       </button>
@@ -706,7 +707,7 @@ export default function AdminPanel() {
                                   {initials}
                                 </div>
                                 <div>
-                                  <h3 className="font-bold text-foreground text-sm group-hover:text-primary transition-colors leading-tight">
+                                  <h3 className="font-bold text-foreground text-sm group-hover:text-primary transition-colors leading-tight font-heading">
                                     {pat.name}
                                   </h3>
                                   <span className="text-xs text-foreground-subtle font-mono block mt-0.5 font-semibold">{pat.patient_id}</span>
@@ -735,25 +736,28 @@ export default function AdminPanel() {
                             <span className="text-xs text-foreground-subtle font-mono font-medium truncate max-w-[130px]">
                               {pat.doctor_username ? doctorDisplayName(pat.doctor_username) : `ID: ${pat.created_by ?? '—'}`}
                             </span>
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-1.5">
                               <button
                                 onClick={() => navigate(`/history/${pat.patient_id}`)}
-                                className="p-2 rounded-xl bg-surface-secondary hover:bg-surface-hover border border-border text-foreground-muted hover:text-primary transition-colors"
+                                className="p-2.5 rounded-xl bg-surface-secondary hover:bg-surface-hover border border-border text-foreground-muted hover:text-primary transition-colors min-h-[40px] min-w-[40px] flex items-center justify-center"
                                 title="View History"
+                                aria-label={`View clinical history for ${pat.name}`}
                               >
                                 <Eye size={14} />
                               </button>
                               <button
                                 onClick={() => patientsApi.export(pat.patient_id)}
-                                className="p-2 rounded-xl bg-surface-secondary hover:bg-surface-hover border border-border text-foreground-muted hover:text-emerald-500 transition-colors"
+                                className="p-2.5 rounded-xl bg-surface-secondary hover:bg-surface-hover border border-border text-foreground-muted hover:text-emerald-500 transition-colors min-h-[40px] min-w-[40px] flex items-center justify-center"
                                 title="Export Patient Data CSV"
+                                aria-label={`Export CSV data for ${pat.name}`}
                               >
                                 <Download size={14} />
                               </button>
                               <button
                                 onClick={() => requestDelete('patient', pat.patient_id, pat.name)}
-                                className="p-2 rounded-xl text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 border border-transparent hover:border-red-200 dark:hover:border-red-900/30 transition-colors"
+                                className="p-2.5 rounded-xl text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 border border-transparent hover:border-red-200 dark:hover:border-red-900/30 transition-colors min-h-[40px] min-w-[40px] flex items-center justify-center"
                                 title="Delete Patient"
+                                aria-label={`Delete patient record for ${pat.name}`}
                               >
                                 <Trash2 size={14} />
                               </button>

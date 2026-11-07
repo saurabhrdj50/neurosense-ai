@@ -74,6 +74,13 @@ export default defineConfig({
             '@tanstack/react-query', '@tanstack/query-core',
           ]
           if (m && CORE_PKGS.includes(m[1])) return 'vendor-core'
+          // Separate heavy libraries so pages that don't need them load faster.
+          // NiiVue (~2 MB) is deferred to MRI/results views only.
+          if (m && m[1] === '@niivue/niivue') return 'vendor-niivue'
+          // Animation library deferred to animated routes.
+          if (m && m[1] === 'framer-motion') return 'vendor-motion'
+          // Recharts (~150 kB) deferred to dashboard/results.
+          if (m && m[1] === 'recharts') return 'vendor-charts'
           return undefined
         },
       },

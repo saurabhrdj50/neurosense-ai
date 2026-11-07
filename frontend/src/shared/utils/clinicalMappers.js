@@ -106,29 +106,29 @@ export function stageToLabel(stage) {
  */
 export const SIMPLE_STAGE_INFO = {
   healthy: {
-    simple: 'Memory looks healthy',
-    meaning: 'No clear signs of memory disease right now. Keep up regular check-ups.',
-    nextStep: 'Continue a healthy lifestyle and repeat screening yearly.',
+    simple: 'Cognitive Health Profile: Stable & Typical',
+    meaning: 'No significant markers of neurocognitive decline detected across the assessed modalities.',
+    nextStep: 'Maintain regular wellness check-ups, physical exercise, and repeat screening annually.',
   },
   early: {
-    simple: 'Very early small changes',
-    meaning: 'Tiny changes that can be normal aging or the very start of memory trouble.',
-    nextStep: 'Watch and re-check in 6–12 months; stay mentally and socially active.',
+    simple: 'Subtle Cognitive Fluctuations Observed',
+    meaning: 'Minor variations detected that can occur with normal healthy aging, stress, or early subtle changes.',
+    nextStep: 'Recommend proactive lifestyle adjustments, cognitive stimulation, and a scheduled follow-up in 6–12 months.',
   },
   mild: {
-    simple: 'Mild memory problems',
-    meaning: 'Noticeable memory trouble, but daily life is still mostly okay.',
-    nextStep: 'See a memory specialist and re-check in 3–6 months.',
+    simple: 'Mild Cognitive Changes Identified',
+    meaning: 'Observable changes in memory or processing speed identified, while independent daily functioning remains intact.',
+    nextStep: 'Consult a memory specialist or neurologist for a personalized cognitive wellness plan and baseline tracking.',
   },
   serious: {
-    simple: 'Serious memory problems',
-    meaning: 'Clear memory loss that affects daily life and needs medical care.',
-    nextStep: 'See a neurologist soon and arrange daily support.',
+    simple: 'Notable Cognitive Patterns Detected',
+    meaning: 'Evaluation indicates changes in memory retention and cognitive processing that benefit from timely clinical attention.',
+    nextStep: 'Schedule a comprehensive clinical consultation with a neurologist to explore targeted therapies and family support.',
   },
   pending: {
-    simple: 'Not enough information yet',
-    meaning: 'More tests are needed before saying anything certain.',
-    nextStep: 'Complete the remaining tests.',
+    simple: 'Diagnostic Assessment in Progress',
+    meaning: 'Additional clinical evaluation modalities are required to generate a holistic cognitive assessment.',
+    nextStep: 'Complete remaining diagnostic modules to finalize the evaluation profile.',
   },
 };
 

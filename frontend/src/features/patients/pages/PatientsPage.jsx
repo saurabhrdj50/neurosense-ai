@@ -30,17 +30,17 @@ import {
 } from '../../../shared/utils/clinicalMappers'
 
 const STAGE_CONFIG = {
-  'Cognitively Normal (CN)': { label: 'Normal / Healthy (CN)', variant: 'success', color: '#10B981' },
-  'Non-Demented':       { label: 'Normal / Healthy', variant: 'success', color: '#10B981' },
-  'Non Demented':       { label: 'Normal / Healthy', variant: 'success', color: '#10B981' },
-  'Very Mild Demented': { label: 'Very Mild Decline', variant: 'purple',  color: '#7C3AED' },
-  'Mild Cognitive Impairment (MCI)': { label: 'Mild Impairment (MCI)', variant: 'warning', color: '#F59E0B' },
-  'Mild Demented':      { label: 'Mild Impairment (MCI)', variant: 'warning', color: '#F59E0B' },
+  'Cognitively Normal (CN)': { label: 'Typical / Normal Cognition (CN)', variant: 'success', color: '#10B981' },
+  'Non-Demented':       { label: 'Typical / Normal Cognition', variant: 'success', color: '#10B981' },
+  'Non Demented':       { label: 'Typical / Normal Cognition', variant: 'success', color: '#10B981' },
+  'Very Mild Demented': { label: 'Subtle Variations Observed', variant: 'purple',  color: '#7C3AED' },
+  'Mild Cognitive Impairment (MCI)': { label: 'Mild Cognitive Changes (MCI)', variant: 'warning', color: '#F59E0B' },
+  'Mild Demented':      { label: 'Mild Cognitive Changes (MCI)', variant: 'warning', color: '#F59E0B' },
   "Alzheimer's Disease (AD)": { label: "Alzheimer's Disease (AD)", variant: 'danger',  color: '#EF4444' },
-  'Moderate Demented':  { label: 'Moderate Decline', variant: 'danger',  color: '#EF4444' },
-  'Severe Demented':    { label: 'Severe Decline', variant: 'danger',  color: '#EF4444' },
-  'Unassessed':         { label: 'Pending Assessment', variant: 'neutral', color: '#94A3B8' },
-  'Unknown':            { label: 'Pending Assessment', variant: 'neutral', color: '#94A3B8' },
+  'Moderate Demented':  { label: 'Notable Cognitive Decline', variant: 'danger',  color: '#EF4444' },
+  'Severe Demented':    { label: 'Significant Impairment', variant: 'danger',  color: '#EF4444' },
+  'Unassessed':         { label: 'Under Clinical Evaluation', variant: 'neutral', color: '#94A3B8' },
+  'Unknown':            { label: 'Under Clinical Evaluation', variant: 'neutral', color: '#94A3B8' },
 }
 
 /* Biological sex display helper — 'Other' must not render as 'Female' */
@@ -53,6 +53,74 @@ const escapeCsvCell = (value) => {
   const str = String(value ?? '')
   const escaped = str.replace(/"/g, '""')
   return /^[=+\-@]/.test(str) ? `'${escaped}` : escaped
+}
+
+/* Accessible Optimistic Deletion Toast with live countdown & keyboard focus */
+function UndoDeleteToast({ toastId, patientName, onUndo, duration = 7 }) {
+  const [secondsLeft, setSecondsLeft] = useState(duration)
+  const buttonRef = useRef(null)
+
+  useEffect(() => {
+    // Focus the undo action button so keyboard users can hit Enter or Space immediately
+    buttonRef.current?.focus()
+
+    const interval = setInterval(() => {
+      setSecondsLeft((s) => (s > 1 ? s - 1 : 1))
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [])
+
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="flex flex-col gap-2.5 min-w-[300px] max-w-[380px] font-sans"
+    >
+      <div className="flex items-start gap-3">
+        <span
+          className="w-9 h-9 rounded-xl bg-danger/10 border border-danger/20 text-danger flex items-center justify-center shrink-0 mt-0.5"
+          aria-hidden="true"
+        >
+          <Trash2 size={16} />
+        </span>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-bold text-foreground">
+            Patient {patientName} deleted
+          </p>
+          <p className="text-[11px] text-foreground-muted font-medium mt-0.5">
+            Dossier &amp; test history queued for permanent deletion.
+          </p>
+        </div>
+        <button
+          ref={buttonRef}
+          type="button"
+          tabIndex={0}
+          onClick={() => {
+            toast.dismiss(toastId)
+            onUndo()
+          }}
+          className="shrink-0 px-3.5 py-2 rounded-xl text-xs font-bold text-primary bg-primary/10 border border-primary/30 hover:bg-primary/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary min-h-[40px] transition-colors cursor-pointer flex items-center gap-1.5"
+          aria-label={`Undo deletion of patient ${patientName}. Automatically deletes in ${secondsLeft} seconds.`}
+        >
+          <span>Undo</span>
+          <span className="font-mono text-[10px] bg-primary/20 px-1.5 py-0.5 rounded text-primary font-extrabold">
+            {secondsLeft}s
+          </span>
+        </button>
+      </div>
+
+      {/* Accessible visual countdown indicator */}
+      <div
+        className="w-full bg-border/50 h-1 rounded-full overflow-hidden"
+        aria-hidden="true"
+      >
+        <div
+          className="h-full bg-primary transition-all duration-1000 ease-linear rounded-full"
+          style={{ width: `${(secondsLeft / duration) * 100}%` }}
+        />
+      </div>
+    </div>
+  )
 }
 
 export default function PatientsPage() {
@@ -86,8 +154,9 @@ export default function PatientsPage() {
   const [selectedPatientId, setSelectedPatientId] = useState(null)
   const [activeTab, setActiveTab]                 = useState('history') // 'history' | 'profile'
 
-  /* Search State */
+  /* Search & Filter State */
   const [search, setSearch] = useState('')
+  const [stageFilter, setStageFilter] = useState('all') // 'all' | 'normal' | 'mci' | 'ad' | 'unassessed'
 
   /* Modal State */
   const [addOpen, setAddOpen] = useState(false)
@@ -188,6 +257,25 @@ export default function PatientsPage() {
   const filteredPatients = useMemo(() => {
     let result = enrichedPatients
 
+    if (stageFilter !== 'all') {
+      result = result.filter((p) => {
+        const s = (p.stage || '').toLowerCase()
+        if (stageFilter === 'normal') {
+          return s.includes('normal') || s.includes('non') || s === 'cn'
+        }
+        if (stageFilter === 'mci') {
+          return s.includes('mild') || s.includes('mci')
+        }
+        if (stageFilter === 'ad') {
+          return s.includes('alzheimer') || s.includes('moderate') || s.includes('severe') || s === 'ad'
+        }
+        if (stageFilter === 'unassessed') {
+          return !p.lastAnalysis || s === 'unassessed' || s === 'unknown'
+        }
+        return true
+      })
+    }
+
     if (search.trim()) {
       const q = search.toLowerCase().trim()
       result = result.filter((p) =>
@@ -198,7 +286,7 @@ export default function PatientsPage() {
     }
 
     return result
-  }, [enrichedPatients, search])
+  }, [enrichedPatients, search, stageFilter])
 
   /* Auto-select patient with most recent analysis on first load */
   useEffect(() => {
@@ -297,22 +385,12 @@ export default function PatientsPage() {
     setSelectedPatientId(remaining[0]?.patient_id || null)
 
     toast((t) => (
-      <div className="flex items-start gap-3 min-w-[280px]">
-        <span className="w-8 h-8 rounded-lg bg-danger/10 border border-danger/20 text-danger flex items-center justify-center shrink-0" aria-hidden="true">
-          <Trash2 size={15} />
-        </span>
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-bold text-foreground">Patient {target.name} deleted</p>
-          <p className="text-[11px] text-foreground-muted font-medium mt-0.5">Removes the profile and all assessment history.</p>
-        </div>
-        <button
-          type="button"
-          onClick={() => { toast.dismiss(t.id); handleUndoDelete(pid) }}
-          className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold text-primary bg-primary/10 border border-primary/30 hover:bg-primary/20 transition-colors cursor-pointer"
-        >
-          Undo
-        </button>
-      </div>
+      <UndoDeleteToast
+        toastId={t.id}
+        patientName={target.name}
+        onUndo={() => handleUndoDelete(pid)}
+        duration={7}
+      />
     ), { duration: 7000 })
 
     const timer = setTimeout(async () => {
@@ -435,8 +513,8 @@ export default function PatientsPage() {
         {/* ── LEFT SIDEBAR: Master Patient Registry (4 Cols with vertical divider border) ────────── */}
         <div className="lg:col-span-4 space-y-3 lg:pr-5 lg:border-r lg:border-border">
           
-          {/* Search Box */}
-          <div className="bg-card border border-border rounded-2xl p-3 shadow-2xs">
+          {/* Search Box & Quick Filter Chips */}
+          <div className="bg-card border border-border rounded-2xl p-3 shadow-2xs space-y-2.5">
             <div className="relative">
               <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-foreground-muted pointer-events-none" />
               <input
@@ -452,6 +530,30 @@ export default function PatientsPage() {
                   <X size={14} />
                 </button>
               )}
+            </div>
+
+            {/* Quick Filter Chips */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 text-xs select-none">
+              {[
+                { id: 'all', label: 'All' },
+                { id: 'normal', label: 'Typical' },
+                { id: 'mci', label: 'Mild Changes' },
+                { id: 'ad', label: 'Notable' },
+                { id: 'unassessed', label: 'Awaiting' },
+              ].map(f => (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => setStageFilter(f.id)}
+                  className={`px-2.5 py-1 rounded-lg font-bold text-[11px] transition-colors shrink-0 cursor-pointer ${
+                    stageFilter === f.id
+                      ? 'bg-primary text-primary-foreground shadow-2xs'
+                      : 'bg-surface border border-border text-foreground-muted hover:text-foreground'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -803,6 +905,23 @@ export default function PatientsPage() {
       {/* ── New Patient Modal (real form with client-side validation) ───── */}
       <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Register New Patient File" maxWidth={500}>
         <form onSubmit={handleAddPatient} noValidate className="space-y-4 text-xs font-sans">
+          {Object.keys(formErrors).length > 0 && (
+            <div role="alert" aria-live="assertive" className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-600 dark:text-rose-400 text-xs space-y-1">
+              <p className="font-bold flex items-center gap-1.5">
+                <span>Please complete the required intake fields:</span>
+              </p>
+              <ul className="list-disc list-inside space-y-0.5 font-medium pl-1">
+                {Object.entries(formErrors).map(([key, msg]) => (
+                  <li key={key}>
+                    <a href={`#patient-${key.replace('_', '-')}`} className="underline hover:opacity-80">
+                      {msg}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label htmlFor="patient-id" className="block font-semibold text-foreground mb-1 uppercase tracking-wider">

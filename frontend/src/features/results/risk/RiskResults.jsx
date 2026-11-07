@@ -7,6 +7,20 @@ export function RiskResults({ risk }) {
   const factorsAssessed = risk.factors_assessed ?? risk.contributing_factors?.length ?? 0
   const hasScore = factorsAssessed > 0 && risk.overall_risk_score != null
   const riskScore = hasScore ? Number(risk.overall_risk_score) : null
+  const scoreColor = riskScore == null
+    ? 'text-foreground-muted'
+    : riskScore < 30
+      ? 'text-emerald-500 dark:text-emerald-400'
+      : riskScore < 65
+        ? 'text-amber-500 dark:text-amber-400'
+        : 'text-rose-500 dark:text-rose-400'
+
+  const categoryLabel = hasScore ? (risk.risk_category || risk.risk_label || 'Not available') : 'Not assessed'
+  const categoryColor = categoryLabel.toLowerCase().includes('low') || categoryLabel.toLowerCase().includes('normal')
+    ? '#10b981'
+    : categoryLabel.toLowerCase().includes('high')
+      ? '#ef4444'
+      : '#f59e0b'
 
   return (
     <Section icon={HeartPulse} title="Risk Factor Profile" color="#ef4444" defaultOpen={true}>
@@ -14,7 +28,9 @@ export function RiskResults({ risk }) {
         <div className="p-4.5 rounded-xl bg-surface border border-border/80 space-y-3 text-base">
           <div className="flex justify-between items-center font-bold">
             <span className="text-foreground text-base">Rule-based factor score</span>
-            <span className="text-rose-400 font-extrabold text-base">{riskScore == null ? 'Not assessed' : `${riskScore}/100`}</span>
+            <span className={`font-extrabold text-base ${scoreColor}`}>
+              {riskScore == null ? 'Not assessed' : `${riskScore}/100`}
+            </span>
           </div>
           <div className="w-full bg-background h-3.5 rounded-full overflow-hidden border border-border/60">
             <div className="h-full bg-gradient-to-r from-emerald-500 via-amber-500 to-rose-500" style={{ width: `${riskScore ?? 0}%` }} />
@@ -22,7 +38,7 @@ export function RiskResults({ risk }) {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-base">
-          <DataRow label="Risk category" value={hasScore ? (risk.risk_category || risk.risk_label || 'Not available') : 'Not assessed'} color="#f59e0b" />
+          <DataRow label="Risk category" value={categoryLabel} color={categoryColor} />
         </div>
 
         {risk.contributing_factors?.length > 0 && (

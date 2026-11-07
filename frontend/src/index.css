@@ -508,7 +508,18 @@ button:focus-visible,
     width: 100%;
     background: #ffffff !important;
     color: #0f172a !important;
-    padding: 20px !important;
+    padding: 24px !important;
+  }
+  .printable-area * {
+    color: #0f172a !important;
+    border-color: #e2e8f0 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+  .printable-area .bg-surface,
+  .printable-area .bg-card,
+  .printable-area .bg-surface-secondary {
+    background-color: #ffffff !important;
   }
   .no-print {
     display: none !important;

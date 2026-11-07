@@ -75,7 +75,10 @@ services:
     environment:
       PORT: 10000
       DATABASE_URL: postgresql://${POSTGRES_USER:-neuro}:${POSTGRES_PASSWORD:-neuro}@db:5432/${POSTGRES_DB:-neurosense}
-      ENABLE_EAGER_WARMUP: ${ENABLE_EAGER_WARMUP:-false}
+      ENABLE_EAGER_WARMUP: ${ENABLE_EAGER_WARMUP:-true}
+      ML_JOB_WORKERS: ${ML_JOB_WORKERS:-4}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_WHISPER_MODEL: ${GROQ_WHISPER_MODEL:-whisper-large-v3-turbo}
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
@@ -113,6 +116,8 @@ services:
       - ./backend/.env
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-neuro}:${POSTGRES_PASSWORD:-neuro}@db:5432/${POSTGRES_DB:-neurosense}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_WHISPER_MODEL: ${GROQ_WHISPER_MODEL:-whisper-large-v3-turbo}
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0

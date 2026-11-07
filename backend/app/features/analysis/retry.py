@@ -152,12 +152,14 @@ def retry_modality(session_id: int, modality: str, user) -> Dict[str, Any]:
             results['sentiment'] = build_sentiment_summary(transcription, True)
             results.pop('audio_error', None)
     except Exception as e:
+        logger.exception("Retry failed for %s on session %d", modality, session_id)
         # Mirror the pipeline behaviour: record the error on the result
         # instead of discarding the session's other modalities.
         key = 'mri_error' if modality == 'mri' else 'audio_error'
         results[key] = str(e)
         repo.update_results(session_id, results)
-        raise ApiError(502, f"{modality} retry failed: {e}")
+        clean_msg = "An internal processing issue occurred. Please check scan/recording format." if len(str(e)) > 120 or "Traceback" in str(e) or "TorchScript" in str(e) or "RuntimeError" in str(e) else str(e)
+        raise ApiError(502, f"{modality.upper()} retry failed: {clean_msg}")
 
     # Re-fuse and regenerate derived outputs with the refreshed modality.
     speech_nlp = results.get('audio_transcription') or {}

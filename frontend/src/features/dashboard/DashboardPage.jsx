@@ -338,14 +338,14 @@ export default function DashboardPage() {
 
       {/* ── PRIMARY FOCUS: High-Risk Urgent Triage Section ──────────────── */}
       <section 
-        aria-label="Urgent Clinical Triage" 
+        aria-label="Priority Clinical Attention" 
         className="bg-card rounded-2xl border border-rose-500/30 overflow-hidden shadow-xs"
       >
         <div className="px-5 py-3.5 bg-rose-500/10 border-b border-rose-500/20 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <AlertTriangle size={20} className="text-rose-500 dark:text-rose-400 shrink-0" />
             <h2 className="text-base font-extrabold text-foreground uppercase tracking-wider">
-              Urgent Attention — High Risk Patients ({stats.highRiskCount})
+              Priority Clinical Attention — Follow-up Advised ({stats.highRiskCount})
             </h2>
           </div>
           {stats.highRiskCount > 0 && (
@@ -353,7 +353,7 @@ export default function DashboardPage() {
               onClick={() => navigate('/patients')}
               className="text-sm font-bold text-rose-600 dark:text-rose-400 hover:underline flex items-center gap-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/50 rounded-sm"
             >
-              View All High-Risk <ArrowRight size={15} />
+              Review Priority Cohort <ArrowRight size={15} />
             </button>
           )}
         </div>
@@ -384,7 +384,7 @@ export default function DashboardPage() {
                       onClick={() => handleSortToggle('priority', 'stage')} 
                       className="flex items-center gap-1.5 hover:text-foreground font-bold uppercase"
                     >
-                      Diagnosis Stage {renderSortIcon(prioritySort, 'stage')}
+                      Diagnostic Classification {renderSortIcon(prioritySort, 'stage')}
                     </button>
                   </th>
                   <th scope="col" className="py-3.5 px-4 w-32 text-right pr-6">
@@ -450,7 +450,7 @@ export default function DashboardPage() {
         ) : (
           <div className="py-8 px-4 text-center text-sm font-medium text-foreground-muted flex items-center justify-center gap-2">
             <CheckCircle2 size={18} className="text-emerald-500" />
-            <span>Zero high-risk cases currently require urgent clinical intervention.</span>
+            <span>No active patients currently require priority follow-up intervention.</span>
           </div>
         )}
       </section>
@@ -460,7 +460,7 @@ export default function DashboardPage() {
         {[
           { label: 'Total Patients', value: stats.totalPatients, sub: 'Active registry', icon: Users, tile: 'bg-primary-soft text-primary border-primary/20' },
           { label: 'Evaluations Run', value: stats.totalAnalyses, sub: 'Full assessments', icon: FileText, tile: 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20' },
-          { label: 'High-Risk Alerts', value: stats.highRiskCount, sub: stats.highRiskCount > 0 ? 'Action required' : 'All clear', icon: HeartPulse, tile: stats.highRiskCount > 0 ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' },
+          { label: 'Priority Alerts', value: stats.highRiskCount, sub: stats.highRiskCount > 0 ? 'Review advised' : 'All clear', icon: HeartPulse, tile: stats.highRiskCount > 0 ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' },
           { label: '24h New Cases', value: stats.recentActivity, sub: 'Recent evaluations', icon: CalendarClock, tile: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' },
         ].map((kpi, idx) => (
           <StaggerCell key={idx} className="p-5 rounded-2xl bg-card border border-border shadow-xs hover:border-border-strong hover:-translate-y-0.5 hover:shadow-sm transition-all duration-200 flex flex-col gap-3">
@@ -484,43 +484,65 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         
         {/* Longitudinal Progression Area Chart */}
-        <div className="lg:col-span-2 bg-card p-5 rounded-2xl border border-border shadow-2xs">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-[15px] font-extrabold text-foreground uppercase tracking-wider">Diagnostic Progression Trajectories</h3>
-            <span className="text-sm font-mono font-semibold text-foreground-muted bg-surface-secondary px-3 py-1 rounded-lg border border-border">
-              6-Month Window
-            </span>
+        <div className="lg:col-span-2 bg-card p-5 rounded-2xl border border-border shadow-2xs flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-[15px] font-extrabold text-foreground uppercase tracking-wider font-heading">Diagnostic Progression Trajectories</h3>
+                <p className="text-xs text-foreground-muted font-medium mt-0.5">Cohort progression trends with multi-modal agreement</p>
+              </div>
+              <span className="text-xs font-mono font-bold text-foreground-muted bg-surface-secondary px-3 py-1 rounded-lg border border-border">
+                6-Month Window
+              </span>
+            </div>
+
+            {trendData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={180}>
+                <AreaChart data={trendData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="gradNormal" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#10B981" stopOpacity={0.35} />
+                      <stop offset="100%" stopColor="#10B981" stopOpacity={0.02} />
+                    </linearGradient>
+                    <linearGradient id="gradMild" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#F59E0B" stopOpacity={0.35} />
+                      <stop offset="100%" stopColor="#F59E0B" stopOpacity={0.02} />
+                    </linearGradient>
+                    <linearGradient id="gradModerate" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#EF4444" stopOpacity={0.35} />
+                      <stop offset="100%" stopColor="#EF4444" stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                  <XAxis dataKey="month" tick={{ fill: textColor, fontSize: 13, fontWeight: 500 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: textColor, fontSize: 13, fontWeight: 500 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Area type="monotone" dataKey="normal" name="Normal" stroke="#10B981" strokeWidth={2.5} fill="url(#gradNormal)" animationDuration={900} animationEasing="ease-out" />
+                  <Area type="monotone" dataKey="mild" name="Mild (MCI)" stroke="#F59E0B" strokeWidth={2.5} fill="url(#gradMild)" animationDuration={900} animationEasing="ease-out" animationBegin={120} />
+                  <Area type="monotone" dataKey="ad" name="Alzheimer's (AD)" stroke="#EF4444" strokeWidth={2.5} fill="url(#gradModerate)" animationDuration={900} animationEasing="ease-out" animationBegin={240} />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="py-10 text-center text-sm font-medium text-muted">No trend data available</div>
+            )}
           </div>
 
-          {trendData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={180}>
-              <AreaChart data={trendData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="gradNormal" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#10B981" stopOpacity={0.35} />
-                    <stop offset="100%" stopColor="#10B981" stopOpacity={0.02} />
-                  </linearGradient>
-                  <linearGradient id="gradMild" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#F59E0B" stopOpacity={0.35} />
-                    <stop offset="100%" stopColor="#F59E0B" stopOpacity={0.02} />
-                  </linearGradient>
-                  <linearGradient id="gradModerate" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#EF4444" stopOpacity={0.35} />
-                    <stop offset="100%" stopColor="#EF4444" stopOpacity={0.02} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                <XAxis dataKey="month" tick={{ fill: textColor, fontSize: 13, fontWeight: 500 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: textColor, fontSize: 13, fontWeight: 500 }} axisLine={false} tickLine={false} allowDecimals={false} />
-                <Tooltip content={<ChartTooltip />} />
-                <Area type="monotone" dataKey="normal" name="Normal" stroke="#10B981" strokeWidth={2.5} fill="url(#gradNormal)" animationDuration={900} animationEasing="ease-out" />
-                <Area type="monotone" dataKey="mild" name="Mild (MCI)" stroke="#F59E0B" strokeWidth={2.5} fill="url(#gradMild)" animationDuration={900} animationEasing="ease-out" animationBegin={120} />
-                <Area type="monotone" dataKey="ad" name="Alzheimer's (AD)" stroke="#EF4444" strokeWidth={2.5} fill="url(#gradModerate)" animationDuration={900} animationEasing="ease-out" animationBegin={240} />
-              </AreaChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="py-10 text-center text-sm font-medium text-muted">No trend data available</div>
-          )}
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-3 mt-3 border-t border-border/60 text-xs text-foreground-muted">
+            <div className="flex items-center gap-4">
+              <span className="flex items-center gap-1.5 font-medium">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" aria-hidden="true" /> Typical (CN)
+              </span>
+              <span className="flex items-center gap-1.5 font-medium">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" aria-hidden="true" /> Mild Changes (MCI)
+              </span>
+              <span className="flex items-center gap-1.5 font-medium">
+                <span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" aria-hidden="true" /> Notable (AD)
+              </span>
+            </div>
+            <span className="text-[11px] font-mono text-foreground-muted">
+              Tri-modal concordance tracking active
+            </span>
+          </div>
         </div>
 
         {/* Stage Spectrum Pie Chart */}

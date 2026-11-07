@@ -83,7 +83,7 @@ export function ReviewStep({
               <ShieldCheck size={28} className="drop-shadow" />
             </div>
             <div>
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight flex items-center gap-2">
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight flex items-center gap-2 font-heading">
                 Assessment Review & Report
               </h2>
               <p className="text-sm text-foreground-muted font-medium mt-0.5">
@@ -160,7 +160,7 @@ export function ReviewStep({
                 <User size={20} />
               </div>
               <div>
-                <h4 className="text-base font-extrabold text-foreground group-hover:text-primary transition-colors">
+                <h4 className="text-base font-extrabold text-foreground group-hover:text-primary transition-colors font-heading">
                   1. Patient Information
                 </h4>
                 <p className="text-sm text-foreground-muted font-medium">Patient name, age, and ID details</p>
@@ -208,7 +208,7 @@ export function ReviewStep({
                 <Brain size={20} />
               </div>
               <div>
-                <h4 className="text-base font-extrabold text-foreground group-hover:text-indigo-400 transition-colors">
+                <h4 className="text-base font-extrabold text-foreground group-hover:text-indigo-400 transition-colors font-heading">
                   2. Brain MRI Scan
                 </h4>
                 <p className="text-sm text-foreground-muted font-medium">Brain scan image file</p>
@@ -244,7 +244,7 @@ export function ReviewStep({
                 <MessageSquare size={20} />
               </div>
               <div>
-                <h4 className="text-base font-extrabold text-foreground group-hover:text-cyan-400 transition-colors">
+                <h4 className="text-base font-extrabold text-foreground group-hover:text-cyan-400 transition-colors font-heading">
                   3. Cognitive Screening
                 </h4>
                 <p className="text-sm text-foreground-muted font-medium">15-question multi-domain cognitive screening battery</p>
@@ -292,7 +292,7 @@ export function ReviewStep({
                 <Mic size={20} />
               </div>
               <div>
-                <h4 className="text-base font-extrabold text-foreground group-hover:text-amber-400 transition-colors">
+                <h4 className="text-base font-extrabold text-foreground group-hover:text-amber-400 transition-colors font-heading">
                   4. Voice & Speech Test
                 </h4>
                 <p className="text-sm text-foreground-muted font-medium">Voice recording and spoken transcript</p>
@@ -327,7 +327,7 @@ export function ReviewStep({
               <HeartPulse size={20} />
             </div>
             <div>
-              <h4 className="text-base font-extrabold text-foreground group-hover:text-rose-400 transition-colors">
+              <h4 className="text-base font-extrabold text-foreground group-hover:text-rose-400 transition-colors font-heading">
                 5. Health & Risk Factors
               </h4>
               <p className="text-sm text-foreground-muted font-medium">Daily habits, heart health, and family history flags</p>
@@ -346,28 +346,46 @@ export function ReviewStep({
       </div>
 
       {/* ── FINAL CONFIRMATION ───────────────────────────────────────────── */}
-      <label
-        className={`flex items-start gap-3 p-4 rounded-2xl border cursor-pointer select-none transition-colors ${
-          confirmChecked
-            ? 'bg-emerald-500/5 border-emerald-500/40'
-            : 'bg-card border-border hover:border-primary/40'
-        }`}
-      >
-        <input
-          type="checkbox"
-          checked={confirmChecked}
-          onChange={(e) => onConfirmChange?.(e.target.checked)}
-          className="mt-0.5 w-5 h-5 rounded accent-emerald-500 cursor-pointer shrink-0"
-        />
-        <span className="text-sm">
-          <span className="font-extrabold text-foreground block">
-            I have verified the patient identity and the entered data
+      {!isPatientComplete ? (
+        <div className="flex items-center justify-between gap-3 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400">
+          <div className="flex items-center gap-3">
+            <XCircle size={20} className="shrink-0" />
+            <span className="text-xs sm:text-sm font-bold">
+              Required patient demographics are missing. Please complete Step 1 (Patient Details) before confirming analysis.
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => onGoToStep(0)}
+            className="px-3.5 py-1.5 rounded-xl bg-rose-500 text-white font-bold text-xs shrink-0 hover:bg-rose-600 transition-colors cursor-pointer"
+          >
+            Fix Details &rarr;
+          </button>
+        </div>
+      ) : (
+        <label
+          className={`flex items-start gap-3 p-4 rounded-2xl border cursor-pointer select-none transition-colors ${
+            confirmChecked
+              ? 'bg-emerald-500/5 border-emerald-500/40'
+              : 'bg-card border-border hover:border-primary/40'
+          }`}
+        >
+          <input
+            type="checkbox"
+            checked={confirmChecked}
+            onChange={(e) => onConfirmChange?.(e.target.checked)}
+            className="mt-0.5 w-5 h-5 rounded accent-emerald-500 cursor-pointer shrink-0"
+          />
+          <span className="text-sm">
+            <span className="font-extrabold text-foreground block">
+              I have verified the patient identity and the entered data
+            </span>
+            <span className="text-foreground-muted font-medium">
+              Required before starting the analysis — the report is generated for the patient shown above.
+            </span>
           </span>
-          <span className="text-foreground-muted font-medium">
-            Required before starting the analysis — the report is generated for the patient shown above.
-          </span>
-        </span>
-      </label>
+        </label>
+      )}
     </div>
   )
 }

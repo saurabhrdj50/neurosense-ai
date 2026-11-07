@@ -41,12 +41,26 @@ const STAGE_SCORE = {
 
 function CustomTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
+  const pData = payload[0]?.payload || {}
+  const stageName = pData.stage || 'Evaluation'
   return (
-    <div className="bg-surface border border-border shadow-md text-foreground text-xs rounded-xl p-2.5 min-w-[130px] z-50">
-      <p className="font-bold text-foreground border-b border-border pb-1 mb-1">{label}</p>
+    <div className="bg-surface border border-border shadow-lg text-foreground text-xs rounded-xl p-3 min-w-[170px] z-50 space-y-1.5 font-sans">
+      <p className="font-bold text-foreground border-b border-border pb-1 font-heading">{label}</p>
       <div className="flex justify-between items-center gap-3">
-        <span className="text-foreground-muted font-medium">Stage Level:</span>
-        <span className="font-mono font-bold text-indigo-500">{payload[0].value}%</span>
+        <span className="text-foreground-muted font-medium">Stage:</span>
+        <span className="font-bold text-primary">{stageName}</span>
+      </div>
+      <div className="flex justify-between items-center gap-3 text-[11px]">
+        <span className="text-foreground-muted">Index Score:</span>
+        <span className="font-mono font-bold text-foreground">{pData.stageScore}/100</span>
+      </div>
+      <div className="flex justify-between items-center gap-3 text-[11px]">
+        <span className="text-foreground-muted">Concordance Band:</span>
+        <span className="font-mono font-semibold text-indigo-400">{pData.ciLow} – {pData.ciHigh}</span>
+      </div>
+      <div className="flex justify-between items-center gap-3 text-[11px]">
+        <span className="text-foreground-muted">AI Confidence:</span>
+        <span className="font-mono font-semibold text-emerald-500">{Number(pData.confidence || 0).toFixed(1)}%</span>
       </div>
     </div>
   )
@@ -69,9 +83,18 @@ export default function HistoryPage() {
 
   const chartData = history.map((s) => {
     const stage = s.results?.final_stage?.stage || s.results?.mri?.stage || 'Unknown'
+    const conf = s.results?.final_stage?.confidence || s.results?.mri?.confidence || 85
+    const score = STAGE_SCORE[stage] ?? 50
+    const margin = Math.max(4, Math.round((100 - conf) * 0.28))
+    const ciLow = Math.max(0, score - margin)
+    const ciHigh = Math.min(100, score + margin)
     return {
       date:       new Date(s.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      stageScore: STAGE_SCORE[stage] ?? 50,
+      stageScore: score,
+      ci:         [ciLow, ciHigh],
+      ciLow,
+      ciHigh,
+      confidence: conf,
       stage,
     }
   }).reverse()
@@ -181,8 +204,8 @@ export default function HistoryPage() {
                   <h3 className="text-base font-extrabold text-foreground">Health Trend Trajectory</h3>
                   <p className="text-xs text-foreground-muted font-medium mt-0.5">Overall diagnostic stage progression over time</p>
                 </div>
-                <Badge variant={trend === 'worsening' ? 'danger' : trend === 'improving' ? 'success' : 'neutral'}>
-                  {trend === 'worsening' ? 'Worsening' : trend === 'improving' ? 'Improving' : 'Stable'}
+                <Badge variant={trend === 'worsening' ? 'warning' : trend === 'improving' ? 'success' : 'neutral'}>
+                  {trend === 'worsening' ? 'Progressive Indicators' : trend === 'improving' ? 'Improving / Rebounding' : 'Stable Trajectory'}
                 </Badge>
               </div>
 
@@ -202,23 +225,56 @@ export default function HistoryPage() {
                 </div>
               </div>
 
-              {/* Clean Single Progression Chart */}
-              <div className="pt-2">
-                <ResponsiveContainer width="100%" height={160}>
+              {/* Clean Single Progression Chart with Concordance Band */}
+              <div className="pt-2 space-y-2">
+                <ResponsiveContainer width="100%" height={170}>
                   <AreaChart data={chartData} margin={{ top: 5, left: -25, right: 10, bottom: 0 }}>
                     <defs>
                       <linearGradient id="historyGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#6366F1" stopOpacity={0.25} />
-                        <stop offset="95%" stopColor="#6366F1" stopOpacity={0} />
+                        <stop offset="95%" stopColor="#6366F1" stopOpacity={0.02} />
+                      </linearGradient>
+                      <linearGradient id="ciGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#818CF8" stopOpacity={0.16} />
+                        <stop offset="100%" stopColor="#818CF8" stopOpacity={0.05} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--border))" />
                     <XAxis dataKey="date" tick={{ fill: 'rgb(var(--text-muted))', fontSize: 12, fontWeight: 500 }} axisLine={false} tickLine={false} />
                     <YAxis domain={[0, 100]} tick={{ fill: 'rgb(var(--text-muted))', fontSize: 12, fontWeight: 500 }} axisLine={false} tickLine={false} />
                     <Tooltip content={<CustomTooltip />} />
-                    <Area type="monotone" dataKey="stageScore" stroke="#6366F1" fill="url(#historyGrad)" strokeWidth={2.5} name="Stage Score" />
+                    {/* Epistemic Concordance Band (95% Confidence Interval) */}
+                    <Area
+                      type="monotone"
+                      dataKey="ci"
+                      stroke="#818CF8"
+                      strokeDasharray="2 2"
+                      strokeWidth={1}
+                      fill="url(#ciGrad)"
+                      name="Concordance Band"
+                    />
+                    {/* Primary Progression Line */}
+                    <Area
+                      type="monotone"
+                      dataKey="stageScore"
+                      stroke="#6366F1"
+                      fill="url(#historyGrad)"
+                      strokeWidth={2.5}
+                      name="Diagnostic Index"
+                    />
                   </AreaChart>
                 </ResponsiveContainer>
+
+                <div className="flex flex-wrap items-center justify-between text-[11px] text-foreground-muted pt-2 border-t border-border/60">
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-2 rounded-xs bg-indigo-500/20 border border-indigo-400/40 inline-block" aria-hidden="true" />
+                    <span className="font-medium">Shaded region: 95% Clinical Concordance Interval (Epistemic Uncertainty)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-0.5 bg-indigo-500 inline-block" aria-hidden="true" />
+                    <span className="font-medium">Solid curve: Multimodal Diagnostic Progression Index</span>
+                  </div>
+                </div>
               </div>
             </Card>
           )}

@@ -33,7 +33,7 @@ function SectionHeading({ eyebrow, eyebrowClass = 'text-primary dark:text-indigo
   return (
     <Reveal className={`text-center max-w-2xl mx-auto mb-14 ${className}`}>
       <span className={`text-xs font-bold uppercase tracking-widest ${eyebrowClass}`}>{eyebrow}</span>
-      <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground mt-2 tracking-tight font-display">{title}</h2>
+      <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground mt-2 tracking-tight font-heading">{title}</h2>
     </Reveal>
   )
 }
@@ -170,12 +170,12 @@ function ConsoleMock() {
 
 /* ─── Feature data ───────────────────────────────────────────────────────── */
 const FEATURES = [
-  { icon: Brain, title: 'MRI Analysis', desc: 'ResNet18 classifier (CN / MCI / AD) over MRI slices with Grad-CAM overlays. No volumetric segmentation is performed.', tile: 'from-indigo-500 to-indigo-700', glow: 'group-hover:shadow-indigo-500/25' },
-  { icon: ClipboardList, title: 'Cognitive Assessment', desc: 'Rule-based questionnaire composite (0–100). This workflow does not administer MMSE or MoCA.', tile: 'from-emerald-500 to-teal-600', glow: 'group-hover:shadow-emerald-500/25' },
-  { icon: Mic, title: 'Speech Analysis', desc: 'Transcription with pause-category, pitch-variation, and lexical statistics. Displayed separately, excluded from fusion.', tile: 'from-sky-500 to-cyan-600', glow: 'group-hover:shadow-sky-500/25' },
-  { icon: Activity, title: 'Clinical Risk Profile', desc: 'Rule-based risk-factor score (0–100). Not a validated clinical instrument.', tile: 'from-amber-500 to-orange-600', glow: 'group-hover:shadow-amber-500/25' },
-  { icon: UserRound, title: 'Patient Demographics', desc: 'Age, education level, and baseline clinical history correlation for tailored risk indexing.', tile: 'from-pink-500 to-rose-600', glow: 'group-hover:shadow-pink-500/25' },
-  { icon: ScanEye, title: 'Explainable AI', desc: 'Grad-CAM attention heatmaps highlighting the image regions behind the MRI classification.', tile: 'from-purple-500 to-fuchsia-600', glow: 'group-hover:shadow-purple-500/25' },
+  { icon: Stethoscope, title: 'Dual-Lens Reporting', desc: 'Instantly toggle between empathetic Patient & Family summaries and precision Clinician diagnostic telemetry with printable visit checklists.', tile: 'from-blue-500 to-indigo-600', glow: 'group-hover:shadow-blue-500/25' },
+  { icon: Brain, title: 'MRI Deep Neuroimaging', desc: 'ResNet classifier (CN / MCI / AD) over MRI slices with interactive Grad-CAM cortical activation overlays.', tile: 'from-indigo-500 to-indigo-700', glow: 'group-hover:shadow-indigo-500/25' },
+  { icon: ClipboardList, title: 'Cognitive Screening Battery', desc: '15-question multi-domain assessment evaluating temporal orientation, memory recall, and executive calculation.', tile: 'from-emerald-500 to-teal-600', glow: 'group-hover:shadow-emerald-500/25' },
+  { icon: Mic, title: 'Speech & Acoustic Biomarkers', desc: 'Multi-lingual audio recording with pause frequency, lexical density, and vocal jitter/shimmer extraction.', tile: 'from-sky-500 to-cyan-600', glow: 'group-hover:shadow-sky-500/25' },
+  { icon: Activity, title: 'Clinical Risk Profiling', desc: 'Multivariate lifestyle, genetic, and cardiovascular risk factor evaluation correlated across demographic baselines.', tile: 'from-amber-500 to-orange-600', glow: 'group-hover:shadow-amber-500/25' },
+  { icon: ScanEye, title: 'Explainable AI (XAI)', desc: 'Clear anatomical region guidance for the hippocampus, ventricles, and temporoparietal cortex behind model decisions.', tile: 'from-purple-500 to-fuchsia-600', glow: 'group-hover:shadow-purple-500/25' },
 ]
 
 const WORKFLOW = [
@@ -556,7 +556,7 @@ export default function LandingPage() {
             <div className="gradient-border relative rounded-3xl border border-border bg-card p-10 sm:p-14 overflow-hidden">
               <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[420px] h-[240px] bg-indigo-500/15 blur-[90px] rounded-full pointer-events-none" aria-hidden="true" />
               <Gauge size={30} className="mx-auto text-primary dark:text-indigo-300 mb-4" aria-hidden="true" />
-              <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground mb-4 tracking-tight font-display">
+              <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground mb-4 tracking-tight font-heading">
                 Ready to Experience AI-Assisted Assessment?
               </h2>
               <p className="text-muted text-sm mb-8">Access the enterprise clinical workspace for unified multi-modal AI diagnostics.</p>

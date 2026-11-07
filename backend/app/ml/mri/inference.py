@@ -96,15 +96,18 @@ class MRIClassifier:
                         if 'backbone.fc.bias' in wrapped:
                             wrapped['classifier.bias'] = wrapped.pop('backbone.fc.bias')
                     state = wrapped
-            elif is_single_backbone:
-                num_classes = self._infer_num_classes(state) or 3
-                logger.info("Detected single backbone state_dict. Initializing EfficientNet-B4 architecture.")
-                self.model = AlzheimerModel(num_classes=num_classes, architecture='efficientnet_b4')
-                self.architecture_label = 'EfficientNet-B4'
             else:
                 num_classes = self._infer_num_classes(state) or 3
-                self.model = AlzheimerModel(num_classes=num_classes, architecture='ensemble')
-                self.architecture_label = 'Ensemble (Swin + ConvNeXt V2 + EfficientNet-B4)'
+                logger.info("Initializing default ResNet18 architecture (%d classes).", num_classes)
+                self.model = AlzheimerModel(num_classes=num_classes, architecture='resnet18')
+                self.architecture_label = 'ResNet-18'
+                if isinstance(state, dict) and not any(k.startswith('backbone.') for k in state.keys()):
+                    wrapped = {f"backbone.{k}": v for k, v in state.items() if k != '_metadata'}
+                    if 'backbone.fc.weight' in wrapped:
+                        wrapped['classifier.weight'] = wrapped.pop('backbone.fc.weight')
+                        if 'backbone.fc.bias' in wrapped:
+                            wrapped['classifier.bias'] = wrapped.pop('backbone.fc.bias')
+                    state = wrapped
 
             if isinstance(self.model, torch.nn.Module):
                 self.model.load_state_dict(state)
@@ -128,16 +131,17 @@ class MRIClassifier:
         if self._is_nifti_file(image_path):
             from .nifti import preprocess_volume
             samples, _ = preprocess_volume(image_path)
-            tensor = torch.from_numpy(samples).permute(0, 3, 1, 2).float()
-            tensor = tensor.unsqueeze(0).to(self.device)
+            # samples is (num_slices, 224, 224, 3) -> permute to (num_slices, 3, 224, 224)
+            tensor = torch.from_numpy(samples).permute(0, 3, 1, 2).float().to(self.device)
+            logits = self.model(tensor)
+            probs = torch.softmax(logits, dim=1).mean(dim=0)
         else:
             image = Image.open(image_path).convert('RGB')
             tensor = VALID_TRANSFORMS(image).unsqueeze(0).to(self.device)  # type: ignore
-
-        logits = self.model(tensor)
-        probs = torch.softmax(logits, dim=1).squeeze()
-        if probs.dim() == 0:
-            probs = probs.unsqueeze(0)
+            logits = self.model(tensor)
+            probs = torch.softmax(logits, dim=1).squeeze()
+            if probs.dim() == 0:
+                probs = probs.unsqueeze(0)
         pred_idx = int(probs.argmax().item())
         confidence = float(probs[pred_idx].item())
 

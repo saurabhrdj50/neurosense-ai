@@ -35,7 +35,12 @@ def list_analyses(
         analyses = session_repo.get_for_doctor(user.id, limit=limit, offset=offset)
         total = session_repo.count_for_doctor(user.id)
 
-    return {'analyses': analyses, 'total': total, 'limit': limit, 'offset': offset}
+    # Short cache header: safe because dataSync / SSE invalidates React Query
+    # caches immediately when clinical data mutates.
+    return JSONResponse(
+        {'analyses': analyses, 'total': total, 'limit': limit, 'offset': offset},
+        headers={'Cache-Control': 'private, max-age=10'},
+    )
 
 
 @router.get('/{session_id}')

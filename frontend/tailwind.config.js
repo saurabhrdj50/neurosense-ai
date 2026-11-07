@@ -64,6 +64,8 @@ export default {
         }
       },
       fontFamily: {
+        heading: ['Figtree', 'Sora', 'system-ui', 'sans-serif'],
+        body:    ['Noto Sans', 'Inter', 'system-ui', 'sans-serif'],
         sans:    ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
         display: ['Sora', 'Inter', 'system-ui', 'sans-serif'],
         mono:    ['JetBrains Mono', 'monospace'],

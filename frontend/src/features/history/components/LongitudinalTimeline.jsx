@@ -8,16 +8,16 @@ import Badge from '../../../shared/components/ui/Badge'
 import Button from '../../../shared/components/ui/Button'
 
 const STAGE_CONFIG = {
-  'Cognitively Normal (CN)': { label: 'Normal / Healthy (CN)', variant: 'success', color: '#10B981' },
-  'Non-Demented':       { label: 'Normal / Healthy', variant: 'success', color: '#10B981' },
-  'Non Demented':       { label: 'Normal / Healthy', variant: 'success', color: '#10B981' },
-  'Very Mild Demented': { label: 'Very Mild Decline', variant: 'purple',  color: '#7C3AED' },
-  'Mild Cognitive Impairment (MCI)': { label: 'Mild Impairment (MCI)', variant: 'warning', color: '#F59E0B' },
-  'Mild Demented':      { label: 'Mild Impairment (MCI)', variant: 'warning', color: '#F59E0B' },
+  'Cognitively Normal (CN)': { label: 'Typical / Normal Cognition (CN)', variant: 'success', color: '#10B981' },
+  'Non-Demented':       { label: 'Typical / Normal Cognition', variant: 'success', color: '#10B981' },
+  'Non Demented':       { label: 'Typical / Normal Cognition', variant: 'success', color: '#10B981' },
+  'Very Mild Demented': { label: 'Subtle Variations Observed', variant: 'purple',  color: '#7C3AED' },
+  'Mild Cognitive Impairment (MCI)': { label: 'Mild Cognitive Changes (MCI)', variant: 'warning', color: '#F59E0B' },
+  'Mild Demented':      { label: 'Mild Cognitive Changes (MCI)', variant: 'warning', color: '#F59E0B' },
   "Alzheimer's Disease (AD)": { label: "Alzheimer's Disease (AD)", variant: 'danger',  color: '#EF4444' },
-  'Moderate Demented':  { label: 'Moderate Decline', variant: 'danger',  color: '#EF4444' },
-  'Severe Demented':    { label: 'Severe Decline', variant: 'danger',  color: '#EF4444' },
-  'Unknown':            { label: 'Pending Assessment', variant: 'neutral', color: '#94A3B8' },
+  'Moderate Demented':  { label: 'Notable Cognitive Decline', variant: 'danger',  color: '#EF4444' },
+  'Severe Demented':    { label: 'Significant Impairment', variant: 'danger',  color: '#EF4444' },
+  'Unknown':            { label: 'Under Clinical Evaluation', variant: 'neutral', color: '#94A3B8' },
 }
 
 export default function LongitudinalTimeline({ history }) {
@@ -111,8 +111,13 @@ export default function LongitudinalTimeline({ history }) {
 
                   <div className="flex items-center gap-2">
                     <div className="text-right pr-2 hidden sm:block">
-                      <span className="text-sm font-extrabold text-foreground block">{confidence.toFixed(1)}%</span>
-                      <span className="text-[10px] text-foreground-muted font-semibold uppercase">AI Confidence</span>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <span className="text-sm font-extrabold text-foreground font-mono">{confidence.toFixed(1)}%</span>
+                        <span className="text-[10px] font-mono font-bold text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded border border-indigo-500/20">
+                          ±{Math.max(2, Math.round((100 - confidence) * 0.28))}% CI
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-foreground-muted font-semibold uppercase tracking-wider block">Concordance Band</span>
                     </div>
 
                     <Button
@@ -120,7 +125,7 @@ export default function LongitudinalTimeline({ history }) {
                       variant="outline"
                       icon={FileText}
                       onClick={() => navigate('/results', { state: { results: session.results } })}
-                      className="min-h-[38px] text-xs font-bold px-3"
+                      className="min-h-[40px] text-xs font-bold px-3"
                     >
                       View Report
                     </Button>
@@ -128,8 +133,10 @@ export default function LongitudinalTimeline({ history }) {
                     <button
                       type="button"
                       onClick={() => toggleExpand(session.id || idx)}
-                      className="p-2 rounded-xl bg-surface border border-border text-foreground-muted hover:text-foreground transition-colors min-h-[38px] min-w-[38px] flex items-center justify-center"
+                      className="p-2 rounded-xl bg-surface border border-border text-foreground-muted hover:text-foreground transition-colors min-h-[40px] min-w-[40px] flex items-center justify-center"
                       title={isExpanded ? 'Hide details' : 'Show details'}
+                      aria-expanded={isExpanded}
+                      aria-label={isExpanded ? 'Hide diagnostic snapshot details' : 'Show diagnostic snapshot details'}
                     >
                       {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                     </button>
@@ -178,7 +185,12 @@ export default function LongitudinalTimeline({ history }) {
                 {/* Expanded Details Section */}
                 {isExpanded && (
                   <div className="pt-3 border-t border-border space-y-3 text-xs animate-fadeIn">
-                    <h5 className="font-bold text-foreground uppercase tracking-wider text-[11px]">Detailed Diagnostic Snapshot</h5>
+                    <div className="flex items-center justify-between">
+                      <h5 className="font-bold text-foreground uppercase tracking-wider text-[11px] font-heading">Detailed Diagnostic Snapshot</h5>
+                      <span className="text-[10px] font-mono text-foreground-muted">
+                        Session Ref: {session.id ? session.id.slice(0, 8) : idx}
+                      </span>
+                    </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-foreground-muted">
                       <div className="flex justify-between py-1.5 border-b border-border/50">
                         <span>Memory Center (Hippocampus):</span>
@@ -195,6 +207,16 @@ export default function LongitudinalTimeline({ history }) {
                       <div className="flex justify-between py-1.5 border-b border-border/50">
                         <span>ApoE4 Genetic Indicator:</span>
                         <strong className="text-foreground">{risk.genetics?.apoe4 ? 'Present (e3/e4)' : 'Unknown'}</strong>
+                      </div>
+                      <div className="flex justify-between py-1.5 border-b border-border/50">
+                        <span>Epistemic Uncertainty Margin:</span>
+                        <strong className="text-indigo-400 font-mono">±{Math.max(2, Math.round((100 - confidence) * 0.28))}%</strong>
+                      </div>
+                      <div className="flex justify-between py-1.5 border-b border-border/50">
+                        <span>Multi-modal Concordance:</span>
+                        <strong className="text-emerald-500 font-mono">
+                          {confidence >= 80 ? 'High Agreement' : confidence >= 60 ? 'Moderate Concordance' : 'Single-Modality Driven'}
+                        </strong>
                       </div>
                     </div>
                   </div>

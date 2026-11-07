@@ -1,5 +1,6 @@
 import logging
 import os
+from typing import Optional, Dict, Any, List
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +30,13 @@ except ImportError:
     HAS_LIBROSA = False
     librosa = None
     np = None
+
+try:
+    import httpx
+    HAS_HTTPX = True
+except ImportError:
+    HAS_HTTPX = False
+    httpx = None
 
 
 class SpeechTranscriber:
@@ -179,6 +187,52 @@ class SpeechTranscriber:
             return 1.0  # cannot measure — never block transcription on this
 
 
+    def _transcribe_groq(self, audio_path: str, language: str = 'en-US') -> Optional[str]:
+        """High-speed cloud Whisper transcription via Groq API (free tier).
+
+        Transcribes ~60s audio in 0.3-0.8s on specialized LPUs.
+        Returns the transcript string on success, or None on error / if unset.
+        """
+        api_key = os.environ.get('GROQ_API_KEY', '').strip()
+        if not api_key:
+            return None
+        if not HAS_HTTPX or httpx is None:
+            logger.warning("GROQ_API_KEY is configured but httpx is not available; falling back to local Whisper.")
+            return None
+
+        model_name = os.environ.get('GROQ_WHISPER_MODEL', 'whisper-large-v3-turbo').strip()
+        lang_code = language.split('-')[0].lower() if language else 'en'
+
+        try:
+            with open(audio_path, 'rb') as f:
+                filename = os.path.basename(audio_path)
+                files = {'file': (filename, f, 'application/octet-stream')}
+                data = {
+                    'model': model_name,
+                    'response_format': 'json',
+                    'language': lang_code,
+                    'temperature': '0',
+                }
+                headers = {'Authorization': f'Bearer {api_key}'}
+                resp = httpx.post(
+                    'https://api.groq.com/openai/v1/audio/transcriptions',
+                    headers=headers,
+                    files=files,
+                    data=data,
+                    timeout=25.0,
+                )
+            if resp.status_code == 200:
+                payload = resp.json()
+                text = (payload.get('text') or '').strip()
+                logger.info("Groq Whisper (%s) transcribed in cloud successfully.", model_name)
+                return text
+            else:
+                logger.warning("Groq Whisper API returned status %s: %s", resp.status_code, resp.text[:200])
+                return None
+        except Exception as e:
+            logger.warning("Groq Whisper request failed (%s) — falling back to local Whisper.", e)
+            return None
+
     def transcribe_file(self, audio_path: str, language: str = 'en-US') -> dict:
         result = {
             'text': '',
@@ -188,32 +242,58 @@ class SpeechTranscriber:
             'linguistic_biomarkers': {},
         }
 
-        # Try a local Whisper backend first (faster-whisper, else openai-whisper)
-        if self.whisper_model is not None:
-            y = None
-            sr_rate = None
-            converted_path = None
+        # Decode once up front: powers speech-presence gate & acoustic biomarker extraction
+        y = None
+        sr_rate = None
+        converted_path = None
+        if HAS_LIBROSA and librosa is not None:
             try:
-                # Decode once up front: it powers the speech-presence gate,
-                # the duration cap, and the acoustic features.
-                if HAS_LIBROSA and librosa is not None:
+                y, sr_rate, converted_path = self._try_load_audio(audio_path)
+            except Exception as e:
+                logger.warning("Audio decode failed before transcription: %s", e)
+
+        # Silence / voice activity check: fail loudly if no speech energy detected
+        if y is not None and self._voiced_ratio(y, sr_rate) < 0.02:
+            result.update({
+                'text': '',
+                'method': 'silence_gate',
+                'error': 'No speech detected in the recording.',
+                'acoustic_features': self._extract_acoustic_from(y, sr_rate),
+            })
+            if converted_path:
+                try:
+                    os.remove(converted_path)
+                except OSError:
+                    pass
+            return result
+
+        # 1. High-speed Groq Cloud Whisper acceleration (if GROQ_API_KEY is configured)
+        groq_text = self._transcribe_groq(audio_path, language=language)
+        if groq_text is not None:
+            try:
+                words = groq_text.split()
+                linguistic = self._extract_linguistic_biomarkers(groq_text, words)
+                acoustic = (self._extract_acoustic_from(y, sr_rate)
+                            if y is not None
+                            else self._extract_acoustic_biomarkers(audio_path))
+                model_used = os.environ.get('GROQ_WHISPER_MODEL', 'whisper-large-v3-turbo')
+                return {
+                    'text': groq_text,
+                    'method': f'groq_{model_used}',
+                    'error': None,
+                    'acoustic_features': acoustic,
+                    'linguistic_biomarkers': linguistic,
+                }
+            finally:
+                if converted_path:
                     try:
-                        y, sr_rate, converted_path = self._try_load_audio(audio_path)
-                    except Exception as e:
-                        logger.warning("Audio decode failed before transcription: %s", e)
+                        os.remove(converted_path)
+                    except OSError:
+                        pass
 
-                if y is not None and self._voiced_ratio(y, sr_rate) < 0.02:
-                    # Whisper hallucinates fluent text ("…") on silence — a
-                    # fabricated transcript on a clinical report is worse than
-                    # no transcript. Fail loudly instead.
-                    result.update({
-                        'text': '',
-                        'method': f'whisper_{self.model_size}',
-                        'error': 'No speech detected in the recording.',
-                        'acoustic_features': self._extract_acoustic_from(y, sr_rate),
-                    })
-                    return result
-
+        # 2. Local Whisper backend fallback (faster-whisper, else openai-whisper)
+        if self.whisper_model is not None:
+            try:
                 # Both backends accept a 16 kHz float array; cap duration so a
                 # long recording cannot monopolize a CPU worker past the timeout.
                 whisper_input = audio_path
@@ -227,7 +307,11 @@ class SpeechTranscriber:
                         logger.info("Trimming audio to %.0fs for transcription.", max_sec)
 
                 if self.whisper_impl == 'faster':
-                    seg_iter, _info = self.whisper_model.transcribe(whisper_input)
+                    # Greedy decoding (beam_size=1) and language='en' yields ~2-3x faster CPU execution
+                    transcribe_opts = {'beam_size': 1}
+                    if language and language.startswith('en'):
+                        transcribe_opts['language'] = 'en'
+                    seg_iter, _info = self.whisper_model.transcribe(whisper_input, **transcribe_opts)
                     raw_segments = [
                         {'text': s.text, 'no_speech_prob': float(getattr(s, 'no_speech_prob', 0.0) or 0.0)}
                         for s in seg_iter

@@ -317,7 +317,7 @@ export default function LoginPage() {
             <Brain className="w-7 h-7" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground font-heading">
               NeuroSense AI
             </h1>
             <p className="text-xs font-medium text-muted">
@@ -329,7 +329,7 @@ export default function LoginPage() {
         {/* Clean Hero Text — scrim keeps the headline legible over the brain art */}
         <div className="relative z-10 max-w-md my-auto space-y-4">
           <div className="absolute -inset-x-10 -inset-y-8 -z-10 bg-gradient-to-r from-background/85 via-background/60 to-transparent blur-md rounded-3xl" aria-hidden="true" />
-          <h2 className="text-4xl font-extrabold tracking-tight text-foreground leading-tight">
+          <h2 className="text-4xl font-extrabold tracking-tight text-foreground leading-tight font-heading">
             Smart AI for Brain Imaging &amp; Diagnostics
           </h2>
           <p className="text-base text-muted leading-relaxed">
@@ -354,7 +354,7 @@ export default function LoginPage() {
             <div className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto shadow-md mb-2 bg-gradient-to-br from-indigo-500 to-indigo-700 text-white">
               <Brain className="w-7 h-7" />
             </div>
-            <h1 className="text-2xl font-bold text-foreground">NeuroSense AI</h1>
+            <h1 className="text-2xl font-bold text-foreground font-heading">NeuroSense AI</h1>
             <p className="text-xs text-muted">Medical Imaging Intelligence</p>
           </div>
 
@@ -372,7 +372,7 @@ export default function LoginPage() {
 
               {/* CARD TITLE & MODE TABS */}
               <div>
-                <h2 className="text-2xl font-bold text-foreground tracking-tight mb-1">
+                <h2 className="text-2xl font-bold text-foreground tracking-tight mb-1 font-heading">
                   {forgotMode
                     ? 'Reset Password'
                     : mode === 'login'

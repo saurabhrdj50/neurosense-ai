@@ -94,7 +94,7 @@ export default function CommandPalette({ isOpen, onClose }) {
     { id: 'history', label: 'Patient Assessment History', category: 'Navigation', icon: Clock, path: '/patients' },
     { id: 'admin', label: 'System Admin Workstation', category: 'Admin', icon: Shield, path: '/admin/dashboard' },
     { id: 'new-patient', label: 'Register New Patient', category: 'Patient actions', icon: Plus, action: 'new-patient' },
-    { id: 'high-risk', label: 'Show High Risk Patients', category: 'Patient actions', icon: Users, action: 'high-risk' },
+    { id: 'high-risk', label: 'Show Priority Follow-Up Patients', category: 'Patient actions', icon: Users, action: 'high-risk' },
     { id: 'resume-analysis', label: 'Resume Analysis', category: 'Analysis actions', icon: FileUp, path: '/analysis' },
     { id: 'generate-report', label: 'Generate Clinical Report', category: 'Analysis actions', icon: CheckCircle, path: '/results' }
   ]

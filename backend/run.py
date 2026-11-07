@@ -34,11 +34,13 @@ if __name__ == '__main__':
     logger.info(f"Running on port: {port}")
     logger.info("=" * 60)
 
+    workers = int(os.environ.get("WEB_CONCURRENCY", os.environ.get("UVICORN_WORKERS", "1")))
+
     uvicorn.run(
         'app.main:app',
         host='0.0.0.0',
         port=port,
-        workers=1,
+        workers=workers,
         proxy_headers=bool(os.environ.get('TRUST_PROXY')),
         server_header=False,
     )

@@ -68,7 +68,12 @@ def list_patients(
         patients = patient_repo.get_all(created_by=user.id, limit=limit, offset=offset)
         total = patient_repo.count_all(created_by=user.id)
 
-    return {'patients': patients, 'total': total, 'limit': limit, 'offset': offset}
+    # Short cache header: safe because dataSync / SSE invalidates React Query
+    # caches immediately when clinical data mutates.
+    return JSONResponse(
+        {'patients': patients, 'total': total, 'limit': limit, 'offset': offset},
+        headers={'Cache-Control': 'private, max-age=10'},
+    )
 
 
 @router.post('')

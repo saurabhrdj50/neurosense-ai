@@ -1,8 +1,16 @@
+import API_URL from '../../../config/api';
 import apiClient from '../../../services/apiClient';
 
 export const authApi = {
   login: async (username, password) => {
     return apiClient.post('/api/auth/login', { username, password })
+  },
+
+  // GitHub OAuth: full-page redirect to the backend, which redirects on to
+  // github.com and back to /auth/callback. No token is handled in JS — the
+  // backend sets the same session cookie as password login.
+  githubLogin: () => {
+    window.location.href = `${API_URL}/api/auth/github/login`
   },
 
   register: async (payload) => {

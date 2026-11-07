@@ -34,6 +34,29 @@ const STEPS = [
   { id: 'review',    label: 'Ready for Analysis',icon: ShieldCheck,   required: true },
 ];
 
+// Simplified (free-tier) deploy: heavy MRI / voice inference is off.
+// Set VITE_ENABLE_MRI=false / VITE_ENABLE_VOICE=false in Vercel for the
+// demo deploy; the backend enforces the same flags and answers 503, so
+// these flags only change what the UI offers. Defaults (unset) = enabled.
+const MRI_ENABLED = import.meta.env.VITE_ENABLE_MRI !== 'false';
+const VOICE_ENABLED = import.meta.env.VITE_ENABLE_VOICE !== 'false';
+const DEMO_DISABLED_MESSAGE =
+  'Disabled in this demo deploy — this step needs a larger server and is off for now.';
+
+/** Placeholder shown in place of a disabled MRI / voice step. */
+function DisabledStep({ label }) {
+  return (
+    <div className="p-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300">
+      <p className="text-sm font-bold">{label} — disabled</p>
+      <p className="text-xs mt-1 leading-relaxed">{DEMO_DISABLED_MESSAGE}</p>
+      <p className="text-xs mt-2 text-foreground-muted">
+        Cognitive test and risk factors still run, and the results combine
+        whatever is available.
+      </p>
+    </div>
+  );
+}
+
 const DRAFT_STORAGE_KEY = 'neurosense_analysis_draft';
 const perPatientDraftKey = (patientId) => `${DRAFT_STORAGE_KEY}_${patientId}`;
 
@@ -309,9 +332,12 @@ export default function AnalysisPage() {
     const toastId = toast.loading('Preparing sample patient…');
     try {
       // Bundled illustrative MRI so the demo showcases the full pipeline,
-      // including Grad-CAM, without any real patient material.
-      const mri = await loadSampleMriFile();
-      setMriFile(mri);
+      // including Grad-CAM, without any real patient material. Skipped
+      // when MRI is disabled in the simplified deploy.
+      if (MRI_ENABLED) {
+        const mri = await loadSampleMriFile();
+        setMriFile(mri);
+      }
       setPatient({ ...SAMPLE_PATIENT, handedness: 'Right' });
       setPatientText(SAMPLE_PATIENT_TEXT);
       // Fully derived cognitive profile — fields mirror CognitiveStep's own
@@ -319,7 +345,8 @@ export default function AnalysisPage() {
       setCognData(buildSampleCognitive());
       // Text-only speech sample: fillers/pauses/preserved content give the
       // annotated transcript and linguistic biomarkers something to show.
-      setSpeechText(SAMPLE_SPEECH_TEXT);
+      // Skipped when voice is disabled in the simplified deploy.
+      if (VOICE_ENABLED) setSpeechText(SAMPLE_SPEECH_TEXT);
       // Risk values must be booleans matching RiskStep's toggle ids — the
       // step UI cannot produce strings or numbers (a stale/foreign sample
       // used 'moderate' / 6 here once).
@@ -331,7 +358,7 @@ export default function AnalysisPage() {
       setPatient(SAMPLE_PATIENT);
       setPatientText(SAMPLE_PATIENT_TEXT);
       setCognData(buildSampleCognitive());
-      setSpeechText(SAMPLE_SPEECH_TEXT);
+      if (VOICE_ENABLED) setSpeechText(SAMPLE_SPEECH_TEXT);
       setRisk({ hypertension: true, family_history: true, sleep_issues: true, physical_inactivity: false });
       toast.error('Sample scan could not be loaded — loaded the text-only sample instead.', { id: toastId });
     }
@@ -362,9 +389,9 @@ export default function AnalysisPage() {
   const isStepComplete = (index) => {
     switch (index) {
       case 0: return !!(patient.name && patient.patient_id);
-      case 1: return !!mriFile;
+      case 1: return !MRI_ENABLED || !!mriFile;
       case 2: return Object.keys(cognData).length > 0;
-      case 3: return !!(audioFile || speechText);
+      case 3: return !VOICE_ENABLED || !!(audioFile || speechText);
       case 4: return Object.keys(risk).length > 0;
       case 5: return step === 5 && !!(patient.name && patient.patient_id);
       default: return false;
@@ -386,9 +413,15 @@ export default function AnalysisPage() {
             onLoadSample={loadSampleClinicalCase}
           />
         );
-      case 1: return <MRIStep mriFile={mriFile} setMriFile={setMriFile} />;
+      case 1:
+        return MRI_ENABLED
+          ? <MRIStep mriFile={mriFile} setMriFile={setMriFile} />
+          : <DisabledStep label="MRI Scan" />;
       case 2: return <CognitiveStep cognData={cognData} setCognData={setCognData} />;
-      case 3: return <SpeechStep speechText={speechText} setSpeechText={setSpeechText} audioFile={audioFile} setAudioFile={setAudioFile} />;
+      case 3:
+        return VOICE_ENABLED
+          ? <SpeechStep speechText={speechText} setSpeechText={setSpeechText} audioFile={audioFile} setAudioFile={setAudioFile} />
+          : <DisabledStep label="Speech Test" />;
       case 4: return <RiskStep risk={risk} setRisk={setRisk} />;
       case 5:
         return (

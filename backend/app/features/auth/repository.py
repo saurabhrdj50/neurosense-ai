@@ -1,4 +1,6 @@
 import logging
+import re
+import secrets
 from datetime import timedelta
 from typing import Optional, List, Dict, Any
 
@@ -56,6 +58,104 @@ class UserRepository(BaseRepository):
                 User.email == email,
                 User.date_of_birth == date_of_birth
             ).first()
+
+    def get_by_github_id(self, github_id: str) -> Optional[User]:
+        with SessionLocal() as db:
+            return db.query(User).filter(User.github_id == str(github_id)).first()
+
+    def record_login(self, user_id: int) -> None:
+        """Public wrapper for the successful-login bookkeeping (last login
+        timestamp + lockout reset) used by the GitHub callback."""
+        self._on_login_success(user_id)
+
+    def link_github_account(self, user_id: int, github_id: str,
+                            github_login: str, avatar_url: str = '') -> bool:
+        """Attach a GitHub identity to an existing (password) account — e.g.
+        a doctor who registered with email first. Refuses if the GitHub id
+        is already linked to a different account."""
+        with SessionLocal() as db:
+            other = db.query(User).filter(
+                User.github_id == str(github_id), User.id != user_id
+            ).first()
+            if other is not None:
+                logger.warning(
+                    "Refusing to link github_id=%s to user id=%s: already linked",
+                    github_id, user_id,
+                )
+                return False
+            user = db.query(User).filter(User.id == user_id).first()
+            if user is None:
+                return False
+            user.github_id = str(github_id)
+            user.github_login = github_login
+            user.avatar_url = avatar_url or user.avatar_url
+            user.auth_provider = 'github'
+            db.commit()
+            return True
+
+    # ---------------------------------------------------------------------- #
+    # GitHub OAuth users                                                       #
+    # ---------------------------------------------------------------------- #
+
+    @staticmethod
+    def _username_from_github_login(github_login: str) -> str:
+        """Derive a valid NeuroSense username from a GitHub login.
+
+        GitHub logins allow hyphens and up to 39 chars; NeuroSense usernames
+        allow [a-zA-Z0-9_.-] and 3–30 chars, and must not contain '@'.
+        """
+        safe = re.sub(r'[^a-zA-Z0-9_.\-]', '_', github_login or '')
+        safe = safe.strip('._-') or 'github_user'
+        if len(safe) < 3:
+            safe = f'gh_{safe}'
+        return safe[:30]
+
+    def create_github_user(self, github_id: str, github_login: str, email: str,
+                           full_name: str = '', avatar_url: str = '') -> Dict[str, Any]:
+        """Create a doctor account from a verified GitHub identity.
+
+        The account gets a random, unusable password hash — it can only ever
+        log in via GitHub (password login always fails for it). Username is
+        derived from the GitHub login and de-duplicated on collision.
+        """
+        # A random scrypt hash nobody knows: the account has no usable password.
+        unusable_password = secrets.token_urlsafe(48)
+        base_username = self._username_from_github_login(github_login)
+        with SessionLocal() as db:
+            try:
+                username = base_username
+                suffix = 2
+                while db.query(User).filter(User.username == username).first():
+                    candidate = f'{base_username[:27]}-{suffix}'
+                    username = candidate
+                    suffix += 1
+                user = User(
+                    username=username,
+                    email=email,
+                    password_hash=hash_password(unusable_password),
+                    role='doctor',
+                    full_name=full_name,
+                    github_id=str(github_id),
+                    github_login=github_login,
+                    avatar_url=avatar_url,
+                    auth_provider='github',
+                )
+                db.add(user)
+                db.flush()
+                user.storage_key = f"{user.id}_{self._generate_storage_key_from_username(username)}"
+                db.commit()
+                db.refresh(user)
+                logger.info(
+                    "Created GitHub user '%s' (github_login='%s')",
+                    username, github_login,
+                )
+                return {'success': True, 'user_id': user.id}
+            except IntegrityError:
+                db.rollback()
+                logger.error(
+                    "Failed to create GitHub user '%s': duplicate", github_login
+                )
+                return {'success': False, 'message': 'Username or email already exists'}
 
     # ---------------------------------------------------------------------- #
     # Authentication & lockout                                                 #

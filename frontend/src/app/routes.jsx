@@ -8,6 +8,7 @@ import ErrorBoundary from '../shared/components/common/ErrorBoundary'
 
 const LandingPage     = lazy(() => import('../features/landing/LandingPage'))
 const LoginPage       = lazy(() => import('../features/auth/LoginPage'))
+const AuthCallback    = lazy(() => import('../features/auth/AuthCallback'))
 const DashboardPage   = lazy(() => import('../features/dashboard/DashboardPage'))
 const AnalysisPage    = lazy(() => import('../features/analysis/AnalysisPage'))
 const PatientsPage    = lazy(() => import('../features/patients/pages/PatientsPage'))
@@ -74,6 +75,8 @@ export default function AppRoutes() {
       <Routes>
         <Route path="/" element={<PageTransition><LandingPage /></PageTransition>} />
         <Route path="/login" element={<PageTransition><LoginPage /></PageTransition>} />
+        {/* Public: GitHub OAuth lands here after the backend sets the session. */}
+        <Route path="/auth/callback" element={<PageTransition><AuthCallback /></PageTransition>} />
         <Route
           path="/admin"
           element={

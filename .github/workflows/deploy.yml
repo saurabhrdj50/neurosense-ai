@@ -61,6 +61,11 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            # Auto-clone repository if missing
+            if [ ! -d "/home/ubuntu/neurosense-ai" ]; then
+              git clone https://github.com/saurabhrdj50/neurosense-ai.git /home/ubuntu/neurosense-ai
+            fi
+
             cd /home/ubuntu/neurosense-ai
             git pull origin main
             
@@ -70,9 +75,8 @@ jobs:
             # Pull pre-compiled images directly from GitHub Container Registry
             docker compose -f docker-compose.prod.yml pull
             
-            # Start/update the stack with zero downtime
+            # Start/update the stack with zero downtime (including Caddy SSL proxy)
             docker compose -f docker-compose.prod.yml up -d --remove-orphans
             
             # Prune obsolete images to protect disk space on EC2
             docker image prune -f
-

@@ -1,0 +1,3 @@
+neurosense.duckdns.org, neurosense-ai.duckdns.org {
+    reverse_proxy web:80
+}

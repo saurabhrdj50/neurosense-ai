@@ -97,7 +97,8 @@ class RequestMetricsMiddleware:
                 status_code=status,
                 duration_ms=duration_ms,
             )
-            if duration_ms >= float(os.environ.get('SLOW_REQUEST_MS', '750')):
+            is_sse = scope.get('path', '').startswith('/api/meta/events')
+            if not is_sse and duration_ms >= float(os.environ.get('SLOW_REQUEST_MS', '750')):
                 logger.warning(
                     "Slow request: %s %s took %.0fms (status %s)",
                     scope.get('method'), scope.get('path'), duration_ms, status,
@@ -121,6 +122,12 @@ class ETagMiddleware:
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope['type'] != 'http' or scope.get('method') not in ('GET', 'HEAD'):
+            await self.app(scope, receive, send)
+            return
+
+        path = scope.get('path', '')
+        # Never buffer SSE streaming connections or live job status polling
+        if path.startswith('/api/meta/events') or path.startswith('/api/analysis/jobs'):
             await self.app(scope, receive, send)
             return
 

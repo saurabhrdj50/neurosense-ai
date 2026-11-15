@@ -103,7 +103,14 @@ def analysis_job_status(job_id: str, request: Request, user=Depends(require_user
     )
     if job is None:
         return JSONResponse({'success': False, 'message': 'Job not found'}, status_code=404)
-    return job
+    return JSONResponse(
+        content=job,
+        headers={
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0',
+        },
+    )
 
 
 @router.post('/mri/preview')

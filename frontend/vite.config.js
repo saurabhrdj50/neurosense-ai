@@ -95,9 +95,13 @@ export default defineConfig({
   },
   server: {
     port: 3000,
+    watch: {
+      usePolling: true,
+      interval: 300,
+    },
     proxy: {
       '/api': {
-        target: 'http://localhost:10000',
+        target: 'http://127.0.0.1:10000',
         changeOrigin: true,
         secure: false,
       },

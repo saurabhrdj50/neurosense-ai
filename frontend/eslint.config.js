@@ -29,8 +29,9 @@ export default defineConfig([
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]', argsIgnorePattern: '^_' }],
       // Count JSX identifiers as variable usage — without this, a component
       // used only in JSX is reported "unused" and undefined JSX identifiers
-      // (the MRIStep crash) slip through lint silently.
+      // slip through lint silently.
       'react/jsx-uses-vars': 'error',
+      'react/jsx-no-undef': 'error',
       'react/jsx-uses-react': 'off',
     },
   },

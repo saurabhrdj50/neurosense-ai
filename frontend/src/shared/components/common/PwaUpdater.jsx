@@ -23,6 +23,19 @@ export default function PwaUpdater() {
   })
 
   useEffect(() => {
+    // In local development or testing on localhost, avoid service worker cache hijacking
+    if (import.meta.env.DEV || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+          for (const reg of registrations) {
+            reg.unregister()
+          }
+        }).catch(() => {})
+      }
+    }
+  }, [])
+
+  useEffect(() => {
     if (!needRefresh) return
     import('react-hot-toast').then(({ default: toast }) => {
       toast(

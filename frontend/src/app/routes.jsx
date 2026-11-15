@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react'
-import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAuth } from '../providers/AuthProvider'
 import AppLayout from './AppLayout'
@@ -41,12 +41,23 @@ function PageTransition({ children }) {
  */
 function RouteErrorBoundary({ children }) {
   const location = useLocation()
-  const navigate = useNavigate()
   return (
     <ErrorBoundary
       key={location.pathname}
       title="This Page Encountered an Error"
-      onReset={() => navigate('/dashboard')}
+      onReset={() => {
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then((regs) => {
+            regs.forEach((r) => r.unregister())
+          })
+        }
+        if (typeof caches !== 'undefined') {
+          caches.keys().then((keys) => {
+            keys.forEach((k) => caches.delete(k))
+          })
+        }
+        window.location.reload()
+      }}
     >
       {children}
     </ErrorBoundary>

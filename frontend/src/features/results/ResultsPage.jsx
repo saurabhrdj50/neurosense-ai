@@ -195,7 +195,6 @@ function SanitizedErrorAlert({ errors, retryingModality, onRetry, canRetry }) {
 export default function ResultsPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const reducedMotion = useReducedMotionPref();
   const [results, setResultsState] = useState(getAnalysisResults());
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
@@ -1250,7 +1249,7 @@ export default function ResultsPage() {
                         <div className="p-5 rounded-2xl border border-border bg-surface hover:border-border-strong transition-all space-y-2.5 shadow-xs">
                           <div className="flex items-center gap-2.5">
                             <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0">
-                              <Activity size={18} />
+                              <Sparkles size={18} />
                             </div>
                             <div>
                               <h4 className="text-sm font-bold text-foreground">Memory & Recall Exercises</h4>

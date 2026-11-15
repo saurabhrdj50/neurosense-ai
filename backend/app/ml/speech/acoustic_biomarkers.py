@@ -185,10 +185,19 @@ class AcousticBiomarkerExtractor:
     def _calculate_hnr(self, y: np.ndarray, sr: int) -> Optional[float]:
         """Compute Harmonics-to-Noise Ratio (HNR in dB) via autocorrelation."""
         try:
+            # Use center 2 seconds of audio if longer to avoid excessive computation
+            # and non-stationary prosodic drift.
+            max_samples = 2 * sr
+            if len(y) > max_samples:
+                center = len(y) // 2
+                chunk = y[max(0, center - max_samples // 2): min(len(y), center + max_samples // 2)]
+            else:
+                chunk = y
+
             # Bandpass filter around speech frequencies (80 - 4000 Hz)
             sos = signal.butter(4, [80, min(3800, sr // 2 - 100)], btype='bandpass', fs=sr, output='sos')
-            filtered = signal.sosfilt(sos, y)
-            autocorr = np.correlate(filtered, filtered, mode='full')
+            filtered = signal.sosfilt(sos, chunk)
+            autocorr = signal.correlate(filtered, filtered, mode='full', method='fft')
             mid = len(autocorr) // 2
             half = autocorr[mid:]
             if len(half) < 2:

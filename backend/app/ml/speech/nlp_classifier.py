@@ -46,16 +46,28 @@ class SpeechNLPClassifier:
 
         import joblib
         import torch
+        import warnings
+        import transformers
         from transformers import AutoModel, AutoTokenizer
 
-        artifact = joblib.load(self.model_path)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", message="Trying to unpickle estimator")
+            warnings.filterwarnings("ignore", category=UserWarning, module="sklearn")
+            artifact = joblib.load(self.model_path)
         self.head = artifact['model']           # LogisticRegression(768)
         self.scaler = artifact['scaler']        # StandardScaler(768), fit on train
         self.label_map = artifact.get('label_map') or {'control': 0, 'dementia': 1}
 
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        self.tokenizer = AutoTokenizer.from_pretrained('distilbert-base-uncased')
-        self.encoder = AutoModel.from_pretrained('distilbert-base-uncased').to(self.device)
+
+        # Silence extraneous transformer checkpoint mismatch messages and load local cache first
+        transformers.logging.set_verbosity_error()
+        try:
+            self.tokenizer = AutoTokenizer.from_pretrained('distilbert-base-uncased', local_files_only=True)
+            self.encoder = AutoModel.from_pretrained('distilbert-base-uncased', local_files_only=True).to(self.device)
+        except Exception:
+            self.tokenizer = AutoTokenizer.from_pretrained('distilbert-base-uncased')
+            self.encoder = AutoModel.from_pretrained('distilbert-base-uncased').to(self.device)
         self.encoder.eval()
         logger.info("Speech NLP classifier ready (device=%s, train_rows=%s).",
                     self.device, artifact.get('train_rows'))

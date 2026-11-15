@@ -1,0 +1,108 @@
+# NeuroSense AI - Full-Stack Production Container Stack
+# Usage:
+#   docker compose up -d --build
+#
+# Services:
+#   - web:   Nginx serving optimized SPA bundle & reverse proxying /api (Port 3000)
+#   - api:   FastAPI backend with PyTorch CPU ML models (Port 10000)
+#   - db:    PostgreSQL 16 relational store with automatic Alembic migrations
+#   - redis: Redis 7 in-memory cache and background job state mirror
+#
+# Web UI:     http://localhost:3000
+# API Direct: http://localhost:10000 (/docs for OpenAPI specifications)
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-neuro}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-neuro}
+      POSTGRES_DB: ${POSTGRES_DB:-neurosense}
+    volumes:
+      - neuro_pg:/var/lib/postgresql/data
+    shm_size: 128m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-neuro} -d ${POSTGRES_DB:-neurosense}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - neuro_redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    stop_grace_period: 30s
+    ports:
+      - "10000:10000"
+    environment:
+      PORT: 10000
+      SECRET_KEY: ${SECRET_KEY:-ONvL8EaMlvWXgo0aa42XJYVQXVl6vioa5i0buFdr09r54nX5l9mNS5B62JeooOr7}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-neuro}:${POSTGRES_PASSWORD:-neuro}@db:5432/${POSTGRES_DB:-neurosense}
+      ENABLE_EAGER_WARMUP: ${ENABLE_EAGER_WARMUP:-true}
+      ML_JOB_WORKERS: ${ML_JOB_WORKERS:-4}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_WHISPER_MODEL: ${GROQ_WHISPER_MODEL:-whisper-large-v3-turbo}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      USE_CELERY: ${USE_CELERY:-false}
+      STORAGE_BACKEND: local
+      TRUST_PROXY: "true"
+      CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+    volumes:
+      - ./backend/app/models:/app/app/models:ro
+      - neuro_uploads:/app/app/uploads
+      - neuro_whisper:/home/neuro/.cache/whisper
+      - neuro_hf:/home/neuro/.cache/huggingface
+    user: "10001:10001"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:10000/api/health')"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 45s
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ""
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-3000}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  neuro_pg:
+  neuro_redis:
+  neuro_uploads:
+  neuro_whisper:
+  neuro_hf:

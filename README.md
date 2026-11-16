@@ -1,5 +1,6 @@
 # NeuroSense AI — Multimodal Alzheimer's Screening & Decision Support
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-neurosense.duckdns.org-4F46E5?style=flat&logo=caddy&logoColor=white)](https://neurosense.duckdns.org/)
 [![CI Status](https://github.com/saurabhrdj50/neurosense-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/saurabhrdj50/neurosense-ai/actions)
 [![Backend Tests](https://img.shields.io/badge/backend%20tests-61%20passed-brightgreen.svg)](backend/)
 [![Frontend Tests](https://img.shields.io/badge/frontend%20tests-41%20passed-brightgreen.svg)](frontend/)
@@ -10,6 +11,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 **NeuroSense AI** is a translational research and clinical decision-support workspace designed for multimodal early Alzheimer's disease risk screening. By fusing **3D Brain MRI neuroimaging**, **acoustic vocal biomarkers**, **linguistic speech NLP**, **interactive cognitive testing (MMSE)**, and **structured clinical hazard profiling**, NeuroSense AI generates a unified, explainable consensus evaluation with documented epistemic uncertainty and transparent attribution.
+
+> **🌐 Live Deployment**: Access the live clinical workspace at [https://neurosense.duckdns.org/](https://neurosense.duckdns.org/) (Secured with automated HTTPS via Caddy on AWS EC2).
 
 > ### ⚠️ Mandatory Clinical Scope & Non-Diagnostic Disclaimer
 > **NeuroSense AI is an investigational decision-support instrument and educational research platform; it is NOT an FDA-cleared, CE-marked, or validated medical diagnostic device.**
@@ -100,18 +103,15 @@ docker compose up --build
 
 ### Deployed Services & Ports
 
-| Service | Access URL | Description | Default Credentials |
+| Service | Access URL | Description | Access Mode |
 |---|---|---|---|
-| **Web Application** | [http://localhost:3000](http://localhost:3000) | React 19 Frontend (Served via high-performance Nginx) | See Demo Accounts below |
-| **API Server & Docs** | [http://localhost:10000](http://localhost:10000) | FastAPI Backend (Interactive OpenAPI docs at `/docs`) | — |
+| **Live Production Cloud** | [https://neurosense.duckdns.org/](https://neurosense.duckdns.org/) | Live AWS EC2 deployment with automated HTTPS | Authenticated |
+| **Local Web Application** | [http://localhost:3000](http://localhost:3000) | Local React 19 Frontend (Served via Nginx / Vite) | Local Auth |
+| **API Server & Docs** | [http://localhost:10000](http://localhost:10000) | FastAPI Backend (Interactive OpenAPI docs at `/docs`) | Open / Token Auth |
 | **MinIO Console** | [http://localhost:9001](http://localhost:9001) | S3 Object Storage Management UI | `minioadmin` / `minioadmin` |
 | **PostgreSQL** | `localhost:5432` | Relational Database (`postgres:16-alpine`) | `postgres` / `postgres` |
 | **Redis** | `localhost:6379` | Celery Message Broker & Result Store | Internal |
 | **Celery Worker** | Internal Worker | Distributed ML background execution worker | — |
-
-### Default Demo Accounts (`SEED_DEMO_USERS=true`)
-- **Clinician / Doctor**: `doctor@neurosense.ai` / `Doctor@123`
-- **System Administrator**: `admin@neurosense.ai` / `Admin@123`
 
 ---
 

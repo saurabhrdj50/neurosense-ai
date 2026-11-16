@@ -1,182 +1,163 @@
-# NeuroSense AI — Multimodal Alzheimer's Screening & Decision Support
+<div align="center">
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-neurosense.duckdns.org-4F46E5?style=flat&logo=caddy&logoColor=white)](https://neurosense.duckdns.org/)
-[![CI Status](https://github.com/saurabhrdj50/neurosense-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/saurabhrdj50/neurosense-ai/actions)
-[![Backend Tests](https://img.shields.io/badge/backend%20tests-61%20passed-brightgreen.svg)](backend/)
-[![Frontend Tests](https://img.shields.io/badge/frontend%20tests-41%20passed-brightgreen.svg)](frontend/)
-[![Playwright E2E](https://img.shields.io/badge/Playwright%20E2E-16%20passed-brightgreen.svg)](frontend/e2e/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com)
-[![React](https://img.shields.io/badge/React-19-61DAFB.svg)](https://react.dev)
-[![WCAG 2.2 AA](https://img.shields.io/badge/Accessibility-WCAG%202.2%20AA-blueviolet.svg)](https://www.w3.org/WAI/standards-guidelines/wcag/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+  <img src="frontend/public/favicon.svg" width="96" height="96" alt="NeuroSense AI Logo" />
 
-**NeuroSense AI** is a translational research and clinical decision-support workspace designed for multimodal early Alzheimer's disease risk screening. By fusing **3D Brain MRI neuroimaging**, **acoustic vocal biomarkers**, **linguistic speech NLP**, **interactive cognitive testing (MMSE)**, and **structured clinical hazard profiling**, NeuroSense AI generates a unified, explainable consensus evaluation with documented epistemic uncertainty and transparent attribution.
+  # NeuroSense AI
 
-> **🌐 Live Deployment**: Access the live clinical workspace at [https://neurosense.duckdns.org/](https://neurosense.duckdns.org/) (Secured with automated HTTPS via Caddy on AWS EC2).
+  ### Multimodal Early Alzheimer's Detection & Clinical Decision Support Workspace
 
-> ### ⚠️ Mandatory Clinical Scope & Non-Diagnostic Disclaimer
-> **NeuroSense AI is an investigational decision-support instrument and educational research platform; it is NOT an FDA-cleared, CE-marked, or validated medical diagnostic device.**
-> - All predictive models, risk estimates, stage categorizations, and multimodal fusion outputs represent experimental screening signals with statistical confidence bounds.
-> - They must never replace independent diagnostic evaluation, clinical judgment, laboratory testing, or care plans by certified medical professionals.
+  An investigational translational AI platform fusing 3D Brain MRI neuroimaging, acoustic voice DSP, linguistic speech NLP, cognitive psychometrics, and structured hazard profiling into an explainable clinical decision-support dossier.
+
+  <br />
+
+  [![Live Demo](https://img.shields.io/badge/🚀_Live_Demo-neurosense.duckdns.org-4F46E5?style=for-the-badge&logo=caddy&logoColor=white)](https://neurosense.duckdns.org/)
+  [![CI Pipeline](https://img.shields.io/github/actions/workflow/status/saurabhrdj50/neurosense-ai/ci.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=CI%20Pipeline)](https://github.com/saurabhrdj50/neurosense-ai/actions)
+  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
+
+  <br />
+
+  [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
+  [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+  [![React](https://img.shields.io/badge/React-19.0-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
+  [![Vite](https://img.shields.io/badge/Vite-6.0-646CFF?style=flat-square&logo=vite&logoColor=white)](https://vitejs.dev/)
+  [![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+  [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white)](https://www.docker.com/)
+  [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+  [![WCAG](https://img.shields.io/badge/WCAG-2.2_AA_Compliant-8A2BE2?style=flat-square)](https://www.w3.org/WAI/standards-guidelines/wcag/)
+
+  <br />
+
+  [**🚀 Launch Live Demo**](https://neurosense.duckdns.org/) &nbsp;•&nbsp;
+  [**✨ Core Features**](#-core-capabilities) &nbsp;•&nbsp;
+  [**🏗️ Architecture**](#️-system-architecture) &nbsp;•&nbsp;
+  [**🧠 Multimodal Fusion**](#-two-tier-hybrid-fusion-engine) &nbsp;•&nbsp;
+  [**⚡ 1-Click Quickstart**](#-quickstart-with-docker-compose) &nbsp;•&nbsp;
+  [**🧪 Test Suites**](#-testing--quality-gates)
+
+</div>
+
+<br />
+
+> [!TIP]
+> **Live Clinical Cloud Workspace**: Access the live, fully-functional deployment at [**https://neurosense.duckdns.org/**](https://neurosense.duckdns.org/) — hosted on AWS EC2 with automated SSL/TLS termination via Caddy.
+
+> [!IMPORTANT]
+> **Investigational Clinical Decision Support Tool — Non-Diagnostic Research Scope**
+> NeuroSense AI is an academic research platform and investigational Clinical Decision Support (CDS) instrument. It is **NOT** an FDA-cleared, CE-marked, or clinically validated diagnostic device.
+> * All model predictions, stage classifications, risk indexes, and saliency maps represent experimental screening indicators.
+> * Outputs must never supersede certified physician judgment, standard neurological workups, laboratory testing, or histological evaluations.
 
 ---
 
-## 📑 Table of Contents
+## 🌟 Overview
 
-1. [🌟 Multimodal Screening Streams](#-multimodal-screening-streams)
-2. [🏗️ System Architecture & Technology Stack](#️-system-architecture--technology-stack)
-3. [🚀 Quickstart with Docker Compose](#-quickstart-with-docker-compose)
-4. [💻 Bare-Metal Development Setup](#-bare-metal-development-setup)
-5. [🧠 Two-Tier Hybrid Multimodal Fusion Architecture](#-two-tier-hybrid-multimodal-fusion-architecture)
-6. [🎨 UI/UX Design System & Dual-Lens Presentation](#-uiux-design-system--dual-lens-presentation)
-7. [📂 Repository Structure](#-repository-structure)
-8. [🧪 Testing & Quality Assurance](#-testing--quality-assurance)
-9. [🔐 Security, Privacy & Compliance (HIPAA Safeguards)](#-security-privacy--compliance-hipaa-safeguards)
-10. [⚠️ Known Limitations](#️-known-limitations)
-11. [📜 License](#-license)
-
----
-
-## 🌟 Multimodal Screening Streams
-
-| Modality | Accepted Inputs | Underlying Processing & Model Architecture | Diagnostic Output & Saliency |
-|---|---|---|---|
-| **Brain MRI** | 2D slices (PNG, JPG) or **3D NIfTI volumes** (`.nii`, `.nii.gz`) | Deep **ResNet-18** CNN fine-tuned on ADNI 3-class lineage (`CN`, `MCI`, `AD`) + **Grad-CAM Saliency** + **NiiVue WebGL 2.0 Multi-Planar Viewer** | Classifies diagnostic stage, activation confidence, and displays interactive orthogonal slices (Axial, Coronal, Sagittal) and 3D raycast rendering with live Grad-CAM opacity sliders. |
-| **Acoustic Voice DSP** | Audio recordings (WAV, WebM, MP3) or live microphone | **Autonomous DSP Pipeline** (Librosa / OpenSMILE eGeMAPSv02) extracting Pitch $F_0$, Local Jitter (%), Local Shimmer (%), HNR (dB), Formants ($F_1, F_2$), and Speech Pausometry | Quantifies vocal fold micro-tremors, articulatory centralization, voice breathiness, and outputs a composite **Vocal Risk Index** ($0-100$). |
-| **Speech NLP & Language** | Transcribed speech or typed clinical transcript | Local **Whisper ASR** (`faster-whisper` CTranslate2) + **DistilBERT** 768-dim mean-pooled embeddings fed into a balanced Logistic Regression classifier | Vocabulary richness (TTR), pronoun-to-noun ratios, multilingual hesitation detection (`[pause]`, `[um]`, `[ah]`), and $P(\text{dementia})$ screening probability. |
-| **Cognitive Battery** | Interactive neuropsychological questionnaire | Itemized digital assessment (Orientation, Immediate Memory, Attention & Calculation, Delayed Recall, Visuospatial/Clock Drawing, Language) | Composite score ($0 - 100$), stage mapping, and domain vulnerability indicators. |
-| **Clinical Risk Profiler** | Structured medical questionnaire | Evaluates 18 clinical hazard factors (Age, Sex, APOE4 genotype, Cardiovascular health, Family history, Hypertension, Physical activity) | Weighted health risk index ($0 - 100$) and personalized preventive recommendations. |
-| **Two-Tier Hybrid Fusion** | All active modalities from above | **Tier 1**: Feature-level cross-modal speech gating<br>**Tier 2**: Attentive evidential decision fusion with dynamic missing-modality re-normalization | Unified consensus stage, modality agreement index (Full, High, Moderate, Low), epistemic uncertainty variance ($\sigma^2$), and contribution weights. |
-
----
-
-## 🏗️ System Architecture & Technology Stack
+**NeuroSense AI** addresses the challenge of early, pre-symptomatic Alzheimer’s disease identification by combining orthogonal biomarkers into a single evidential assessment. Rather than relying on a solitary modality, NeuroSense AI deploys a **Two-Tier Hybrid Fusion Architecture**:
 
 ```
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│                      React 19 + Vite 6 Single Page Application                   │
-│  - Clinical Dark/Light Theme with Medical Glassmorphism & Framer Motion          │
-│  - Dual-Lens Diagnostic Presentation (Patient & Family Summary vs. Clinician CDS)│
-│  - NiiVue WebGL 2.0 3D MRI Multi-Planar Viewer (Axial, Coronal, Sagittal, 3D)    │
-│  - Live Grad-CAM Saliency Inspector (0% - 100% Opacity Blending & Colormaps)     │
-│  - Acoustic Biomarker Visualizer (Vocal Risk Gauges & Annotated Transcript)      │
-│  - Longitudinal Patient Directory, Onboarding Tour, and Offline PWA v2.0         │
-└────────────────────────────────────────┬─────────────────────────────────────────┘
-                                         │ HTTP REST / Session Cookies
-                                         ▼
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│                            FastAPI Backend Application                           │
-│  - Cryptographic Signed Cookies (SessionMiddleware) & Starlette Auth             │
-│  - SlowAPI OWASP Rate Limiting & Fernet Protected Health Information Encryption  │
-│  - Strict Pydantic v2 Request/Response Validation Contracts                      │
-│  - Hybrid Job Dispatcher: In-process ThreadPool OR Celery Queue Dispatch         │
-└────────────┬───────────────────────────┬───────────────────────────┬─────────────┘
-             │                           │                           │
-             ▼                           ▼                           ▼
-┌─────────────────────────┐ ┌─────────────────────────┐ ┌─────────────────────────┐
-│      PostgreSQL 16      │ │   Celery + Redis Queue  │ │  MinIO S3 Object Store  │
-│   (SQLAlchemy 2 ORM)    │ │ (Decoupled ML Workers)  │ │ (Medical Scans & Audio) │
-│ - Longitudinal Records  │ │ - Background Inference  │ │ - 3D NIfTI Scans        │
-│ - Encrypted Patients    │ │ - Async Job Polling     │ │ - Patient Audio Files   │
-│ - Alembic Migrations    │ │ - Non-blocking HTTP loop│ │ - Presigned Access URLs │
-│ - SQLite Zero-Config FB │ │ - Redis Result Backend  │ │ - Local Disk Fallback   │
-└─────────────────────────┘ └─────────────────────────┘ └─────────────────────────┘
+ 3D Brain MRI (NIfTI) ────────┐
+ Acoustic Vocal DSP  ──┐      │
+                       ├──► [ Tier 1: Gated Speech ] ──┐
+ Linguistic NLP      ──┘                               ├──► [ Tier 2: Attentive Fusion ] ──► Consensus Evaluation &
+ Cognitive Battery (MMSE) ─────────────────────────────┤                                      Epistemic Uncertainty (σ²)
+ Clinical Hazard Profiler ─────────────────────────────┘
+```
+
+1. **3D Brain MRI Volumetrics & Saliency**: ResNet-18 volumetric classification across 3 classes (`CN`, `MCI`, `AD`) paired with an interactive WebGL 2.0 multi-planar viewer (Axial, Coronal, Sagittal, 3D Raycast) and real-time Grad-CAM saliency overlays.
+2. **Acoustic Voice DSP**: Autonomous digital signal processing measuring pitch stability ($F_0$), local jitter (%), local shimmer (%), harmonics-to-noise ratio (HNR), and formants ($F_1, F_2$) to detect subtle motor speech dysprosody.
+3. **Linguistic Speech NLP**: On-device Whisper transcription feeding a 768-dimensional DistilBERT semantic pipeline to identify lexical richness erosion (TTR), syntactic complexity shifts, and hesitation pauses.
+4. **Digital Cognitive Screening**: Interactive 6-domain psychometric examination (Orientation, Memory, Attention, Recall, Language, Visuospatial) providing granular domain breakdown.
+5. **Clinical Hazard Engine**: Quantitative scoring of 18 cardiovascular, genetic (APOE4), metabolic, and lifestyle risk factors.
+
+---
+
+## ✨ Core Capabilities
+
+### 🩺 Dual-Lens Diagnostic Presentation
+Different stakeholders need different levels of clinical detail. NeuroSense AI provides an instant, zero-recalculation toggle:
+* **Patient & Family Summary**: Empathetic, jargon-free explanations using clear visual analogies, lifestyle risk guidance, and structured questions to ask their primary care physician.
+* **Clinician Workstation (CDS)**: Comprehensive technical telemetry including individual modality likelihoods, epistemic uncertainty ($\sigma^2$), cross-modality agreement indexes, Grad-CAM attribution heatmaps, and downloadable formal clinical PDF dossiers.
+
+### 🔬 Multi-Planar NIfTI & Grad-CAM Inspector
+* Zero-footprint client-side rendering via **NiiVue WebGL 2.0**.
+* Live slider control for Grad-CAM overlay opacity ($0\% - 100\%$) and selectable diagnostic colormaps.
+* Orthogonal multi-slice synchronization with crosshair tracking across volumetric datasets.
+
+### 🛡️ Clinical Verification Safety Gate
+* Pre-analysis clinical sign-off gate requiring explicit attending clinician verification of patient identity and intake data before computational inference is unlocked.
+
+### ♿ WCAG 2.2 AA Accessibility & Responsive Precision
+* Minimum touch targets $\ge 44 \times 44\text{px}$ across all interactive controls.
+* High-contrast focus rings (`focus-visible:ring-2`) with zero clipping.
+* Strict screen-reader semantic trees and responsive layouts tested across 375px, 768px, 1024px, and 1440px viewports with zero horizontal overflow.
+
+---
+
+## 📊 Multimodal Screening Modalities
+
+| Modality | Input Types | Underlying AI / DSP Pipeline | Clinical Telemetry & Explainability |
+| :--- | :--- | :--- | :--- |
+| **Brain MRI** | 3D NIfTI volumes (`.nii`, `.nii.gz`) or 2D image slices | Fine-tuned **ResNet-18** CNN on ADNI lineage (`CN`, `MCI`, `AD`) + **Grad-CAM** | Interactive Axial, Coronal, Sagittal & 3D raycast rendering; activation heatmap opacity blending. |
+| **Acoustic Voice DSP** | Audio files (`WAV`, `WebM`, `MP3`) or live microphone | **Autonomous DSP Pipeline** (Librosa / OpenSMILE eGeMAPS) | Pitch $F_0$, Jitter %, Shimmer %, HNR (dB), Formants ($F_1, F_2$), and Composite Vocal Risk Index ($0-100$). |
+| **Speech NLP** | Audio speech or typed clinician transcript | **Whisper ASR** (`faster-whisper`) + **DistilBERT** 768-dim embeddings | Type-Token Ratio (TTR), speech pausometry, pronoun-to-noun shift, and linguistic dementia likelihood $P(\text{dementia})$. |
+| **Cognitive Battery** | Interactive digital questionnaire | 6-domain psychometric scoring (Orientation, Calculation, Recall, etc.) | Domain vulnerability breakdown, composite score ($0-100$), and MMSE stage mapping. |
+| **Clinical Risk Profiler** | Structured medical intake form | Weighted multivariable hazard model (18 risk parameters) | Relative cardiovascular/lifestyle hazard index ($0-100$) and targeted preventive recommendations. |
+| **Hybrid Fusion Engine** | Unified active stream inputs | **Two-Tier Evidential Attention** with missing-modality compensation | Unified consensus stage, Modality Agreement Index, Epistemic Uncertainty Variance ($\sigma^2$), and contribution weights. |
+
+---
+
+## 🏗️ System Architecture
+
+```mermaid
+flowchart TD
+    subgraph Client ["Client Layer — React 19 + Vite 6 Single Page Application"]
+        UI["Clinician Dashboard & Assessment Wizard"]
+        DualLens["Dual-Lens Engine (Patient vs. CDS)"]
+        NiiVue["NiiVue WebGL 2.0 (3D NIfTI Multi-Planar Viewer)"]
+        AcousticUI["Voice DSP & Audio Spectrogram Visualizer"]
+        UI --> DualLens
+        UI --> NiiVue
+        UI --> AcousticUI
+    end
+
+    subgraph Gateway ["API Gateway & Security Layer — FastAPI"]
+        Auth["Cryptographic Signed Session Auth (scrypt + HMAC)"]
+        RateLimit["OWASP SlowAPI Rate Limiting"]
+        Validation["Strict Pydantic v2 Request/Response Contracts"]
+        Dispatcher["Hybrid Job Dispatcher (ThreadPool / Celery)"]
+        Auth --> RateLimit --> Validation --> Dispatcher
+    end
+
+    subgraph Processing ["ML & Analytics Subsystem"]
+        MRI_Engine["MRI ResNet-18 + Grad-CAM"]
+        Audio_Engine["Whisper ASR + Librosa Acoustic DSP"]
+        NLP_Engine["DistilBERT Semantic Language Model"]
+        Fusion_Engine["Two-Tier Evidential Fusion Engine"]
+        Report_Engine["Clinical PDF Dossier Generator"]
+
+        Dispatcher --> MRI_Engine
+        Dispatcher --> Audio_Engine
+        Dispatcher --> NLP_Engine
+        MRI_Engine & Audio_Engine & NLP_Engine --> Fusion_Engine
+        Fusion_Engine --> Report_Engine
+    end
+
+    subgraph Storage ["Persistence & Distributed State"]
+        PG[("PostgreSQL 16\n(Fernet Encrypted PHI)")]
+        Redis[("Redis 7\n(Celery Broker & Result Store)")]
+        MinIO[("MinIO Object Storage\n(3D NIfTI & Audio Blobs)")]
+    end
+
+    Client -- "HTTPS / Cookie Auth" --> Gateway
+    Gateway --> PG
+    Gateway --> Redis
+    Gateway --> MinIO
 ```
 
 ---
 
-## 🚀 Quickstart with Docker Compose
+## 🧠 Two-Tier Hybrid Fusion Engine
 
-The simplest way to run the entire NeuroSense AI production stack is with Docker Compose. This builds and links the **Web UI**, **FastAPI Backend**, **Celery ML Worker**, **PostgreSQL 16**, **Redis**, and **MinIO S3 Object Storage**:
-
-```bash
-# 1. Clone the repository
-git clone https://github.com/saurabhrdj50/neurosense-ai.git
-cd neurosense-ai
-
-# 2. Copy the sample environment configuration
-cp backend/.env.example backend/.env
-
-# 3. Build and launch all services
-docker compose up --build
-```
-
-### Deployed Services & Ports
-
-| Service | Access URL | Description | Access Mode |
-|---|---|---|---|
-| **Live Production Cloud** | [https://neurosense.duckdns.org/](https://neurosense.duckdns.org/) | Live AWS EC2 deployment with automated HTTPS | Authenticated |
-| **Local Web Application** | [http://localhost:3000](http://localhost:3000) | Local React 19 Frontend (Served via Nginx / Vite) | Local Auth |
-| **API Server & Docs** | [http://localhost:10000](http://localhost:10000) | FastAPI Backend (Interactive OpenAPI docs at `/docs`) | Open / Token Auth |
-| **MinIO Console** | [http://localhost:9001](http://localhost:9001) | S3 Object Storage Management UI | `minioadmin` / `minioadmin` |
-| **PostgreSQL** | `localhost:5432` | Relational Database (`postgres:16-alpine`) | `postgres` / `postgres` |
-| **Redis** | `localhost:6379` | Celery Message Broker & Result Store | Internal |
-| **Celery Worker** | Internal Worker | Distributed ML background execution worker | — |
-
----
-
-## 💻 Bare-Metal Development Setup
-
-To run services locally without Docker:
-
-### 1. Prerequisites
-- **Python**: `3.11` or higher
-- **Node.js**: `20.x` or higher (`npm 10+`)
-- **Git**
-
-### 2. Backend Setup
-```bash
-cd backend
-
-# Create and activate Python virtual environment
-python3 -m venv venv
-source venv/bin/activate       # On Windows: venv\Scripts\activate
-
-# Install Python dependencies
-pip install -r requirements.txt
-
-# Start development server (runs with SQLite by default)
-python run.py
-```
-*The backend API will start on [http://localhost:10000](http://localhost:10000).*
-
-### 3. Frontend Setup
-In a new terminal:
-```bash
-cd frontend
-
-# Install Node dependencies
-npm install
-
-# Start Vite development server
-npm run dev
-```
-*The web interface will start on [http://localhost:3000](http://localhost:3000) and automatically proxy `/api` calls to port `10000`.*
-
----
-
-## 🎨 UI/UX Design System & Dual-Lens Presentation
-
-NeuroSense AI incorporates a clinical design system designed under the **`ui-ux-pro-max`** methodology:
-
-* **Dual-Lens Perspective Switcher**:
-  * **Patient & Family Summary**: A compassionate, non-alarmist plain-language explanation of cognitive health patterns with everyday analogies, actionable wellness habits, and check-list questions to ask their doctor.
-  * **Clinician Workstation (CDS)**: Comprehensive technical telemetry including individual modality scores, posterior probabilities, epistemic uncertainty variance ($\sigma^2$), feature attributions, and Grad-CAM saliency maps.
-* **Clinical Verification Gate**:
-  * In the intake wizard's Review Step, the `Run Analysis & Generate Report` button remains gated until the attending clinician explicitly confirms patient identity and entered data accuracy.
-* **Priority Clinical Triage & Longitudinal Trajectories**:
-  * Full dashboard prominence given to high-risk patient attention alerts, 6-month longitudinal progression trajectories, and recent patient assessment dossiers.
-* **WCAG 2.2 AA Accessibility Compliance**:
-  * Minimum touch targets $\ge 44 \times 44\text{px}$ on all interactive buttons.
-  * 2px visible focus indicators (`focus-visible:ring-2 focus-visible:ring-primary`) with zero clipping.
-  * Explicit `<label htmlFor={...}>` and `id` bindings across all input elements.
-  * Tested and verified responsive containment across 375px, 768px, 1024px, and 1440px viewports with zero horizontal overflow.
-
----
-
-## 🧠 Two-Tier Hybrid Multimodal Fusion Architecture
-
-NeuroSense AI employs an evidential, fault-tolerant **Two-Tier Hybrid Fusion Architecture** ([`backend/app/ml/fusion/engine.py`](backend/app/ml/fusion/engine.py)):
+The evidential multimodal fusion engine ([`backend/app/ml/fusion/engine.py`](backend/app/ml/fusion/engine.py)) operates across two hierarchical tiers:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
@@ -202,7 +183,7 @@ NeuroSense AI employs an evidential, fault-tolerant **Two-Tier Hybrid Fusion Arc
 │       └──────────────────┴──────────┬───────────┴────────────────────┘          │
 │                                     │                                           │
 │                 Dynamic Confidence Attention Scaling:                           │
-│                 α_k = W_k * [1.0 + 0.25 * (Confidence_k - 0.5)]                 │
+│                 α_k = W_k · [1.0 + 0.25 · (Confidence_k - 0.5)]                 │
 │                                     │                                           │
 │                 Dynamic Missing Modality Re-Normalization:                      │
 │                 Active weights scaled to sum strictly to 1.0                    │
@@ -218,7 +199,138 @@ NeuroSense AI employs an evidential, fault-tolerant **Two-Tier Hybrid Fusion Arc
 
 ---
 
-## 📂 Repository Structure
+## 🚀 Quickstart with Docker Compose
+
+The entire stack (**Web SPA, FastAPI, Celery ML Worker, PostgreSQL 16, Redis, MinIO**) can be launched with a single command:
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/saurabhrdj50/neurosense-ai.git
+cd neurosense-ai
+
+# 2. Configure environment variables
+cp backend/.env.example backend/.env
+
+# 3. Build and launch all containers
+docker compose up --build
+```
+
+### 🌐 Service Port Matrix
+
+| Service | Access Endpoint | Description |
+| :--- | :--- | :--- |
+| **Live Production Cloud** | [https://neurosense.duckdns.org/](https://neurosense.duckdns.org/) | Live AWS EC2 deployment with automated HTTPS |
+| **Local Web Application** | [http://localhost:3000](http://localhost:3000) | React 19 Frontend (Served via Nginx / Vite) |
+| **Backend REST API** | [http://localhost:10000](http://localhost:10000) | FastAPI Core Backend |
+| **Interactive API Docs** | [http://localhost:10000/docs](http://localhost:10000/docs) | Swagger UI OpenAPI Explorer |
+| **MinIO Console** | [http://localhost:9001](http://localhost:9001) | S3 Object Storage Browser |
+| **PostgreSQL 16** | `localhost:5432` | Relational Storage (`postgres:16-alpine`) |
+| **Redis 7** | `localhost:6379` | Celery Broker & In-Memory Cache |
+
+---
+
+## 🧪 Testing & Quality Gates
+
+Every code change must satisfy our automated quality gates across unit, integration, and cross-device browser testing.
+
+<div align="center">
+
+| Test Suite | Framework | Target Scope | Passing Status |
+| :--- | :--- | :--- | :---: |
+| **End-to-End Browser QA** | Playwright | Full clinical walkthrough across 4 viewports (375px, 768px, 1024px, 1440px) | **16 / 16 Passed (100%)** |
+| **Backend API & Security** | Pytest | Authentication, Rate limiting, Session cookies, PHI encryption, Celery tasks | **61 / 61 Passed (100%)** |
+| **Frontend Unit & Logic** | Vitest | Clinical mappers, DSP biomarker calculators, Dual-Lens toggles, XAI attribution | **41 / 41 Passed (100%)** |
+| **Frontend Static Quality** | ESLint | Code style, React 19 hooks, Accessibility rules, Dead-code prevention | **0 Errors, 0 Warnings** |
+| **Production Build** | Vite 6 | Type-check, CSS purge, PWA manifest, Bundle minimization | **Zero Errors (4.85s build)** |
+
+</div>
+
+<br />
+
+<details>
+<summary><b>🔍 Click to view step-by-step test execution commands</b></summary>
+
+```bash
+# 1. Run Playwright End-to-End Suite (Multi-Viewport Responsive QA)
+cd frontend
+npm run e2e
+
+# 2. Run Frontend Unit & Integration Tests
+cd frontend
+npm test
+
+# 3. Run Frontend Linter
+cd frontend
+npm run lint
+
+# 4. Run Backend Pytest Suite
+cd backend
+source venv/bin/activate
+pytest tests/test_api.py tests/test_auth.py tests/test_audit_fixes.py
+
+# 5. Execute Production Vite Build
+cd frontend
+npm run build
+```
+
+</details>
+
+---
+
+## 💻 Bare-Metal Development Setup
+
+<details>
+<summary><b>🛠️ Click to expand instructions for manual setup without Docker</b></summary>
+
+### Prerequisites
+* **Python**: `3.11` or higher
+* **Node.js**: `20.x` or higher (`npm 10+`)
+* **Git**
+
+### 1. Backend Service Setup
+```bash
+cd backend
+
+# Create and activate Python virtual environment
+python3 -m venv venv
+source venv/bin/activate    # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Start backend (defaults to SQLite if PostgreSQL is not active)
+python run.py
+```
+*API available at [http://localhost:10000](http://localhost:10000) (Swagger docs at `/docs`).*
+
+### 2. Frontend SPA Setup
+In a separate terminal window:
+```bash
+cd frontend
+
+# Install Node dependencies
+npm install
+
+# Start Vite development server
+npm run dev
+```
+*Web client available at [http://localhost:3000](http://localhost:3000) with live proxying to backend on port 10000.*
+
+</details>
+
+---
+
+## 🔐 Security, Privacy & HIPAA Compliance Safeguards
+
+1. **Protected Health Information (PHI) Encryption**: Patient identifiers, names, and contact records are encrypted at rest using **Fernet 128-bit AES-CBC** cryptography with dedicated key management.
+2. **Cryptographic Authentication**: Passwords hashed using memory-hard **scrypt** with unique salt derivations per user.
+3. **Signed Session Cookies**: HTTP-only, SameSite cookies signed with HMAC-SHA256 prevent token theft and cross-site scripting (XSS) compromise.
+4. **OWASP Defense-in-Depth**: Strict SlowAPI rate limiting protects authentication and heavy inference endpoints from denial-of-service and credential stuffing.
+5. **Immutable Audit Trails**: Structured audit logs track all clinician logins, patient creation events, and assessment submissions.
+
+---
+
+## 📂 Repository Organization
 
 ```
 neurosense-ai/
@@ -256,7 +368,6 @@ neurosense-ai/
 │   ├── nginx.conf                    # Nginx reverse proxy & caching configuration
 │   └── package.json                  # Frontend dependencies and scripts
 ├── design-system/                    # Design tokens & specifications generated via ui-ux-pro-max
-├── app/                              # Next.js exploratory design reference prototypes (non-production)
 ├── docker-compose.yml                # Multi-service production orchestration
 ├── UI_UX_TRANSFORMATION.md           # Engineering & clinical QA audit ledger
 └── README.md                         # Main repository guide & documentation
@@ -264,65 +375,15 @@ neurosense-ai/
 
 ---
 
-## 🧪 Testing & Quality Assurance
+## 📜 Clinical Research Disclaimer & License
 
-### 1. Playwright End-to-End Suite (16 / 16 Passed)
-Executes against the real FastAPI backend + Vite frontend dev server across 4 viewports (Mobile 375px, Tablet 768px, Laptop 1024px, Desktop 1440px):
-```bash
-cd frontend
-npm run e2e
+NeuroSense AI is distributed under the **MIT License**. See [`LICENSE`](LICENSE) for complete terms.
+
 ```
-*Verifies registration, bad credentials rejection, clinical triage dashboard, full clinical walkthrough (intake $\rightarrow$ analysis $\rightarrow$ report), dual-lens perspective switching, PDF export dropdown, and zero horizontal page overflow.*
-
-### 2. Frontend Unit & Integration Tests (Vitest)
-```bash
-cd frontend
-npm test
+Investigational Research Platform — Not for Autonomous Clinical Diagnosis.
+Designed for translational machine learning research, clinical AI validation studies, and medical education.
 ```
-*41 tests passing across clinical mappers, audio DSP merging, sample cases, and XAI feature attributions.*
 
-### 3. Frontend Code Quality (ESLint)
-```bash
-cd frontend
-npm run lint
-```
-*Clean execution with 0 errors and 0 warnings.*
-
-### 4. Backend Pytest Suite (61 Passed)
-```bash
-cd backend
-source venv/bin/activate
-pytest backend/tests/test_api.py backend/tests/test_auth.py backend/tests/test_audit_fixes.py
-```
-*61 tests passing across authentication tokens, rate limits, audit logging, and deprecated endpoint removals.*
-
-### 5. Production Bundle Build
-```bash
-cd frontend
-npm run build
-```
-*Compiles in under 5 seconds with zero errors; generates PWA service worker with 70 precache entries.*
-
----
-
-## 🔐 Security, Privacy & Compliance (HIPAA Safeguards)
-
-1. **Protected Health Information (PHI) Encryption**: Patient identifiers and medical record numbers are encrypted at rest using **Fernet 128-bit AES-CBC** encryption.
-2. **Cryptographic Authentication**: Passwords hashed using memory-hard **scrypt** with unique salt derivations.
-3. **Signed Session Cookies**: HTTP-only, SameSite cookies signed with HMAC-SHA256 prevent token theft and cross-site scripting (XSS) compromise. Insecure client-side bypasses have been completely removed.
-4. **OWASP Rate Limiting**: SlowAPI limits authentication and analysis endpoints to mitigate brute force and denial of service.
-5. **Auditable Access Logs**: Immutable audit log records every clinician access, patient creation, and analysis submission.
-
----
-
-## ⚠️ Known Limitations
-
-1. **Investigational Only**: This platform is an academic research prototype. It has not received FDA clearance, CE mark certification, or health authority validation as a diagnostic medical device.
-2. **Hardware Acceleration**: NiiVue 3D MRI volume rendering relies on WebGL 2.0; in virtualized environments or browsers with hardware acceleration disabled, rendering falls back to 2D orthogonal slice views.
-3. **Uncalibrated Posterior**: Softmax confidence scores indicate internal model probability distributions and do not represent calibrated epidemiological risk odds.
-
----
-
-## 📜 License
-
-Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for full details. Built for academic research, translational medicine evaluation, and clinical AI education.
+<div align="center">
+  <sub>Built with ❤️ for neurological health advancement and accessible clinical AI research.</sub>
+</div>

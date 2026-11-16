@@ -121,9 +121,10 @@ export default function HistoryPage() {
       <div className="flex items-center justify-between flex-wrap gap-4 pb-4 border-b border-border">
         <div className="flex items-center gap-3.5">
           <button
+            type="button"
             onClick={() => navigate('/patients')}
             aria-label="Back to Patient Registry"
-            className="p-2.5 rounded-xl bg-surface border border-border text-foreground-muted hover:text-foreground transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center shadow-2xs"
+            className="p-2.5 rounded-xl bg-surface border border-border text-foreground-muted hover:text-foreground transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center shadow-2xs focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <ArrowLeft size={20} />
           </button>
@@ -209,8 +210,8 @@ export default function HistoryPage() {
                 </Badge>
               </div>
 
-              {/* KPI Chips */}
-              <div className="grid grid-cols-3 gap-3">
+              {/* KPI Chips — Responsive on mobile */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                 <div className="p-3.5 rounded-xl bg-surface border border-border space-y-1">
                   <span className="text-[11px] font-semibold text-foreground-muted uppercase block">First Test Stage</span>
                   <Badge variant={earliestInfo.variant}>{earliestInfo.label}</Badge>

@@ -159,10 +159,20 @@ function FactorAttributionPanel({ featureAttribution, fusion = {}, mri = {}, res
         return (
           <Motion.div
             key={idx}
+            role="button"
+            tabIndex={0}
+            aria-expanded={isOpen}
+            aria-label={`${feature}: ${importance.toFixed(1)}% importance, ${f.direction}. Press Enter or Space to toggle details.`}
+            onKeyDown={(e) => {
+              if (e.key === ' ' || e.key === 'Enter') {
+                e.preventDefault()
+                setExpanded(isOpen ? null : idx)
+              }
+            }}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: idx * 0.04, duration: 0.3 }}
-            className={`rounded-xl border overflow-hidden cursor-pointer transition-all duration-200 ${isOpen ? `${colors.bg} ${colors.border}` : 'bg-background/50 border-border hover:border-border'}`}
+            className={`rounded-xl border overflow-hidden cursor-pointer transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${isOpen ? `${colors.bg} ${colors.border}` : 'bg-background/50 border-border hover:border-border'}`}
             onClick={() => setExpanded(isOpen ? null : idx)}
           >
             {/* Row header */}
@@ -184,7 +194,14 @@ function FactorAttributionPanel({ featureAttribution, fusion = {}, mri = {}, res
                   </div>
                 </div>
                 {/* Progress bar */}
-                <div className="w-full bg-border rounded-full h-1.5 overflow-hidden">
+                <div
+                  role="progressbar"
+                  aria-valuenow={Math.round(importance)}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label={`${feature} contribution: ${importance.toFixed(1)}%`}
+                  className="w-full bg-border rounded-full h-1.5 overflow-hidden"
+                >
                   <Motion.div
                     className={`h-full ${colors.bar} rounded-full`}
                     initial={{ width: 0 }}
@@ -282,7 +299,7 @@ function GradCAMPanel({ mri }) {
                       type="button"
                       onClick={() => setView(m.id)}
                       aria-pressed={view === m.id}
-                      className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition-colors ${
+                      className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition-colors min-h-[30px] focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
                         view === m.id
                           ? 'bg-indigo-500 text-white shadow-xs'
                           : 'text-foreground-muted hover:text-foreground'
@@ -667,7 +684,7 @@ export default function XAIPanel({ aiExplanation, mri, fusion, results = {} }) {
       </div>
 
       {/* Section selector tabs */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2" role="group" aria-label="Explainability sections">
         {SECTIONS.map(s => {
           const Icon = s.icon
           const isActive = activeSection === s.id
@@ -675,8 +692,9 @@ export default function XAIPanel({ aiExplanation, mri, fusion, results = {} }) {
             <button
               key={s.id}
               type="button"
+              aria-pressed={isActive}
               onClick={() => setActiveSection(s.id)}
-              className={`flex items-start gap-2.5 p-3 rounded-xl border text-left transition-all cursor-pointer ${
+              className={`flex items-start gap-2.5 p-3 rounded-xl border text-left transition-all cursor-pointer min-h-[44px] focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 ${
                 isActive
                   ? 'bg-violet-500/10 border-violet-500/30 shadow-sm'
                   : 'bg-background/50 border-border hover:border-border hover:bg-surface-hover'

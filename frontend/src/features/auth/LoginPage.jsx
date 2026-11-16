@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Brain, Mail, Lock, User, Shield, Stethoscope, ArrowLeft,
   AlertCircle, LockKeyhole, Eye, EyeOff, CalendarDays, CheckCircle2,
-  AtSign, Hospital
+  AtSign, Hospital, KeyRound, Terminal, ShieldCheck
 } from 'lucide-react';
 import { useAuth } from '../../providers/AuthProvider';
 import { useTheme } from '../../providers/ThemeProvider';
@@ -13,7 +13,9 @@ import Button from '../../shared/components/ui/Button';
 import API_URL from '../../config/api';
 
 /** Floating-label style tokenized input with icon, error state, and password reveal. */
-function AuthInput({ label, icon: Icon, type = 'text', value, onChange, placeholder, error, required, ...props }) {
+function AuthInput({ label, id, icon: Icon, type = 'text', value, onChange, placeholder, error, required, ...props }) {
+  const generatedId = React.useId();
+  const inputId = id || (label ? `auth-${label.toLowerCase().replace(/[^a-z0-9]/g, '-')}` : generatedId);
   const [showPassword, setShowPassword] = useState(false);
   const isPassword = type === 'password';
   const inputType = isPassword ? (showPassword ? 'text' : 'password') : type;
@@ -21,7 +23,7 @@ function AuthInput({ label, icon: Icon, type = 'text', value, onChange, placehol
   return (
     <div className="space-y-1.5">
       {label && (
-        <label className="block text-xs font-bold uppercase tracking-wider text-muted">
+        <label htmlFor={inputId} className="block text-xs font-bold uppercase tracking-wider text-muted cursor-pointer">
           {label}
         </label>
       )}
@@ -34,6 +36,7 @@ function AuthInput({ label, icon: Icon, type = 'text', value, onChange, placehol
           </div>
         )}
         <input
+          id={inputId}
           type={inputType}
           value={value}
           onChange={onChange}

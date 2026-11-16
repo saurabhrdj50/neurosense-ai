@@ -6,7 +6,7 @@ import {
   Users, Search, Download, Eye, Plus, ArrowUpDown, ChevronUp, ChevronDown,
   Activity, FileText, Brain, Sparkles, MessageSquare, HeartPulse, ShieldCheck,
   CheckCircle2, Clock, Calendar, User, Filter, X, ArrowRight, ChevronRight,
-  Trash2
+  Trash2, Mic
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useNavigate, useLocation } from 'react-router-dom'
@@ -74,7 +74,7 @@ function UndoDeleteToast({ toastId, patientName, onUndo, duration = 7 }) {
     <div
       role="status"
       aria-live="polite"
-      className="flex flex-col gap-2.5 min-w-[300px] max-w-[380px] font-sans"
+      className="flex flex-col gap-2.5 w-full max-w-sm font-sans"
     >
       <div className="flex items-start gap-3">
         <span
@@ -766,8 +766,9 @@ export default function PatientsPage() {
                           <div key={item.session_id || idx} className="bg-card border border-border rounded-2xl p-4 space-y-3 shadow-2xs">
                             <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-border">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-xs font-bold text-foreground bg-surface px-2.5 py-1 rounded-lg border border-border">
-                                  📅 {formatDate(item.timestamp || item.date)}
+                                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-foreground bg-surface px-2.5 py-1 rounded-lg border border-border">
+                                  <Calendar size={13} className="text-primary" aria-hidden="true" />
+                                  <span>{formatDate(item.timestamp || item.date)}</span>
                                 </span>
                                 <Badge variant={itemStage.variant}>{itemStage.label}</Badge>
                                 <span className="text-xs font-mono font-bold text-indigo-500 bg-indigo-500/10 px-2.5 py-1 rounded-lg border border-indigo-500/20">
@@ -789,21 +790,30 @@ export default function PatientsPage() {
                             {/* Key Pillar Badges with Soft Color-Coded Background Tints */}
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                               <div className="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20">
-                                <span className="text-indigo-600 dark:text-indigo-400 text-[11px] font-extrabold block">🧠 Brain Scan (MRI)</span>
+                                <span className="inline-flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400 text-[11px] font-extrabold block">
+                                  <Brain size={13} aria-hidden="true" />
+                                  <span>Brain Scan (MRI)</span>
+                                </span>
                                 <strong className="text-foreground font-extrabold text-xs">
                                   {itemMri.stage || 'Not available'}
                                 </strong>
                               </div>
 
                               <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20">
-                                <span className="text-amber-600 dark:text-amber-400 text-[11px] font-extrabold block">📝 Memory Test</span>
+                                <span className="inline-flex items-center gap-1.5 text-amber-600 dark:text-amber-400 text-[11px] font-extrabold block">
+                                  <FileText size={13} aria-hidden="true" />
+                                  <span>Memory Test</span>
+                                </span>
                                 <strong className="text-foreground font-extrabold text-xs">
                                   {itemCog.composite_score != null ? `${itemCog.composite_score}/100` : 'Not available'}
                                 </strong>
                               </div>
 
                               <div className="p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20">
-                                <span className="text-cyan-600 dark:text-cyan-400 text-[11px] font-extrabold block">🎤 Speech Check</span>
+                                <span className="inline-flex items-center gap-1.5 text-cyan-600 dark:text-cyan-400 text-[11px] font-extrabold block">
+                                  <Mic size={13} aria-hidden="true" />
+                                  <span>Speech Check</span>
+                                </span>
                                 <strong className="text-foreground font-extrabold text-xs">
                                   {itemSp.pause_frequency || itemSp.pitch_variation || (res.audio_transcription?.text ? 'Transcript available (not fused)' : 'Not available')}
                                 </strong>
@@ -814,10 +824,11 @@ export default function PatientsPage() {
                                   ? 'bg-rose-500/10 border-rose-500/20'
                                   : 'bg-emerald-500/10 border-emerald-500/20'
                               }`}>
-                                <span className={`text-[11px] font-extrabold block ${
+                                <span className={`inline-flex items-center gap-1.5 text-[11px] font-extrabold block ${
                                   itemRisk.risk_category === 'High Risk' ? 'text-rose-600 dark:text-rose-400' : 'text-foreground-muted'
                                 }`}>
-                                  🧬 Health Factors
+                                  <HeartPulse size={13} aria-hidden="true" />
+                                  <span>Health Factors</span>
                                 </span>
                                 <strong className="text-foreground font-extrabold text-xs">
                                   {itemRisk.risk_category || (itemRisk.overall_risk_score != null ? `${itemRisk.overall_risk_score}/100 (rule-based)` : 'Not assessed')}

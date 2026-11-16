@@ -48,7 +48,7 @@ export default function Tabs({ tabs, activeTab, onChange, variant = 'underline',
               disabled={tab.disabled}
               onClick={() => !tab.disabled && onChange(tab.id)}
               onKeyDown={e => handleKeyDown(e)}
-              className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors duration-150 whitespace-nowrap ${
+              className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors duration-150 whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-background ${
                 active ? 'text-foreground' : 'text-muted hover:text-foreground'
               } ${tab.disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
             >
@@ -90,7 +90,7 @@ export default function Tabs({ tabs, activeTab, onChange, variant = 'underline',
             disabled={tab.disabled}
             onClick={() => !tab.disabled && onChange(tab.id)}
             onKeyDown={e => handleKeyDown(e)}
-            className={`relative flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-semibold whitespace-nowrap transition-colors duration-150 ${
+            className={`relative flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-semibold whitespace-nowrap transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-background ${
               active
                 ? 'text-primary'
                 : `text-muted hover:text-foreground ${tab.disabled ? '' : 'hover:bg-surface-hover'}`

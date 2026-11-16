@@ -20,29 +20,31 @@ export function MRIResults({ mri }) {
               Diagnostic Presentation
             </span>
           </div>
-          <div className="flex items-center p-0.5 rounded-lg bg-surface border border-border">
+          <div className="flex items-center p-0.5 rounded-xl bg-surface-secondary border border-border" aria-label="MRI View Modes">
             <button
               type="button"
+              aria-pressed={viewMode === 'summary'}
               onClick={() => setViewMode('summary')}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all min-h-[32px] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                 viewMode === 'summary'
-                  ? 'bg-indigo-600 text-white shadow-xs'
+                  ? 'bg-primary text-primary-foreground shadow-xs'
                   : 'text-foreground-muted hover:text-foreground'
               }`}
             >
-              <Layers size={13} />
+              <Layers size={13} aria-hidden="true" />
               <span>Summary & Metrics</span>
             </button>
             <button
               type="button"
+              aria-pressed={viewMode === 'interactive'}
               onClick={() => setViewMode('interactive')}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all min-h-[32px] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                 viewMode === 'interactive'
-                  ? 'bg-indigo-600 text-white shadow-xs'
+                  ? 'bg-primary text-primary-foreground shadow-xs'
                   : 'text-foreground-muted hover:text-foreground'
               }`}
             >
-              <Sparkles size={13} />
+              <Sparkles size={13} aria-hidden="true" />
               <span>Interactive 3D / NiiVue Viewer</span>
             </button>
           </div>

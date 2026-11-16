@@ -76,9 +76,10 @@ export default function TopBar({ onMenuClick }) {
         {/* Left Title / Breadcrumb Area */}
         <div className="flex items-center gap-3 min-w-0">
           <button
+            type="button"
             onClick={onMenuClick}
             aria-label="Open mobile navigation menu"
-            className="p-2 rounded-lg lg:hidden bg-surface-secondary text-foreground-muted hover:bg-surface-hover hover:text-foreground transition-colors border border-border focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+            className="p-2 rounded-lg lg:hidden bg-surface-secondary text-foreground-muted hover:bg-surface-hover hover:text-foreground transition-colors border border-border focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 min-h-[36px] min-w-[36px] flex items-center justify-center"
           >
             <Menu size={20} />
           </button>
@@ -97,6 +98,7 @@ export default function TopBar({ onMenuClick }) {
         <div className="flex items-center gap-2.5 shrink-0">
           {/* Command Palette trigger — discoverable alternative to Ctrl/⌘+K */}
           <button
+            type="button"
             onClick={() => setPaletteOpen(true)}
             data-tour="command-palette"
             className="hidden sm:flex items-center gap-2 h-9 pl-3 pr-2 rounded-lg bg-surface-secondary border border-border text-foreground-subtle hover:text-foreground hover:border-border-strong transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
@@ -123,8 +125,9 @@ export default function TopBar({ onMenuClick }) {
 
           {/* Settings Trigger */}
           <button
+            type="button"
             onClick={() => setSettingsOpen(true)}
-            className="p-2 rounded-lg bg-surface-secondary text-foreground-muted hover:bg-surface-hover hover:text-foreground transition-colors border border-border focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+            className="p-2 rounded-lg bg-surface-secondary text-foreground-muted hover:bg-surface-hover hover:text-foreground transition-colors border border-border focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 min-h-[36px] min-w-[36px] flex items-center justify-center"
             title="System Settings"
             aria-label="System Settings"
           >
@@ -134,10 +137,11 @@ export default function TopBar({ onMenuClick }) {
           {/* User Profile Popover */}
           <div className="relative" ref={profileRef}>
             <button
+              type="button"
               onClick={() => setProfileOpen(o => !o)}
               aria-label="User account menu"
               aria-expanded={profileOpen}
-              className="flex items-center gap-1.5 p-1 rounded-lg hover:bg-surface-hover transition-colors border border-transparent hover:border-border focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+              className="flex items-center gap-1.5 p-1 rounded-lg hover:bg-surface-hover transition-colors border border-transparent hover:border-border focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 min-h-[36px]"
             >
               <div className="w-7 h-7 rounded-md bg-primary text-primary-foreground flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
                 {(user?.full_name || user?.username || 'U')[0].toUpperCase()}
@@ -161,14 +165,16 @@ export default function TopBar({ onMenuClick }) {
 
                   <div className="py-1 space-y-0.5">
                     <button
+                      type="button"
                       onClick={() => { setProfileOpen(false); setSettingsOpen(true) }}
-                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-foreground hover:bg-hover font-medium transition-colors"
+                      className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-foreground hover:bg-surface-hover font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary text-left min-h-[32px]"
                     >
                       <User size={14} className="text-muted" /> Profile & Settings
                     </button>
                     <button
+                      type="button"
                       onClick={() => { setProfileOpen(false); setHelpOpen(true) }}
-                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-foreground hover:bg-hover font-medium transition-colors"
+                      className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-foreground hover:bg-surface-hover font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary text-left min-h-[32px]"
                     >
                       <HelpCircle size={14} className="text-muted" /> Help & Documentation
                     </button>
@@ -176,8 +182,9 @@ export default function TopBar({ onMenuClick }) {
 
                   <div className="pt-1 border-t border-border">
                     <button
+                      type="button"
                       onClick={() => { setProfileOpen(false); logout(); navigate('/login') }}
-                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-danger hover:bg-danger/10 font-semibold transition-colors"
+                      className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-danger hover:bg-danger/10 font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-danger text-left min-h-[32px]"
                     >
                       <LogOut size={14} /> Log Out
                     </button>

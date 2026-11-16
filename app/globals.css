@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root, .dark {
+  /* ── Canvas & Surface ── */
+  --bg-canvas:            11 15 25;       /* #0B0F19 Deep Space OLED Canvas */
+  --bg-surface:           17 24 39;       /* #111827 Elevated Workstation Surface */
+  --bg-card:              22 30 49;       /* #161E31 High-Density Data Card */
+  --bg-overlay:           15 23 42;       /* #0F172A Modal & Flyout Backdrop */
+
+  /* ── Borders & Grids ── */
+  --border-subtle:        30 41 59;       /* #1E293B Structural dividers */
+  --border-accent:        6 182 212;      /* #06B6D4 Active telemetry indicators */
+  --border-focus:         34 211 238;     /* #22D3EE High-visibility keyboard focus */
+
+  /* ── Foreground / Typography ── */
+  --text-primary:         248 250 252;    /* #F8FAFC Contrast 17.2:1 (AAA) */
+  --text-secondary:       148 163 184;    /* #94A3B8 Contrast 6.8:1 (AA) */
+  --text-subtle:          100 116 139;    /* #64748B Secondary labels & timestamps */
+
+  /* ── Accents & Diagnostic Modalities ── */
+  --accent-cyan:          6 182 212;      /* #06B6D4 Primary Action & EEG Beta Wave */
+  --accent-purple:        129 140 248;    /* #818CF8 BOLD fMRI Hemodynamic Activity */
+  --accent-emerald:       16 185 129;     /* #10B981 Stable Baseline & Normal Cohort */
+  --accent-amber:         245 158 11;     /* #F59E0B MCI Warning & Latency Threshold */
+  --accent-rose:          239 68 68;      /* #EF4444 Active Anomaly & High-Risk Cohort */
+
+  /* ── Interactive Focus Tokens ── */
+  --focus-ring:           34 211 238;     /* #22D3EE Focus ring */
+  --focus-offset:         11 15 25;       /* #0B0F19 */
+}
+
+body {
+  background-color: rgb(var(--bg-canvas));
+  color: rgb(var(--text-primary));
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+}
+
+/* Reduced Motion Override */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+

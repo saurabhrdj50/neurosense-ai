@@ -23,9 +23,9 @@ export default function ProgressBar({
 }) {
   const v = Math.min(100, Math.max(0, value))
 
-  // Prefer Tailwind colorClass, fall back to inline style hex for chart colors
-  const fillStyle = colorClass ? {} : { backgroundColor: color || '#2563EB' }
-  const fillClass = colorClass ?? ''
+  // Prefer Tailwind colorClass, fall back to inline style hex for chart colors, defaulting to primary
+  const fillStyle = color ? { backgroundColor: color } : {}
+  const fillClass = colorClass || (color ? '' : 'bg-primary')
 
   return (
     <div>

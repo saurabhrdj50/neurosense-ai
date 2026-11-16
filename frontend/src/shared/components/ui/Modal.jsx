@@ -91,9 +91,10 @@ export default function Modal({ open, onClose, title, children, maxWidth = 560 }
                   </h3>
                 )}
                 <button
+                  type="button"
                   onClick={onClose}
                   aria-label="Close dialog"
-                  className={`p-1.5 rounded-lg text-muted hover:text-foreground hover:bg-surface-hover transition-colors ${title ? '' : 'ml-auto'}`}
+                  className={`p-2 rounded-lg text-muted hover:text-foreground hover:bg-surface-hover transition-colors min-w-[36px] min-h-[36px] flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${title ? '' : 'ml-auto'}`}
                 >
                   <X size={15} aria-hidden="true" />
                 </button>

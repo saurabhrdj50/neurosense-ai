@@ -234,7 +234,7 @@ export default function LandingPage() {
   }, [])
 
   return (
-    <div className="min-h-screen text-foreground font-sans bg-background scroll-smooth">
+    <div className="min-h-screen text-foreground font-sans bg-background scroll-smooth overflow-x-hidden">
       {/* ── Scroll progress hairline ─────────────────────────────────────── */}
       <motion.div
         className="fixed top-0 left-0 right-0 h-0.5 origin-left bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-500 z-[60]"

@@ -199,7 +199,7 @@ export default function OnboardingTour({ open, onClose }) {
             type="button"
             onClick={onClose}
             aria-label="Skip tour"
-            className="p-1 rounded-md text-foreground-subtle hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-foreground-subtle hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer min-w-[32px] min-h-[32px] flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <X size={14} />
           </button>

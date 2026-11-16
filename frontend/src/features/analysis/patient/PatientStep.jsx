@@ -199,7 +199,7 @@ export function PatientStep({ patient, setPatient, patientText, setPatientText, 
               <button
                 type="button"
                 onClick={onSelectRoster}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold bg-surface border border-sky-200/80 dark:border-slate-700 text-foreground hover:bg-surface-hover transition-colors min-h-[42px] cursor-pointer shadow-2xs"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold bg-surface border border-sky-200/80 dark:border-slate-700 text-foreground hover:bg-surface-hover transition-colors min-h-[42px] cursor-pointer shadow-2xs focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <UserCheck size={18} className="text-primary" />
                 <span>{patient.patient_id ? 'Switch Patient' : 'Select Patient'}</span>
@@ -209,7 +209,7 @@ export function PatientStep({ patient, setPatient, patientText, setPatientText, 
               <button
                 type="button"
                 onClick={onLoadSample}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-extrabold bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:opacity-95 transition-opacity min-h-[42px] cursor-pointer shadow-xs"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-extrabold bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:opacity-95 transition-opacity min-h-[42px] cursor-pointer shadow-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <Sparkles size={18} />
                 <span>Sample Case</span>
@@ -263,7 +263,7 @@ export function PatientStep({ patient, setPatient, patientText, setPatientText, 
             <button
               type="button"
               onClick={() => setPatient(p => ({ ...p, photo: null }))}
-              className="px-3 py-2 rounded-xl text-xs font-bold border border-rose-500/30 text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors min-h-[38px] flex items-center gap-1.5 cursor-pointer"
+              className="px-3 py-2 rounded-xl text-xs font-bold border border-rose-500/30 text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors min-h-[38px] flex items-center gap-1.5 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
             >
               <Trash2 size={13} /> Remove
             </button>
@@ -271,7 +271,7 @@ export function PatientStep({ patient, setPatient, patientText, setPatientText, 
             <button
               type="button"
               onClick={() => photoInputRef.current?.click()}
-              className="px-3 py-2 rounded-xl text-xs font-bold bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition-colors min-h-[38px] flex items-center gap-1.5 cursor-pointer"
+              className="px-3 py-2 rounded-xl text-xs font-bold bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition-colors min-h-[38px] flex items-center gap-1.5 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
               <Camera size={13} /> Upload
             </button>
@@ -300,7 +300,7 @@ export function PatientStep({ patient, setPatient, patientText, setPatientText, 
               <button
                 type="button"
                 onClick={generateDoctorPatientId}
-                className="text-xs text-primary hover:underline font-extrabold cursor-pointer"
+                className="text-xs text-primary hover:underline font-extrabold cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded px-1"
               >
                 Auto Generate
               </button>
@@ -336,13 +336,14 @@ export function PatientStep({ patient, setPatient, patientText, setPatientText, 
             <label className="text-sm block mb-1.5 font-bold text-foreground">
               Biological Sex <span className="text-rose-500 font-bold">*</span>
             </label>
-            <div className="flex gap-1.5">
+            <div className="flex gap-1.5" role="group" aria-label="Biological Sex">
               {['M', 'F', 'Other'].map(s => (
                 <button
                   key={s}
                   type="button"
+                  aria-pressed={patient.sex === s}
                   onClick={() => setPatient(p => ({ ...p, sex: s }))}
-                  className={`flex-1 py-2.5 rounded-xl text-sm font-extrabold transition-all border min-h-[44px] cursor-pointer ${
+                  className={`flex-1 py-2.5 rounded-xl text-sm font-extrabold transition-all border min-h-[44px] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                     patient.sex === s
                       ? 'bg-primary text-primary-foreground border-primary shadow-sm'
                       : 'bg-background hover:bg-surface-hover text-foreground-muted border-border'
@@ -367,7 +368,7 @@ export function PatientStep({ patient, setPatient, patientText, setPatientText, 
           <button
             type="button"
             onClick={toggleDictation}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-2 transition-all min-h-[38px] cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-2 transition-all min-h-[38px] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
               isListening
                 ? 'bg-rose-500/20 text-rose-400 border border-rose-500/50 animate-pulse'
                 : 'bg-background border border-border text-foreground hover:border-primary/40'
@@ -383,15 +384,16 @@ export function PatientStep({ patient, setPatient, patientText, setPatientText, 
           <span className="text-xs font-extrabold text-foreground-muted uppercase tracking-wider block">
             Click to Toggle Presenting Symptoms:
           </span>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Essential Presenting Symptoms">
             {ESSENTIAL_SYMPTOM_CHIPS.map(chip => {
               const active = patientText.includes(chip)
               return (
                 <button
                   key={chip}
                   type="button"
+                  aria-pressed={active}
                   onClick={() => toggleSymptomChip(chip)}
-                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 min-h-[40px] cursor-pointer ${
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 min-h-[40px] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                     active
                       ? 'bg-primary text-primary-foreground font-extrabold shadow-sm'
                       : 'bg-background hover:bg-surface-hover text-foreground border border-border'
@@ -411,6 +413,7 @@ export function PatientStep({ patient, setPatient, patientText, setPatientText, 
           onChange={(e) => setPatientText(e.target.value)}
           placeholder="Describe symptom onset timeline, memory complaints, speech pauses, or caregiver observations…"
           rows={3}
+          aria-label="Clinical Observations and Chief Complaint"
           className="w-full px-4 py-3 rounded-xl text-base bg-background text-foreground border border-border resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 min-h-[110px]"
         />
       </div>
@@ -420,7 +423,8 @@ export function PatientStep({ patient, setPatient, patientText, setPatientText, 
         <button
           type="button"
           onClick={() => setShowAdvanced(!showAdvanced)}
-          className="flex items-center gap-2 text-sm font-extrabold text-foreground-muted hover:text-foreground transition-colors min-h-[44px] cursor-pointer"
+          aria-expanded={showAdvanced}
+          className="flex items-center gap-2 text-sm font-extrabold text-foreground-muted hover:text-foreground transition-colors min-h-[44px] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-lg px-2"
         >
           <span className="text-primary text-lg font-extrabold">{showAdvanced ? '−' : '+'}</span>
           <span>{showAdvanced ? 'Hide Secondary Demographics & MRI Clearance' : 'Show Secondary Demographics & MRI Safety Clearance'}</span>
@@ -441,13 +445,14 @@ export function PatientStep({ patient, setPatient, patientText, setPatientText, 
 
               <div>
                 <label className="text-sm block mb-1.5 font-bold text-foreground">Handedness</label>
-                <div className="flex gap-1.5">
+                <div className="flex gap-1.5" role="group" aria-label="Handedness">
                   {['Right', 'Left', 'Ambi'].map(h => (
                     <button
                       key={h}
                       type="button"
+                      aria-pressed={patient.handedness === h}
                       onClick={() => setPatient(p => ({ ...p, handedness: h }))}
-                      className={`flex-1 py-2.5 rounded-xl text-sm font-extrabold border min-h-[44px] cursor-pointer ${
+                      className={`flex-1 py-2.5 rounded-xl text-sm font-extrabold border min-h-[44px] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                         patient.handedness === h ? 'bg-primary text-primary-foreground border-primary' : 'bg-background border-border text-foreground-muted'
                       }`}
                     >
@@ -462,7 +467,7 @@ export function PatientStep({ patient, setPatient, patientText, setPatientText, 
                 <select
                   value={patient.ethnicity || ''}
                   onChange={patSet('ethnicity')}
-                  className="w-full px-4 py-2.5 rounded-xl text-base bg-background text-foreground border border-border min-h-[44px] cursor-pointer"
+                  className="w-full px-4 py-2.5 rounded-xl text-base bg-background text-foreground border border-border min-h-[44px] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 >
                   <option value="">Select Ancestry</option>
                   {ETHNICITIES.map(eth => (

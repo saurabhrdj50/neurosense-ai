@@ -18,9 +18,9 @@ const GUIDED_TASKS = [
 ]
 
 const SUPPORTED_LANGUAGES = [
-  { code: 'auto', label: '🌐 Auto-Detect (Multilingual AI)', ttsLang: 'en-US' },
-  { code: 'en', label: '🇺🇸 English (US / UK / IN)', ttsLang: 'en-US' },
-  { code: 'hi', label: '🇮🇳 Hindi (हिंदी)', ttsLang: 'hi-IN' },
+  { code: 'auto', label: 'Auto-Detect (Multilingual AI)', ttsLang: 'en-US' },
+  { code: 'en', label: 'English (US / UK / IN)', ttsLang: 'en-US' },
+  { code: 'hi', label: 'Hindi (हिंदी)', ttsLang: 'hi-IN' },
 ]
 
 const LOCALIZED_PROMPTS = {
@@ -695,8 +695,8 @@ export function SpeechStep({ speechText, setSpeechText, audioFile, setAudioFile 
                   }`}
                   title="Read Task Prompt Aloud in Selected Spoken Language"
                 >
-                  {isSpeakingPrompt ? <VolumeX size={15} /> : <Volume2 size={15} />}
-                  {isSpeakingPrompt ? 'Stop Voice' : `🔊 Read Aloud (${SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.code.toUpperCase()})`}
+                  {isSpeakingPrompt ? <VolumeX size={15} aria-hidden="true" /> : <Volume2 size={15} aria-hidden="true" />}
+                  {isSpeakingPrompt ? 'Stop Voice' : `Read Aloud (${SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.code.toUpperCase()})`}
                 </button>
 
                 <button

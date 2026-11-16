@@ -151,8 +151,12 @@ export function ReviewStep({
 
         {/* CARD 1: PATIENT INFORMATION */}
         <div
+          role="button"
+          tabIndex={0}
           onClick={() => onGoToStep(0)}
-          className="p-5 rounded-2xl bg-surface border border-primary/30 hover:border-primary cursor-pointer transition-all space-y-3.5 group shadow-2xs"
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onGoToStep(0); } }}
+          className="p-5 rounded-2xl bg-surface border border-primary/30 hover:border-primary cursor-pointer transition-all space-y-3.5 group shadow-2xs focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          aria-label="Review and edit Patient Information"
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -199,8 +203,12 @@ export function ReviewStep({
 
         {/* CARD 2: BRAIN MRI SCAN */}
         <div
+          role="button"
+          tabIndex={0}
           onClick={() => onGoToStep(1)}
-          className="p-5 rounded-2xl bg-surface border border-indigo-500/30 hover:border-indigo-500 cursor-pointer transition-all space-y-3.5 group shadow-2xs"
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onGoToStep(1); } }}
+          className="p-5 rounded-2xl bg-surface border border-indigo-500/30 hover:border-indigo-500 cursor-pointer transition-all space-y-3.5 group shadow-2xs focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+          aria-label="Review and edit Brain MRI Scan"
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -235,8 +243,12 @@ export function ReviewStep({
 
         {/* CARD 3: MEMORY & BRAIN TEST */}
         <div
+          role="button"
+          tabIndex={0}
           onClick={() => onGoToStep(2)}
-          className="p-5 rounded-2xl bg-surface border border-cyan-500/30 hover:border-cyan-500 cursor-pointer transition-all space-y-3.5 group shadow-2xs"
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onGoToStep(2); } }}
+          className="p-5 rounded-2xl bg-surface border border-cyan-500/30 hover:border-cyan-500 cursor-pointer transition-all space-y-3.5 group shadow-2xs focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
+          aria-label="Review and edit Cognitive Screening"
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -283,8 +295,12 @@ export function ReviewStep({
 
         {/* CARD 4: VOICE & SPEECH TEST */}
         <div
+          role="button"
+          tabIndex={0}
           onClick={() => onGoToStep(3)}
-          className="p-5 rounded-2xl bg-surface border border-amber-500/30 hover:border-amber-500 cursor-pointer transition-all space-y-3.5 group shadow-2xs"
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onGoToStep(3); } }}
+          className="p-5 rounded-2xl bg-surface border border-amber-500/30 hover:border-amber-500 cursor-pointer transition-all space-y-3.5 group shadow-2xs focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+          aria-label="Review and edit Voice and Speech Test"
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -319,8 +335,12 @@ export function ReviewStep({
 
         {/* CARD 5: HEALTH & RISK FACTORS */}
         <div
+          role="button"
+          tabIndex={0}
           onClick={() => onGoToStep(4)}
-          className="p-5 rounded-2xl bg-surface border border-rose-500/30 hover:border-rose-500 cursor-pointer transition-all flex items-center justify-between group shadow-2xs"
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onGoToStep(4); } }}
+          className="p-5 rounded-2xl bg-surface border border-rose-500/30 hover:border-rose-500 cursor-pointer transition-all flex items-center justify-between group shadow-2xs focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
+          aria-label="Review and edit Health and Risk Factors"
         >
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center font-bold shrink-0">

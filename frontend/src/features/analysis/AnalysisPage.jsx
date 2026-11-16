@@ -555,6 +555,49 @@ export default function AnalysisPage() {
           </div>
         </header>
 
+        {/* Mobile Horizontal Stepper Strip (< md) */}
+        <div className="md:hidden flex-shrink-0 px-4 py-2.5 bg-surface border-b border-border space-y-2">
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-bold text-foreground flex items-center gap-1.5">
+              <span className="px-1.5 py-0.5 rounded bg-primary text-primary-foreground font-mono text-[10px]">
+                {step + 1}/{STEPS.length}
+              </span>
+              <span>{STEPS[step].label}</span>
+            </span>
+            <span className="text-[11px] font-mono text-foreground-muted">
+              {completedCount}/{STEPS.length} completed
+            </span>
+          </div>
+
+          {/* Touch-Friendly Horizontal Scrollable Step Pills */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none" role="tablist" aria-label="Assessment Steps">
+            {STEPS.map((s, idx) => {
+              const Icon = s.icon;
+              const active = step === idx;
+              const complete = isStepComplete(idx);
+              return (
+                <button
+                  key={s.id}
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => setStep(idx)}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap shrink-0 transition-all border min-h-[32px] ${
+                    active
+                      ? 'bg-primary text-primary-foreground border-primary shadow-xs'
+                      : complete
+                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                      : 'bg-surface-secondary text-foreground-muted border-border'
+                  }`}
+                >
+                  <Icon size={12} className={active ? 'text-primary-foreground' : complete ? 'text-emerald-500' : 'text-foreground-muted'} />
+                  <span>{s.label}</span>
+                  {complete && !active && <span className="text-emerald-500 text-[10px]">✓</span>}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Workspace Body Grid */}
         <div className="flex-1 flex overflow-hidden w-full">
 
@@ -645,18 +688,24 @@ export default function AnalysisPage() {
             Previous Step
           </Button>
 
-          {/* Dots */}
-          <div className="hidden sm:flex items-center gap-2.5">
-            {STEPS.map((_, i) => (
+          {/* Dots with accessible tap targets & aria-labels */}
+          <div className="flex items-center gap-1 sm:gap-1.5" role="group" aria-label="Step progress indicator">
+            {STEPS.map((s, i) => (
               <button
                 key={i}
+                type="button"
                 onClick={() => setStep(i)}
-                className="h-2.5 rounded-full transition-all cursor-pointer"
-                style={{
-                  width: i === step ? 28 : 10,
-                  background: i === step ? 'rgb(var(--primary))' : isStepComplete(i) ? '#10B981' : 'rgb(var(--border))',
-                }}
-              />
+                aria-label={`Step ${i + 1}: ${s.label} (${i === step ? 'Current' : isStepComplete(i) ? 'Completed' : 'Pending'})`}
+                className="p-1 sm:p-1.5 flex items-center justify-center cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-full min-h-[32px] min-w-[32px]"
+              >
+                <span
+                  className="h-2 rounded-full transition-all block"
+                  style={{
+                    width: i === step ? 22 : 8,
+                    background: i === step ? 'rgb(var(--primary))' : isStepComplete(i) ? '#10B981' : 'rgb(var(--border))',
+                  }}
+                />
+              </button>
             ))}
           </div>
 

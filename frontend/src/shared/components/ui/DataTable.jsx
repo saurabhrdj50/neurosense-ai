@@ -291,14 +291,16 @@ export default function DataTable({
           {/* Density toggle */}
           <div className="flex items-center bg-surface-secondary border border-border rounded-lg p-0.5" role="group" aria-label="Density selector">
             <button
+              type="button"
               onClick={() => setDensity('comfortable')}
-              className={`px-2.5 py-1 text-xs font-bold rounded-md transition-all ${density === 'comfortable' ? 'bg-card text-primary shadow-2xs' : 'text-muted hover:text-foreground'}`}
+              className={`px-2.5 py-1 text-xs font-bold rounded-md transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${density === 'comfortable' ? 'bg-card text-primary shadow-2xs' : 'text-muted hover:text-foreground'}`}
             >
               Comfortable
             </button>
             <button
+              type="button"
               onClick={() => setDensity('compact')}
-              className={`px-2.5 py-1 text-xs font-bold rounded-md transition-all ${density === 'compact' ? 'bg-card text-primary shadow-2xs' : 'text-muted hover:text-foreground'}`}
+              className={`px-2.5 py-1 text-xs font-bold rounded-md transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${density === 'compact' ? 'bg-card text-primary shadow-2xs' : 'text-muted hover:text-foreground'}`}
             >
               Compact
             </button>
@@ -323,8 +325,9 @@ export default function DataTable({
                     return (
                       <button
                         key={col.id}
+                        type="button"
                         onClick={() => toggleColumnVisibility(col.id)}
-                        className="w-full flex items-center justify-between px-2 py-1.5 text-xs text-foreground hover:bg-hover rounded-lg transition-colors font-medium"
+                        className="w-full flex items-center justify-between px-2 py-1.5 text-xs text-foreground hover:bg-hover rounded-lg transition-colors font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                       >
                         <span>{col.label}</span>
                         {isVisible ? (
@@ -528,17 +531,19 @@ export default function DataTable({
 
               <div className="flex items-center gap-1.5 font-semibold">
                 <button
+                  type="button"
                   disabled={currentPage === 1}
                   onClick={() => setCurrentPage(1)}
-                  className="px-3 py-1.5 min-h-[36px] border border-border rounded-lg bg-card text-foreground text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-surface-hover transition-colors"
+                  className="px-3 py-1.5 min-h-[36px] border border-border rounded-lg bg-card text-foreground text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-surface-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   aria-label="Go to first page"
                 >
                   First
                 </button>
                 <button
+                  type="button"
                   disabled={currentPage === 1}
                   onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                  className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center border border-border rounded-lg bg-card text-foreground disabled:opacity-40 disabled:cursor-not-allowed hover:bg-surface-hover transition-colors"
+                  className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center border border-border rounded-lg bg-card text-foreground disabled:opacity-40 disabled:cursor-not-allowed hover:bg-surface-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   aria-label="Go to previous page"
                 >
                   <ChevronLeft size={16} />
@@ -547,17 +552,19 @@ export default function DataTable({
                   {currentPage} / {totalPages}
                 </span>
                 <button
+                  type="button"
                   disabled={currentPage === totalPages}
                   onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                  className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center border border-border rounded-lg bg-card text-foreground disabled:opacity-40 disabled:cursor-not-allowed hover:bg-surface-hover transition-colors"
+                  className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center border border-border rounded-lg bg-card text-foreground disabled:opacity-40 disabled:cursor-not-allowed hover:bg-surface-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   aria-label="Go to next page"
                 >
                   <ChevronRight size={16} />
                 </button>
                 <button
+                  type="button"
                   disabled={currentPage === totalPages}
                   onClick={() => setCurrentPage(totalPages)}
-                  className="px-3 py-1.5 min-h-[36px] border border-border rounded-lg bg-card text-foreground text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-surface-hover transition-colors"
+                  className="px-3 py-1.5 min-h-[36px] border border-border rounded-lg bg-card text-foreground text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-surface-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   aria-label="Go to last page"
                 >
                   Last

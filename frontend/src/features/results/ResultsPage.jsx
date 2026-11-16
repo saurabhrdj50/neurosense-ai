@@ -558,7 +558,7 @@ export default function ResultsPage() {
             />
           </div>
 
-          <div className="flex items-center gap-1.5 bg-surface-secondary p-1 rounded-xl border border-border w-full sm:w-auto overflow-x-auto">
+          <div className="flex items-center gap-1.5 bg-surface-secondary p-1 rounded-xl border border-border w-full sm:w-auto overflow-x-auto" role="group" aria-label="Filter past analyses by clinical stage">
             {[
               { id: 'ALL', label: 'All Stages' },
               { id: 'CN', label: 'Normal (CN)' },
@@ -568,8 +568,9 @@ export default function ResultsPage() {
               <button
                 key={tab.id}
                 type="button"
+                aria-pressed={historyStageFilter === tab.id}
                 onClick={() => setHistoryStageFilter(tab.id)}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap min-h-[36px] ${
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap min-h-[36px] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                   historyStageFilter === tab.id
                     ? 'bg-primary text-primary-foreground shadow-xs'
                     : 'text-foreground-muted hover:text-foreground hover:bg-surface'
@@ -923,7 +924,7 @@ export default function ResultsPage() {
                   <button
                     type="button"
                     onClick={() => { setDownloadMenuOpen(false); handleDownloadPdf(); }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-foreground hover:bg-surface-hover font-semibold transition-colors text-left"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-foreground hover:bg-surface-hover font-semibold transition-colors text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary min-h-[38px]"
                   >
                     <FileText size={15} className="text-indigo-500 shrink-0" />
                     <div>
@@ -935,7 +936,7 @@ export default function ResultsPage() {
                   <button
                     type="button"
                     onClick={() => { setDownloadMenuOpen(false); handleExportCsv(); }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-foreground hover:bg-surface-hover font-semibold transition-colors text-left"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-foreground hover:bg-surface-hover font-semibold transition-colors text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary min-h-[38px]"
                   >
                     <Download size={15} className="text-emerald-500 shrink-0" />
                     <div>
@@ -949,7 +950,7 @@ export default function ResultsPage() {
                   <button
                     type="button"
                     onClick={() => { setDownloadMenuOpen(false); handlePrint(); }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-foreground hover:bg-surface-hover font-semibold transition-colors text-left"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-foreground hover:bg-surface-hover font-semibold transition-colors text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary min-h-[38px]"
                   >
                     <Printer size={15} className="text-foreground-muted shrink-0" />
                     <div>
@@ -985,11 +986,12 @@ export default function ResultsPage() {
           </div>
         </div>
 
-        <div className="inline-flex items-center p-1 rounded-xl bg-surface-secondary border border-border shrink-0 self-start sm:self-auto">
+        <div className="inline-flex items-center p-1 rounded-xl bg-surface-secondary border border-border shrink-0 self-start sm:self-auto" role="group" aria-label="Perspective View Switcher">
           <button
             type="button"
+            aria-pressed={lens === 'patient'}
             onClick={() => setLens('patient')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer min-h-[36px] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
               lens === 'patient'
                 ? 'bg-primary text-primary-foreground shadow-xs'
                 : 'text-foreground-muted hover:text-foreground hover:bg-surface'
@@ -1000,8 +1002,9 @@ export default function ResultsPage() {
           </button>
           <button
             type="button"
+            aria-pressed={lens === 'clinician'}
             onClick={() => setLens('clinician')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer min-h-[36px] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
               lens === 'clinician'
                 ? 'bg-primary text-primary-foreground shadow-xs'
                 : 'text-foreground-muted hover:text-foreground hover:bg-surface'

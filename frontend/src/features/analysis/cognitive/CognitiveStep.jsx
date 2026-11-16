@@ -707,7 +707,7 @@ export function CognitiveStep({ cognData, setCognData }) {
 
       {/* ── QUESTION STEPPER ────────────────────────────────────────────── */}
       <div className="p-5 sm:p-6 rounded-2xl bg-surface border border-border space-y-5 shadow-xs">
-        <div className="flex flex-wrap gap-1.5" aria-label="Assessment questions">
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Assessment questions navigation">
           {GUIDED_QUESTIONS.map((question, index) => {
             const answered = Object.prototype.hasOwnProperty.call(breakdown, question.id)
             return (
@@ -716,9 +716,9 @@ export function CognitiveStep({ cognData, setCognData }) {
                 type="button"
                 onClick={() => { setCurrentQIndex(index); setRevealWords(false) }}
                 aria-label={`Question ${index + 1}: ${question.label}${answered ? ', scored' : ', not scored'}`}
-                className={`w-8 h-8 rounded-lg text-xs font-extrabold border transition-colors ${
+                className={`min-h-[34px] min-w-[34px] p-1 rounded-lg text-xs font-extrabold border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                   currentQIndex === index
-                    ? 'bg-primary text-primary-foreground border-primary'
+                    ? 'bg-primary text-primary-foreground border-primary shadow-xs'
                     : answered
                     ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
                     : 'bg-background text-foreground-muted border-border hover:bg-surface-hover'
@@ -760,7 +760,8 @@ export function CognitiveStep({ cognData, setCognData }) {
                 type="button"
                 disabled={currentQIndex === 0}
                 onClick={() => setCurrentQIndex(i => Math.max(0, i - 1))}
-                className="p-2 rounded-xl border border-border disabled:opacity-30 hover:bg-surface-hover text-foreground min-h-[38px] min-w-[38px] flex items-center justify-center cursor-pointer transition-colors"
+                aria-label="Previous question"
+                className="p-2.5 rounded-xl border border-border disabled:opacity-30 hover:bg-surface-hover text-foreground min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 title="Previous Question"
               >
                 <ChevronLeft size={18} />
@@ -769,7 +770,8 @@ export function CognitiveStep({ cognData, setCognData }) {
                 type="button"
                 disabled={currentQIndex === GUIDED_QUESTIONS.length - 1}
                 onClick={() => setCurrentQIndex(i => Math.min(GUIDED_QUESTIONS.length - 1, i + 1))}
-                className="p-2 rounded-xl border border-border disabled:opacity-30 hover:bg-surface-hover text-foreground min-h-[38px] min-w-[38px] flex items-center justify-center cursor-pointer transition-colors"
+                aria-label="Next question"
+                className="p-2.5 rounded-xl border border-border disabled:opacity-30 hover:bg-surface-hover text-foreground min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 title="Next Question"
               >
                 <ChevronRight size={18} />
@@ -802,7 +804,7 @@ export function CognitiveStep({ cognData, setCognData }) {
                 <button
                   type="button"
                   onClick={() => setPatientModalText(currentQ.prompt)}
-                  className="px-3.5 py-1.5 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-600 dark:text-cyan-400 hover:bg-cyan-500/20 text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs transition-colors shrink-0"
+                  className="px-3.5 py-1.5 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-600 dark:text-cyan-400 hover:bg-cyan-500/20 text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs transition-colors shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
                 >
                   <Maximize2 size={14} /> Present to Patient
                 </button>
@@ -849,7 +851,7 @@ export function CognitiveStep({ cognData, setCognData }) {
                         type="button"
                         onClick={() => scoreAndAdvance(currentQ.id, score)}
                         aria-pressed={active}
-                        className={`min-h-[48px] min-w-[48px] px-3 rounded-xl text-sm font-extrabold border transition-colors cursor-pointer ${
+                        className={`min-h-[48px] min-w-[48px] px-3 rounded-xl text-sm font-extrabold border transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                           active
                             ? 'bg-primary text-primary-foreground border-primary shadow-sm'
                             : 'bg-background text-foreground border-border hover:border-primary hover:text-primary'
@@ -864,7 +866,7 @@ export function CognitiveStep({ cognData, setCognData }) {
                   <button
                     type="button"
                     onClick={clearCurrentScore}
-                    className="px-3 py-2.5 rounded-xl text-sm font-bold border border-rose-500/30 text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors min-h-[44px]"
+                    className="px-3 py-2.5 rounded-xl text-sm font-bold border border-rose-500/30 text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors min-h-[44px] focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
                   >
                     Clear item
                   </button>

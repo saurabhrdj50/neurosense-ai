@@ -24,6 +24,7 @@ import {
   getAnalysisConfidence,
   formatTimeAgo
 } from '../../shared/utils/clinicalMappers';
+import TelemetryWorkstation from './components/TelemetryWorkstation';
 
 /* ── High-Contrast Clinical Tooltip ──────────────────────────────────────── */
 const UNKNOWN_RISK_COLOR = '#94A3B8';
@@ -336,6 +337,9 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* ── Interactive Live Telemetry Workstation (Density 8/10 Scale) ──── */}
+      <TelemetryWorkstation />
+
       {/* ── PRIMARY FOCUS: High-Risk Urgent Triage Section ──────────────── */}
       <section 
         aria-label="Priority Clinical Attention" 
@@ -365,40 +369,45 @@ export default function DashboardPage() {
                 <tr>
                   <th scope="col" className="py-3.5 px-4 w-32">
                     <button 
+                      type="button"
                       onClick={() => handleSortToggle('priority', 'patientId')} 
-                      className="flex items-center gap-1.5 hover:text-foreground font-bold uppercase"
+                      className="flex items-center gap-1.5 hover:text-foreground font-bold uppercase focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-sm"
                     >
                       Patient ID {renderSortIcon(prioritySort, 'patientId')}
                     </button>
                   </th>
                   <th scope="col" className="py-3.5 px-4 min-w-[160px]">
                     <button 
+                      type="button"
                       onClick={() => handleSortToggle('priority', 'name')} 
-                      className="flex items-center gap-1.5 hover:text-foreground font-bold uppercase"
+                      className="flex items-center gap-1.5 hover:text-foreground font-bold uppercase focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-sm"
                     >
                       Patient Name {renderSortIcon(prioritySort, 'name')}
                     </button>
                   </th>
                   <th scope="col" className="py-3.5 px-4 min-w-[180px]">
                     <button 
+                      type="button"
                       onClick={() => handleSortToggle('priority', 'stage')} 
-                      className="flex items-center gap-1.5 hover:text-foreground font-bold uppercase"
+                      className="flex items-center gap-1.5 hover:text-foreground font-bold uppercase focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-sm"
                     >
                       Diagnostic Classification {renderSortIcon(prioritySort, 'stage')}
                     </button>
                   </th>
                   <th scope="col" className="py-3.5 px-4 w-32 text-right pr-6">
                     <button 
+                      type="button"
                       onClick={() => handleSortToggle('priority', 'conf')} 
-                      className="flex items-center justify-end gap-1.5 w-full hover:text-foreground font-bold uppercase"
+                      className="flex items-center justify-end gap-1.5 w-full hover:text-foreground font-bold uppercase focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-sm"
                     >
                       AI Confidence {renderSortIcon(prioritySort, 'conf')}
                     </button>
                   </th>
                   <th scope="col" className="py-3.5 px-4 w-36">
                     <button 
+                      type="button"
                       onClick={() => handleSortToggle('priority', 'time')} 
-                      className="flex items-center gap-1.5 hover:text-foreground font-bold uppercase"
+                      className="flex items-center gap-1.5 hover:text-foreground font-bold uppercase focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-sm"
                     >
                       Evaluated {renderSortIcon(prioritySort, 'time')}
                     </button>

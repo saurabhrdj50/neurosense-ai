@@ -107,7 +107,7 @@ export function RiskStep({ risk, setRisk }) {
               <button
                 type="button"
                 onClick={() => setRisk({})}
-                className="px-3.5 py-2 rounded-xl text-xs font-bold bg-surface border border-sky-200/80 dark:border-slate-700 text-foreground-muted hover:text-rose-500 transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs shrink-0"
+                className="px-3.5 py-2 rounded-xl text-xs font-bold bg-surface border border-sky-200/80 dark:border-slate-700 text-foreground-muted hover:text-rose-500 transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
               >
                 <RotateCcw size={14} /> Reset
               </button>
@@ -117,7 +117,7 @@ export function RiskStep({ risk, setRisk }) {
       </div>
 
       {/* ── 4 CATEGORY TABS ONLY ────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2" role="group" aria-label="Risk factor categories">
         {RISK_CATEGORIES.map(cat => {
           const CatIcon = cat.icon
           const catCount = cat.factors.filter(f => risk[f.id]).length
@@ -127,8 +127,9 @@ export function RiskStep({ risk, setRisk }) {
             <button
               key={cat.id}
               type="button"
+              aria-pressed={isActive}
               onClick={() => setActiveCategoryTab(cat.id)}
-              className={`p-3 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-between gap-2 cursor-pointer border ${
+              className={`p-3 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-between gap-2 cursor-pointer border min-h-[44px] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                 isActive
                   ? 'bg-primary text-primary-foreground border-primary shadow-sm'
                   : 'bg-surface hover:bg-surface-hover text-foreground-muted border-border'
@@ -159,16 +160,25 @@ export function RiskStep({ risk, setRisk }) {
         </div>
 
         {/* Spacious List Rows */}
-        <div className="space-y-2.5">
+        <div className="space-y-2.5" role="group" aria-label={`${activeCategory.title} Factors`}>
           {activeCategory.factors.map(f => {
             const isChecked = !!risk[f.id]
 
             return (
               <motion.div
                 key={f.id}
+                role="switch"
+                aria-checked={isChecked}
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === ' ' || e.key === 'Enter') {
+                    e.preventDefault()
+                    toggleFactor(f.id)
+                  }
+                }}
                 whileHover={{ scale: 1.002 }}
                 onClick={() => toggleFactor(f.id)}
-                className={`p-4 rounded-2xl border text-left transition-all flex items-center justify-between gap-4 cursor-pointer ${
+                className={`p-4 rounded-2xl border text-left transition-all flex items-center justify-between gap-4 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                   isChecked
                     ? 'bg-primary/10 border-primary shadow-sm'
                     : 'bg-surface hover:bg-surface-hover border-border'
@@ -185,9 +195,12 @@ export function RiskStep({ risk, setRisk }) {
                 </div>
 
                 {/* Large iOS-style Toggle Switch */}
-                <div className={`w-14 h-8 rounded-full p-1 transition-colors flex items-center shrink-0 border ${
-                  isChecked ? 'bg-primary border-primary justify-end' : 'bg-surface-secondary border-border justify-start'
-                }`}>
+                <div
+                  aria-hidden="true"
+                  className={`w-14 h-8 rounded-full p-1 transition-colors flex items-center shrink-0 border ${
+                    isChecked ? 'bg-primary border-primary justify-end' : 'bg-surface-secondary border-border justify-start'
+                  }`}
+                >
                   <motion.div
                     layout
                     transition={{ type: 'spring', stiffness: 500, damping: 30 }}

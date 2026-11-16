@@ -71,9 +71,10 @@ export default function Sidebar({ open, onToggle, isMobile = false }) {
       {/* ── Collapse Toggle (Desktop only) ─────────────────────────────── */}
       {!isMobile && (
         <button
+          type="button"
           onClick={onToggle}
           aria-label={open ? 'Collapse sidebar' : 'Expand sidebar'}
-          className="absolute top-[68px] -right-3 w-6 h-6 rounded-full hidden lg:flex items-center justify-center cursor-pointer z-50 bg-card border border-border text-muted hover:text-foreground shadow-2xs transition-colors"
+          className="absolute top-[68px] -right-3 w-6 h-6 rounded-full hidden lg:flex items-center justify-center cursor-pointer z-50 bg-card border border-border text-muted hover:text-foreground shadow-2xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
           <ChevronLeft size={12} className={open ? 'transition-transform duration-200' : 'rotate-180 transition-transform duration-200'} />
         </button>
@@ -148,6 +149,7 @@ export default function Sidebar({ open, onToggle, isMobile = false }) {
               </p>
             </div>
             <button
+              type="button"
               onClick={handleLogout}
               className="p-1.5 rounded-md text-foreground-subtle hover:text-danger hover:bg-danger/10 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-danger/50"
               title="Sign out"
@@ -158,6 +160,7 @@ export default function Sidebar({ open, onToggle, isMobile = false }) {
           </div>
         ) : (
           <button
+            type="button"
             onClick={handleLogout}
             className="w-full flex items-center justify-center p-2 rounded-lg text-foreground-subtle hover:text-danger hover:bg-danger/10 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-danger/50"
             title="Sign out"

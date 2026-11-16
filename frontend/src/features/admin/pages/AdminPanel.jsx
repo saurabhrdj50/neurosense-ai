@@ -213,20 +213,23 @@ export default function AdminPanel() {
       render: (_, row) => (
         <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
           <button
+            type="button"
             onClick={() => {
               setSelectedDoctorId(row.id)
               setSelectedDoctorName(row.full_name || row.username)
               setActiveTab('patients')
             }}
             title="View patients managed by this doctor"
-            className="p-1.5 rounded-md text-primary bg-primary-subtle border border-primary/20 hover:bg-primary/20 transition-colors"
+            aria-label={`View patients managed by ${row.full_name || row.username}`}
+            className="p-1.5 rounded-md text-primary bg-primary-subtle border border-primary/20 hover:bg-primary/20 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary min-h-[32px] min-w-[32px] flex items-center justify-center"
           >
             <Users size={13} aria-hidden="true" />
           </button>
           <button
+            type="button"
             onClick={() => requestDelete('doctor', row.id, row.full_name || row.username)}
-            aria-label={`Delete ${row.full_name || row.username}`}
-            className="p-1.5 rounded-md text-red-500 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 hover:bg-red-100 dark:hover:bg-red-950/50 transition-colors"
+            aria-label={`Delete doctor ${row.full_name || row.username}`}
+            className="p-1.5 rounded-md text-red-500 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 hover:bg-red-100 dark:hover:bg-red-950/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 min-h-[32px] min-w-[32px] flex items-center justify-center"
           >
             <Trash2 size={13} aria-hidden="true" />
           </button>
@@ -314,23 +317,28 @@ export default function AdminPanel() {
       render: (_, row) => (
         <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
           <button
+            type="button"
             onClick={() => navigate(`/history/${row.patient_id}`)}
             title="View Patient History"
-            className="p-1.5 rounded-md bg-surface-secondary border border-border text-foreground-muted hover:text-primary hover:border-primary/40 transition-colors"
+            aria-label={`View history for patient ${row.name}`}
+            className="p-1.5 rounded-md bg-surface-secondary border border-border text-foreground-muted hover:text-primary hover:border-primary/40 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary min-h-[32px] min-w-[32px] flex items-center justify-center"
           >
             <Eye size={13} aria-hidden="true" />
           </button>
           <button
+            type="button"
             onClick={() => patientsApi.export(row.patient_id)}
             title="Export CSV"
-            className="p-1.5 rounded-md bg-surface-secondary border border-border text-foreground-muted hover:text-emerald-500 hover:border-emerald-500/40 transition-colors"
+            aria-label={`Export CSV for patient ${row.name}`}
+            className="p-1.5 rounded-md bg-surface-secondary border border-border text-foreground-muted hover:text-emerald-500 hover:border-emerald-500/40 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 min-h-[32px] min-w-[32px] flex items-center justify-center"
           >
             <Download size={13} aria-hidden="true" />
           </button>
           <button
+            type="button"
             onClick={() => requestDelete('patient', row.patient_id, row.name)}
-            aria-label={`Delete ${row.name}`}
-            className="p-1.5 rounded-md text-red-500 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 hover:bg-red-100 dark:hover:bg-red-950/50 transition-colors"
+            aria-label={`Delete patient ${row.name}`}
+            className="p-1.5 rounded-md text-red-500 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 hover:bg-red-100 dark:hover:bg-red-950/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 min-h-[32px] min-w-[32px] flex items-center justify-center"
           >
             <Trash2 size={13} aria-hidden="true" />
           </button>
@@ -416,16 +424,20 @@ export default function AdminPanel() {
       render: (_, row) => (
         <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
           <button
+            type="button"
             onClick={() => navigate(`/history/${row.patient_id || row.patient_info?.patient_id}`)}
             title="View Patient History"
-            className="p-1.5 rounded-md bg-surface-secondary border border-border text-foreground-muted hover:text-primary transition-colors"
+            aria-label={`View history for session #${row.id || row.session_id}`}
+            className="p-1.5 rounded-md bg-surface-secondary border border-border text-foreground-muted hover:text-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary min-h-[32px] min-w-[32px] flex items-center justify-center"
           >
             <Eye size={13} aria-hidden="true" />
           </button>
           <button
+            type="button"
             onClick={() => requestDelete('session', row.id || row.session_id, row.patient_name || row.patient_id)}
             title="Delete Session"
-            className="p-1.5 rounded-md text-red-500 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 hover:bg-red-100 dark:hover:bg-red-950/50 transition-colors"
+            aria-label={`Delete session #${row.id || row.session_id}`}
+            className="p-1.5 rounded-md text-red-500 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 hover:bg-red-100 dark:hover:bg-red-950/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 min-h-[32px] min-w-[32px] flex items-center justify-center"
           >
             <Trash2 size={13} aria-hidden="true" />
           </button>

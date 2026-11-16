@@ -57,42 +57,43 @@ export default function SettingsModal({ isOpen, onClose }) {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-md">
         <motion.div
           initial={{ opacity: 0, scale: 0.96, y: 12 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.96, y: 12 }}
           transition={{ duration: 0.2 }}
-          className="w-full max-w-4xl h-[600px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl text-slate-900 dark:text-white flex overflow-hidden"
+          className="w-full max-w-4xl max-h-[92vh] sm:h-[600px] bg-card border border-border rounded-3xl shadow-2xl text-foreground flex flex-col sm:flex-row overflow-hidden font-sans"
         >
-          {/* ── Settings Left Sidebar ───────────────────────────────────── */}
-          <aside className="w-56 bg-slate-50 dark:bg-slate-900/60 border-r border-slate-200 dark:border-slate-800 p-4 flex flex-col justify-between select-none">
+          {/* ── Settings Left Sidebar — Responsive on mobile ─────────────── */}
+          <aside className="w-full sm:w-56 bg-surface-secondary/60 border-b sm:border-b-0 sm:border-r border-border p-3 sm:p-4 flex flex-col justify-between shrink-0 select-none">
             <div>
-              <div className="flex items-center gap-2.5 px-3 py-3 mb-3 border-b border-slate-200 dark:border-slate-800">
-                <div className="w-7 h-7 rounded-lg bg-indigo-600/10 dark:bg-indigo-400/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold">
-                  <SlidersHorizontal size={16} />
+              <div className="flex items-center gap-2.5 px-2 sm:px-3 py-2 sm:py-3 mb-2 sm:mb-3 border-b border-border">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary border border-primary/20 flex items-center justify-center font-bold shrink-0">
+                  <SlidersHorizontal size={16} aria-hidden="true" />
                 </div>
                 <div>
-                  <h2 className="text-sm font-bold tracking-tight">Settings Center</h2>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400">Enterprise Workstation</p>
+                  <h2 className="text-sm font-bold tracking-tight text-foreground font-heading">Settings Center</h2>
+                  <p className="text-[10px] text-muted">Enterprise Workstation</p>
                 </div>
               </div>
 
-              <nav className="space-y-1">
+              <nav className="flex sm:flex-col gap-1 overflow-x-auto sm:overflow-x-visible pb-1 sm:pb-0">
                 {TABS.map(tab => {
                   const Icon = tab.icon
                   const active = activeTab === tab.id
                   return (
                     <button
                       key={tab.id}
+                      type="button"
                       onClick={() => setActiveTab(tab.id)}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                      className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap sm:w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                         active
-                          ? 'bg-indigo-600 text-white shadow-md'
-                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200/60 dark:hover:bg-slate-800/60'
+                          ? 'bg-primary text-primary-foreground shadow-xs font-bold'
+                          : 'text-muted hover:text-foreground hover:bg-surface-hover'
                       }`}
                     >
-                      <Icon size={16} />
+                      <Icon size={15} aria-hidden="true" className="shrink-0" />
                       <span>{tab.label}</span>
                     </button>
                   )
@@ -100,24 +101,26 @@ export default function SettingsModal({ isOpen, onClose }) {
               </nav>
             </div>
 
-            <div className="p-3 rounded-2xl bg-slate-200/50 dark:bg-slate-800/40 text-[10px] text-slate-500 dark:text-slate-400 space-y-0.5">
-              <p className="font-semibold text-slate-700 dark:text-slate-300">NeuroSense AI Enterprise</p>
+            <div className="hidden sm:block p-3 rounded-2xl bg-surface-secondary border border-border text-[10px] text-muted space-y-0.5">
+              <p className="font-semibold text-foreground">NeuroSense AI Enterprise</p>
               <p>v2.4.0 · Build #8849</p>
             </div>
           </aside>
 
           {/* ── Settings Right Content Panel ─────────────────────────────── */}
-          <main className="flex-1 flex flex-col justify-between overflow-hidden bg-white dark:bg-slate-900">
+          <main className="flex-1 flex flex-col justify-between overflow-hidden bg-card">
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800">
-              <h3 className="text-base font-bold capitalize tracking-tight">
+            <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-border">
+              <h3 className="text-base font-bold capitalize tracking-tight text-foreground font-heading">
                 {TABS.find(t => t.id === activeTab)?.label} Configuration
               </h3>
               <button
+                type="button"
                 onClick={onClose}
-                className="p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                aria-label="Close settings dialog"
+                className="min-w-[40px] min-h-[40px] flex items-center justify-center rounded-xl hover:bg-surface-hover text-muted hover:text-foreground transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
-                <X size={18} />
+                <X size={18} aria-hidden="true" />
               </button>
             </div>
 
@@ -391,10 +394,11 @@ export default function SettingsModal({ isOpen, onClose }) {
             </div>
 
             {/* Footer */}
-            <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2 bg-slate-50 dark:bg-slate-900">
+            <div className="p-4 border-t border-border flex justify-end gap-2 bg-surface-secondary/40">
               <button
+                type="button"
                 onClick={onClose}
-                className="px-5 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-500 transition-colors shadow-md"
+                className="px-5 py-2.5 min-h-[40px] rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:bg-primary-hover transition-colors shadow-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
               >
                 Save Preferences
               </button>

@@ -6,7 +6,7 @@ import { test, expect } from '@playwright/test'
    submit button always lives inside the form. */
 const submitSignIn = (page) => page.locator('form').getByRole('button', { name: 'Sign In' })
 
-test.describe('login → wizard → results', () => {
+test.describe('clinical workflows & authentication', () => {
   test('first-session walkthrough with sample data', async ({ page, request }) => {
     // ── 0. Ensure the demo doctor exists (self-registers if not yet provisioned) ──
     try {
@@ -41,7 +41,8 @@ test.describe('login → wizard → results', () => {
     await expect(page.getByText('✓ Done').first()).toBeVisible()
 
     // ── 3. Jump straight to review and run the analysis ───────────────────
-    await page.getByRole('button', { name: /Ready for Analysis/ }).click()
+    await page.getByRole('button', { name: /Ready for Analysis/ }).first().click()
+    await page.getByLabel(/verified the patient identity/i).check()
     const runButton = page.getByRole('button', { name: /Run Analysis & Generate Report/ })
     await expect(runButton).toBeEnabled()
     await runButton.click()
@@ -49,11 +50,24 @@ test.describe('login → wizard → results', () => {
     // ── 4. Results render — tolerant to MRI weight absence in CI ──────────
     // The pipeline completes even when the MRI model is unavailable (module
     // warning + retry card); cognitive/risk/fusion are rule-based and always
-    // succeed. Assert on the results shell, not on a specific stage.
+    // succeed. Assert on the results shell, patient identity, and health summary.
     await expect(
-      page.getByText(/Main Result/i).first(),
+      page.getByRole('heading', { name: 'Eleanor Sample' }),
     ).toBeVisible({ timeout: 120_000 })
-    await expect(page.getByText(/How sure is the AI/i)).toBeVisible()
+    await expect(page.getByText(/Cognitive Health Summary|Mild Cognitive Changes/i).first()).toBeVisible()
+
+    // ── 5. Dual-lens perspective: Clinician Workstation CDS ───────────────
+    const clinicianTab = page.getByRole('button', { name: 'Clinician Workstation' })
+    await expect(clinicianTab).toBeVisible()
+    await clinicianTab.click()
+    await expect(page.getByText(/Clinical Decision Support \(CDS\)/i)).toBeVisible()
+    await expect(page.getByText(/Multimodal Fusion/i).first()).toBeVisible()
+
+    // ── 6. PDF Export Menu Dropdown ──────────────────────────────────────
+    const exportButton = page.getByRole('button', { name: /Download \/ Export/i })
+    await expect(exportButton).toBeVisible()
+    await exportButton.click()
+    await expect(page.getByRole('button', { name: /Download PDF Report/i })).toBeVisible()
   })
 
   test('login rejects bad credentials', async ({ page }) => {
@@ -63,5 +77,58 @@ test.describe('login → wizard → results', () => {
     await submitSignIn(page).click()
     await expect(page.getByText(/invalid|incorrect|failed/i).first()).toBeVisible({ timeout: 15_000 })
     await expect(page).toHaveURL(/\/login/)
+  })
+
+  test('dashboard renders unmistakable simulated telemetry demarcation', async ({ page }) => {
+    await page.goto('/login')
+    await page.getByPlaceholder('dr_sarah').fill('doctor')
+    await page.getByPlaceholder('••••••••').fill('Doctor@123')
+    await submitSignIn(page).click()
+    await expect(page).toHaveURL(/\/dashboard/, { timeout: 20_000 })
+
+    // Verify unmistakable simulation demarcation
+    await expect(page.getByText(/Simulated Demonstration/i).first()).toBeVisible()
+    await expect(page.getByText(/Synthetic Telemetry Stream/i)).toBeVisible()
+    await expect(page.getByText(/Non-Diagnostic/i).first()).toBeVisible()
+  })
+
+  test('auth lifecycle: registration, forgot password view, and logout', async ({ page }) => {
+    const rand = Math.floor(Math.random() * 900000) + 100000
+    const testUser = `doctor_${rand}`
+    const testEmail = `doctor_${rand}@hospital.org`
+
+    await page.goto('/login')
+    // Click Create Account tab
+    await page.getByRole('button', { name: 'Create Account' }).click()
+    await page.getByLabel(/Full Name/i).fill('Dr. Test Specialist')
+    await page.getByPlaceholder('dr_sarah').fill(testUser)
+    await page.getByPlaceholder('sarah@hospital.org').fill(testEmail)
+    await page.getByPlaceholder('City General Hospital').fill('St. Jude Neurological Center')
+    await page.locator('input[type="date"]').fill('1985-05-15')
+    await page.getByPlaceholder('••••••••').fill('Specialist@2026')
+    // Check Terms & Conditions
+    await page.getByRole('checkbox').click()
+    await page.locator('form').getByRole('button', { name: 'Create Account' }).click()
+
+    // Registration switches to Sign In mode with credentials ready
+    await expect(page.getByRole('heading', { name: 'Sign In' })).toBeVisible({ timeout: 15_000 })
+    await submitSignIn(page).click()
+
+    // Should redirect to dashboard upon successful sign-in
+    await expect(page).toHaveURL(/\/dashboard/, { timeout: 20_000 })
+    await expect(page.getByText('Dr. Test Specialist').first()).toBeVisible()
+
+    // Test Logout
+    const signOutBtn = page.getByRole('button', { name: 'Sign out' }).first()
+    await signOutBtn.click()
+    await expect(page).toHaveURL(/\/login/, { timeout: 15_000 })
+
+    // Test Forgot Password interface
+    await page.getByRole('button', { name: /Forgot Password\?/i }).click()
+    await expect(page.getByText('Reset Password')).toBeVisible()
+    await expect(page.getByPlaceholder('doctor@hospital.org')).toBeVisible()
+    // Back to Sign In
+    await page.getByRole('button', { name: /Back to Sign In/i }).click()
+    await expect(page.getByText('Sign In').first()).toBeVisible()
   })
 })

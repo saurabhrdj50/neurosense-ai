@@ -23,6 +23,7 @@ const STAGE_CONFIG = {
 export default function LongitudinalTimeline({ history }) {
   const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
+  const [selectedModality, setSelectedModality] = useState('all') // 'all' | 'mri' | 'speech' | 'cognitive' | 'highrisk'
   const [expandedSessions, setExpandedSessions] = useState({})
 
   // Sort history chronologically (newest first)
@@ -30,18 +31,34 @@ export default function LongitudinalTimeline({ history }) {
     return [...history].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
   }, [history])
 
-  // Filtered history list
+  // Filtered history list with modality and keyword filtering
   const filteredHistory = useMemo(() => {
-    if (!searchQuery.trim()) return sortedHistory
+    let list = sortedHistory
+
+    if (selectedModality !== 'all') {
+      list = list.filter(session => {
+        const results = session.results || {}
+        if (selectedModality === 'mri') return Boolean(results.mri)
+        if (selectedModality === 'speech') return Boolean(results.speech || results.sentiment)
+        if (selectedModality === 'cognitive') return Boolean(results.cognitive)
+        if (selectedModality === 'highrisk') {
+          const stage = (results.final_stage?.stage || results.mri?.stage || '').toLowerCase()
+          return stage.includes('alzheimer') || stage.includes('mild') || stage.includes('ad') || stage.includes('mci')
+        }
+        return true
+      })
+    }
+
+    if (!searchQuery.trim()) return list
 
     const q = searchQuery.toLowerCase()
-    return sortedHistory.filter(session => {
+    return list.filter(session => {
       const stage = session.results?.final_stage?.stage || session.results?.mri?.stage || ''
       const user = session.user_name || ''
       const date = new Date(session.timestamp).toLocaleDateString()
       return stage.toLowerCase().includes(q) || user.toLowerCase().includes(q) || date.includes(q)
     })
-  }, [sortedHistory, searchQuery])
+  }, [sortedHistory, searchQuery, selectedModality])
 
   const toggleExpand = (id) => {
     setExpandedSessions(prev => ({ ...prev, [id]: !prev[id] }))
@@ -49,8 +66,8 @@ export default function LongitudinalTimeline({ history }) {
 
   return (
     <div className="space-y-4 font-sans">
-      {/* Clean Search & Filter Bar */}
-      <div className="bg-card border border-border rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-2xs">
+      {/* Clean Search & Modality Filter Bar */}
+      <div className="bg-card border border-border rounded-2xl p-4 flex flex-col lg:flex-row items-center justify-between gap-3 shadow-2xs">
         <div className="relative w-full sm:w-80">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground-muted pointer-events-none" />
           <input
@@ -62,8 +79,33 @@ export default function LongitudinalTimeline({ history }) {
           />
         </div>
 
-        <div className="text-xs text-foreground-muted font-semibold">
-          Showing <strong className="text-foreground">{filteredHistory.length}</strong> of <strong className="text-foreground">{history.length}</strong> test sessions
+        {/* Modality Filter Chips */}
+        <div className="flex items-center gap-1.5 flex-wrap" role="group" aria-label="Filter by Modality">
+          {[
+            { id: 'all', label: 'All Modalities' },
+            { id: 'mri', label: 'MRI Scans' },
+            { id: 'speech', label: 'Acoustic Speech' },
+            { id: 'cognitive', label: 'Cognitive' },
+            { id: 'highrisk', label: 'High Risk' },
+          ].map(m => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => setSelectedModality(m.id)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary min-h-[32px] ${
+                selectedModality === m.id
+                  ? 'bg-primary text-primary-foreground shadow-xs'
+                  : 'bg-surface border border-border text-foreground-muted hover:text-foreground'
+              }`}
+              aria-pressed={selectedModality === m.id}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="text-xs text-foreground-muted font-semibold shrink-0">
+          Showing <strong className="text-foreground">{filteredHistory.length}</strong> of <strong className="text-foreground">{history.length}</strong> sessions
         </div>
       </div>
 

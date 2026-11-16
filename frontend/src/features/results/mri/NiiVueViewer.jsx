@@ -350,42 +350,48 @@ export function NiiVueViewer({ mri }) {
 
           {/* Action Row */}
           <div className="flex items-center justify-between gap-2 flex-wrap text-xs">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <button
                 type="button"
                 onClick={() => setZoomLevel((z) => Math.min(Number((z + 0.25).toFixed(2)), 2.5))}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-border bg-surface hover:bg-surface-hover text-foreground-muted hover:text-foreground"
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border bg-surface hover:bg-surface-hover text-foreground-muted hover:text-foreground transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary min-h-[32px]"
+                aria-label="Zoom in"
               >
-                <ZoomIn size={13} /> Zoom ({Math.round(zoomLevel * 100)}%)
+                <ZoomIn size={13} aria-hidden="true" />
+                <span>Zoom ({Math.round(zoomLevel * 100)}%)</span>
               </button>
               <button
                 type="button"
                 onClick={() => setZoomLevel((z) => Math.max(Number((z - 0.25).toFixed(2)), 0.75))}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-border bg-surface hover:bg-surface-hover text-foreground-muted hover:text-foreground"
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border bg-surface hover:bg-surface-hover text-foreground-muted hover:text-foreground transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary min-h-[32px]"
+                aria-label="Zoom out"
               >
-                <ZoomOut size={13} />
+                <ZoomOut size={13} aria-hidden="true" />
               </button>
               <button
                 type="button"
                 onClick={() => setShowCrosshairs((c) => !c)}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border transition-colors ${
+                aria-pressed={showCrosshairs}
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary min-h-[32px] ${
                   showCrosshairs
-                    ? 'border-indigo-500/50 bg-indigo-500/10 text-indigo-400'
-                    : 'border-border bg-surface text-foreground-muted'
+                    ? 'border-primary/50 bg-primary/10 text-primary font-bold'
+                    : 'border-border bg-surface text-foreground-muted hover:text-foreground'
                 }`}
               >
-                <Eye size={13} /> Crosshair Guide
+                <Eye size={13} aria-hidden="true" />
+                <span>Crosshair Guide</span>
               </button>
               <button
                 type="button"
                 onClick={() => setIsInverted((v) => !v)}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border transition-colors ${
+                aria-pressed={isInverted}
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary min-h-[32px] ${
                   isInverted
-                    ? 'border-amber-500/50 bg-amber-500/10 text-amber-400'
-                    : 'border-border bg-surface text-foreground-muted'
+                    ? 'border-amber-500/50 bg-amber-500/10 text-amber-400 font-bold'
+                    : 'border-border bg-surface text-foreground-muted hover:text-foreground'
                 }`}
               >
-                Invert Lut
+                <span>Invert Lut</span>
               </button>
             </div>
 
@@ -398,9 +404,10 @@ export function NiiVueViewer({ mri }) {
                 setZoomLevel(1.0)
                 setIsInverted(false)
               }}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-border bg-surface hover:bg-surface-hover text-foreground-muted hover:text-foreground"
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border bg-surface hover:bg-surface-hover text-foreground-muted hover:text-foreground transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary min-h-[32px]"
             >
-              <RotateCcw size={13} /> Reset View
+              <RotateCcw size={13} aria-hidden="true" />
+              <span>Reset View</span>
             </button>
           </div>
 
@@ -497,7 +504,7 @@ export function NiiVueViewer({ mri }) {
           {/* NiiVue Toolbar */}
           <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-surface/50 border border-border flex-wrap text-xs">
             {/* View Selectors */}
-            <div className="flex items-center gap-1 p-0.5 rounded-lg bg-surface border border-border flex-wrap">
+            <div className="flex items-center gap-1 p-0.5 rounded-lg bg-surface border border-border flex-wrap" role="tablist" aria-label="NiiVue Planar Projections">
               {[
                 { id: 'multiplanar', label: 'Multi-Planar' },
                 { id: 'axial', label: 'Axial' },
@@ -508,10 +515,12 @@ export function NiiVueViewer({ mri }) {
                 <button
                   key={v.id}
                   type="button"
+                  role="tab"
+                  aria-selected={sliceType === v.id}
                   onClick={() => handleSliceTypeChange(v.id)}
-                  className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors ${
+                  className={`px-2.5 py-1.5 rounded-md text-[11px] font-bold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary min-h-[30px] ${
                     sliceType === v.id
-                      ? 'bg-indigo-600 text-white shadow-xs'
+                      ? 'bg-primary text-primary-foreground shadow-xs'
                       : 'text-foreground-muted hover:text-foreground'
                   }`}
                 >
@@ -523,11 +532,12 @@ export function NiiVueViewer({ mri }) {
             {/* Colormap & Display Toggles */}
             <div className="flex items-center gap-2 flex-wrap">
               <div className="flex items-center gap-1.5">
-                <span className="text-[11px] text-foreground-muted font-medium">LUT:</span>
+                <span className="text-[11px] text-foreground-muted font-bold">LUT:</span>
                 <select
                   value={colormap}
                   onChange={(e) => handleColormapChange(e.target.value)}
-                  className="px-2 py-1 rounded-lg border border-border bg-surface text-foreground text-[11px] font-medium"
+                  className="px-2.5 py-1.5 rounded-lg border border-border bg-surface text-foreground text-[11px] font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  aria-label="Colormap look-up table"
                 >
                   {COLORMAPS.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -540,10 +550,11 @@ export function NiiVueViewer({ mri }) {
               <button
                 type="button"
                 onClick={toggleNvCrosshair}
-                className={`px-2.5 py-1 rounded-lg border text-[11px] font-medium transition-colors ${
+                aria-pressed={nvCrosshair}
+                className={`px-3 py-1.5 rounded-lg border text-[11px] font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary min-h-[30px] ${
                   nvCrosshair
-                    ? 'border-indigo-500/50 bg-indigo-500/10 text-indigo-400'
-                    : 'border-border bg-surface text-foreground-muted'
+                    ? 'border-primary/50 bg-primary/10 text-primary'
+                    : 'border-border bg-surface text-foreground-muted hover:text-foreground'
                 }`}
               >
                 Crosshairs
@@ -552,10 +563,11 @@ export function NiiVueViewer({ mri }) {
               <button
                 type="button"
                 onClick={toggleNvColorbar}
-                className={`px-2.5 py-1 rounded-lg border text-[11px] font-medium transition-colors ${
+                aria-pressed={nvColorbar}
+                className={`px-3 py-1.5 rounded-lg border text-[11px] font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary min-h-[30px] ${
                   nvColorbar
-                    ? 'border-indigo-500/50 bg-indigo-500/10 text-indigo-400'
-                    : 'border-border bg-surface text-foreground-muted'
+                    ? 'border-primary/50 bg-primary/10 text-primary'
+                    : 'border-border bg-surface text-foreground-muted hover:text-foreground'
                 }`}
               >
                 Colorbar

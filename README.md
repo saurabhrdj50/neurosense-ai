@@ -15,7 +15,6 @@
 > **NeuroSense AI is an investigational decision-support instrument and educational research platform; it is NOT an FDA-cleared, CE-marked, or validated medical diagnostic device.**
 > - All predictive models, risk estimates, stage categorizations, and multimodal fusion outputs represent experimental screening signals with statistical confidence bounds.
 > - They must never replace independent diagnostic evaluation, clinical judgment, laboratory testing, or care plans by certified medical professionals.
-> - Multi-channel EEG waveforms and telemetry indicators rendered in the dashboard workstation are synthetically generated for UI/UX inspection and workflow preview; they do not represent real-time physiological patient telemetry.
 
 ---
 
@@ -165,9 +164,8 @@ NeuroSense AI incorporates a clinical design system designed under the **`ui-ux-
   * **Clinician Workstation (CDS)**: Comprehensive technical telemetry including individual modality scores, posterior probabilities, epistemic uncertainty variance ($\sigma^2$), feature attributions, and Grad-CAM saliency maps.
 * **Clinical Verification Gate**:
   * In the intake wizard's Review Step, the `Run Analysis & Generate Report` button remains gated until the attending clinician explicitly confirms patient identity and entered data accuracy.
-* **Simulated Telemetry Workstation**:
-  * An interactive multi-channel visualizer (`FP1-F3`, `C3-P3`, `P3-O1`, `T3-T5`) with adjustable sweep windows (5s, 10s, 30s), gain multipliers (1x, 2x, 5x), and play/pause controls (<kbd>Space</kbd>).
-  * Unmistakably labeled as `[Simulated Demonstration]` to prevent misinterpretation as live patient BCI acquisition.
+* **Priority Clinical Triage & Longitudinal Trajectories**:
+  * Full dashboard prominence given to high-risk patient attention alerts, 6-month longitudinal progression trajectories, and recent patient assessment dossiers.
 * **WCAG 2.2 AA Accessibility Compliance**:
   * Minimum touch targets $\ge 44 \times 44\text{px}$ on all interactive buttons.
   * 2px visible focus indicators (`focus-visible:ring-2 focus-visible:ring-primary`) with zero clipping.
@@ -247,7 +245,7 @@ neurosense-ai/
 │   ├── e2e/                          # Playwright end-to-end tests (app.spec.js, responsive.spec.js)
 │   ├── src/                          # Application source code
 │   │   ├── features/analysis/        # 6-step clinical assessment wizard
-│   │   ├── features/dashboard/       # Clinical workstation & TelemetryWorkstation component
+│   │   ├── features/dashboard/       # Clinical triage dashboard, cohort trajectories & dossiers
 │   │   ├── features/results/         # Diagnostic workspaces: NiiVue 3D MRI, Speech, XAI
 │   │   ├── features/patients/        # Patient directory, registration, search
 │   │   ├── features/history/         # Longitudinal timeline & PDF download
@@ -274,7 +272,7 @@ Executes against the real FastAPI backend + Vite frontend dev server across 4 vi
 cd frontend
 npm run e2e
 ```
-*Verifies registration, bad credentials rejection, simulated telemetry demarcation, full clinical walkthrough (intake $\rightarrow$ analysis $\rightarrow$ report), dual-lens perspective switching, PDF export dropdown, and zero horizontal page overflow.*
+*Verifies registration, bad credentials rejection, clinical triage dashboard, full clinical walkthrough (intake $\rightarrow$ analysis $\rightarrow$ report), dual-lens perspective switching, PDF export dropdown, and zero horizontal page overflow.*
 
 ### 2. Frontend Unit & Integration Tests (Vitest)
 ```bash
@@ -320,9 +318,8 @@ npm run build
 ## ⚠️ Known Limitations
 
 1. **Investigational Only**: This platform is an academic research prototype. It has not received FDA clearance, CE mark certification, or health authority validation as a diagnostic medical device.
-2. **Synthetic Telemetry**: The EEG waveforms and voxel volumetric indicators displayed on the dashboard are mathematically generated for UI demonstration and workflow simulation; they do not reflect actual live physiological sensor feeds.
-3. **Hardware Acceleration**: NiiVue 3D MRI volume rendering relies on WebGL 2.0; in virtualized environments or browsers with hardware acceleration disabled, rendering falls back to 2D orthogonal slice views.
-4. **Uncalibrated Posterior**: Softmax confidence scores indicate internal model probability distributions and do not represent calibrated epidemiological risk odds.
+2. **Hardware Acceleration**: NiiVue 3D MRI volume rendering relies on WebGL 2.0; in virtualized environments or browsers with hardware acceleration disabled, rendering falls back to 2D orthogonal slice views.
+3. **Uncalibrated Posterior**: Softmax confidence scores indicate internal model probability distributions and do not represent calibrated epidemiological risk odds.
 
 ---
 

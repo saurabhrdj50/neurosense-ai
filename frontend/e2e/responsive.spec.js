@@ -77,8 +77,8 @@ test.describe('viewport responsive integrity & horizontal containment', () => {
       await page.locator('form').getByRole('button', { name: 'Sign In' }).click()
       await expect(page).toHaveURL(/\/dashboard/, { timeout: 20_000 })
 
-      // Wait for telemetry heading to mount
-      await expect(page.getByText(/Simulated Demonstration/i).first()).toBeVisible({ timeout: 15_000 })
+      // Wait for clinical triage heading to mount
+      await expect(page.getByText(/Priority Clinical Attention/i)).toBeVisible({ timeout: 15_000 })
 
       // Verify no horizontal overflow on dashboard
       const isOverflowing = await page.evaluate(() => {

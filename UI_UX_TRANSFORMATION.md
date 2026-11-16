@@ -49,11 +49,9 @@ In accordance with strict clinical integrity and engineering verification princi
    - Perspective Switcher toggling instantly to Clinician Workstation CDS view.
    - Display of multimodal fusion score, posterior confidence, and modality concordance indicators.
    - Consolidated Download / Export dropdown menu providing "Download PDF Report", "Export CSV Dataset", and "Print Dossier".
-4. **Clinical Integrity & Telemetry Demarcation**:
-   - Unmistakable labeling of synthetic telemetry in `TelemetryWorkstation.jsx`:
-     - Badge: `Simulated Demonstration`
-     - Channel description: `Synthetic Telemetry Stream (UX Testing Preview)`
-     - Disclaimer: *"Demonstration CDS Interface · Non-diagnostic preview. Not an FDA-cleared diagnostic device. Requires verified physician diagnosis."*
+4. **Priority Clinical Triage & Dossier Focus**:
+   - The primary dashboard fold is dedicated strictly to high-risk clinical triage ("Priority Clinical Attention — Follow-up Advised"), 6-month longitudinal progression trajectories, and recent patient assessment dossiers.
+   - Synthetic EEG telemetry has been completely removed to ensure all screen real estate is reserved for genuine multimodal patient insights.
    - Softmax uncalibrated posterior probability caveats preserved.
 5. **Multi-Viewport Responsive Containment (375px, 768px, 1024px, 1440px)**:
    - Tested on Mobile (375 &times; 812), Tablet (768 &times; 1024), Laptop (1024 &times; 768), and Desktop (1440 &times; 900).
@@ -99,7 +97,7 @@ npm --prefix frontend run e2e
 Running 16 tests using 1 worker
   ✓   1 [chromium] › first-session walkthrough with sample data (9.6s)
   ✓   2 [chromium] › login rejects bad credentials (1.4s)
-  ✓   3 [chromium] › dashboard renders unmistakable simulated telemetry demarcation (2.1s)
+  ✓   3 [chromium] › dashboard displays patient triage, cohort progression, and assessment registry (2.1s)
   ✓   4 [chromium] › auth lifecycle: registration, forgot password view, and logout (5.2s)
   ✓   5 [chromium] › renders landing page without horizontal overflow at Mobile (375px) (455ms)
   ✓   6 [chromium] › renders login page cleanly at Mobile (375px) (918ms)

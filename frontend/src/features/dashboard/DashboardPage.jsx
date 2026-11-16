@@ -24,7 +24,6 @@ import {
   getAnalysisConfidence,
   formatTimeAgo
 } from '../../shared/utils/clinicalMappers';
-import TelemetryWorkstation from './components/TelemetryWorkstation';
 
 /* ── High-Contrast Clinical Tooltip ──────────────────────────────────────── */
 const UNKNOWN_RISK_COLOR = '#94A3B8';
@@ -336,9 +335,6 @@ export default function DashboardPage() {
           </Button>
         </div>
       )}
-
-      {/* ── Interactive Live Telemetry Workstation (Density 8/10 Scale) ──── */}
-      <TelemetryWorkstation />
 
       {/* ── PRIMARY FOCUS: High-Risk Urgent Triage Section ──────────────── */}
       <section 

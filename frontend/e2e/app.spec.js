@@ -79,17 +79,18 @@ test.describe('clinical workflows & authentication', () => {
     await expect(page).toHaveURL(/\/login/)
   })
 
-  test('dashboard renders unmistakable simulated telemetry demarcation', async ({ page }) => {
+  test('dashboard displays patient triage, cohort progression, and assessment registry', async ({ page }) => {
     await page.goto('/login')
     await page.getByPlaceholder('dr_sarah').fill('doctor')
     await page.getByPlaceholder('••••••••').fill('Doctor@123')
     await submitSignIn(page).click()
     await expect(page).toHaveURL(/\/dashboard/, { timeout: 20_000 })
 
-    // Verify unmistakable simulation demarcation
-    await expect(page.getByText(/Simulated Demonstration/i).first()).toBeVisible()
-    await expect(page.getByText(/Synthetic Telemetry Stream/i)).toBeVisible()
-    await expect(page.getByText(/Non-Diagnostic/i).first()).toBeVisible()
+    // Verify clinical triage, cohort statistics, and dossier registry
+    await expect(page.getByText(/Priority Clinical Attention/i)).toBeVisible()
+    await expect(page.getByText(/Total Patients/i)).toBeVisible()
+    await expect(page.getByText(/Evaluations Run/i)).toBeVisible()
+    await expect(page.getByText(/Recent Patient Assessments/i)).toBeVisible()
   })
 
   test('auth lifecycle: registration, forgot password view, and logout', async ({ page }) => {

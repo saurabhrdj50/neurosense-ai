@@ -15,6 +15,7 @@ demo patients is not undone on restart.
 """
 import os
 import logging
+import threading
 from typing import Optional
 
 from sqlalchemy.exc import IntegrityError
@@ -78,22 +79,34 @@ def set_meta(key: str, value: str) -> None:
 # every other session (another tab, the admin panel, another clinician).
 
 DATA_VERSION_KEY = 'data_version'
+_DATA_VERSION_LOCK = threading.RLock()
+_DATA_VERSION_CACHE: dict[int, int] = {}
 
 
 def get_data_version() -> int:
-    try:
-        return int(get_meta(DATA_VERSION_KEY) or 0)
-    except (TypeError, ValueError):
-        return 0
+    engine_id = id(get_engine())
+    with _DATA_VERSION_LOCK:
+        cached = _DATA_VERSION_CACHE.get(engine_id)
+        if cached is not None:
+            return cached
+        try:
+            val = int(get_meta(DATA_VERSION_KEY) or 0)
+        except (TypeError, ValueError):
+            val = 0
+        _DATA_VERSION_CACHE[engine_id] = val
+        return val
 
 
 def bump_data_version() -> None:
-    """Increment the data version. Best-effort: never turns a completed
-    mutation into an error just because the marker write failed."""
-    try:
-        set_meta(DATA_VERSION_KEY, str(get_data_version() + 1))
-    except Exception:
-        logger.exception("Failed to bump data version")
+    """Increment the data version atomically. Best-effort: never turns a
+    completed mutation into an error just because the marker write failed."""
+    with _DATA_VERSION_LOCK:
+        try:
+            next_val = get_data_version() + 1
+            set_meta(DATA_VERSION_KEY, str(next_val))
+            _DATA_VERSION_CACHE[id(get_engine())] = next_val
+        except Exception:
+            logger.exception("Failed to bump data version")
 
 
 def ensure_schema() -> None:

@@ -1,10 +1,10 @@
-import { useEffect } from 'react'
+import React, { useEffect } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
+import { X, RefreshCw } from 'lucide-react'
 
 /**
- * Registers the service worker and offers a non-blocking "Update available"
- * toast when a new build is deployed. The refresh is user-initiated: clinic
- * tablets must never hard-reload mid-assessment on their own.
+ * Registers the service worker and offers a non-blocking, dismissible
+ * "Update available" toast when a new build is deployed.
  */
 export default function PwaUpdater() {
   const {
@@ -12,7 +12,6 @@ export default function PwaUpdater() {
     updateServiceWorker,
   } = useRegisterSW({
     onRegisteredSW(url) {
-      // Re-check for a deployed update every hour in long-lived sessions.
       setInterval(async () => {
         try {
           const reg = await navigator.serviceWorker.getRegistration(url)
@@ -23,7 +22,6 @@ export default function PwaUpdater() {
   })
 
   useEffect(() => {
-    // In local development or testing on localhost, avoid service worker cache hijacking
     if (import.meta.env.DEV || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then((registrations) => {
@@ -39,21 +37,36 @@ export default function PwaUpdater() {
     if (!needRefresh) return
     import('react-hot-toast').then(({ default: toast }) => {
       toast(
-        'A new version of NeuroSense is available.',
+        (t) => (
+          <div className="flex items-center gap-3 text-xs">
+            <span className="font-medium text-foreground">
+              A new version of NeuroSense is available.
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                toast.dismiss(t.id)
+                updateServiceWorker(true)
+              }}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-primary text-primary-foreground font-semibold hover:bg-primary-hover transition-colors shrink-0 cursor-pointer"
+            >
+              <RefreshCw size={12} aria-hidden="true" />
+              Refresh
+            </button>
+            <button
+              type="button"
+              aria-label="Dismiss update notification"
+              onClick={() => toast.dismiss(t.id)}
+              className="p-1 rounded-md text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors shrink-0 cursor-pointer"
+            >
+              <X size={14} aria-hidden="true" />
+            </button>
+          </div>
+        ),
         {
-          duration: Infinity,
           id: 'pwa-update',
-          icon: '⬆️',
-          actions: [
-            {
-              label: 'Refresh',
-              onClick: () => updateServiceWorker(true),
-            },
-            {
-              label: 'Later',
-              onClick: () => toast.dismiss('pwa-update'),
-            },
-          ],
+          duration: 10000,
+          position: 'bottom-right',
         },
       )
     })

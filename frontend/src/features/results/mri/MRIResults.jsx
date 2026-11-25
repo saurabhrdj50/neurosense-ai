@@ -1,8 +1,11 @@
-import React, { useState } from 'react'
+import React, { useState, Suspense, lazy } from 'react'
 import { Section, DataRow } from '../ResultSection'
 import { Brain, Layers, Sparkles } from 'lucide-react'
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from 'recharts'
-import { NiiVueViewer } from './NiiVueViewer'
+
+const NiiVueViewer = lazy(() =>
+  import('./NiiVueViewer').then((m) => ({ default: m.NiiVueViewer }))
+)
 
 export function MRIResults({ mri }) {
   const [viewMode, setViewMode] = useState('summary') // 'summary' | 'interactive'
@@ -51,7 +54,15 @@ export function MRIResults({ mri }) {
         </div>
 
         {viewMode === 'interactive' ? (
-          <NiiVueViewer mri={mri} />
+          <Suspense
+            fallback={
+              <div className="h-[360px] rounded-xl bg-surface-secondary/60 border border-border flex items-center justify-center text-xs text-foreground-muted">
+                Loading 3D NiiVue MRI Viewer...
+              </div>
+            }
+          >
+            <NiiVueViewer mri={mri} />
+          </Suspense>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>

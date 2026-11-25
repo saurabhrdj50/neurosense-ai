@@ -44,26 +44,26 @@ describe('MRIResults Component', () => {
     expect(screen.getByText('Hippocampus activation detected.')).toBeDefined()
   })
 
-  it('switches to interactive 3D / NiiVue viewer mode on tab click', () => {
+  it('switches to interactive 3D / NiiVue viewer mode on tab click', async () => {
     render(<MRIResults mri={mockMri} />)
 
     const interactiveBtn = screen.getByRole('button', { name: /Interactive 3D \/ NiiVue Viewer/i })
     fireEvent.click(interactiveBtn)
 
-    expect(screen.getByText(/3D Neuroimaging & Saliency Explorer/i)).toBeDefined()
+    expect(await screen.findByText(/3D Neuroimaging & Saliency Explorer/i)).toBeDefined()
     expect(screen.getByText(/Patient Grad-CAM Inspector/i)).toBeDefined()
     expect(screen.getByText(/NiiVue 3D Multi-Planar/i)).toBeDefined()
     expect(screen.getByText(/Grad-CAM Opacity/i)).toBeDefined()
   })
 
-  it('allows switching to NiiVue 3D multi-planar tab inside viewer', () => {
+  it('allows switching to NiiVue 3D multi-planar tab inside viewer', async () => {
     render(<MRIResults mri={mockMri} />)
 
     // Switch to interactive view
     fireEvent.click(screen.getByRole('button', { name: /Interactive 3D \/ NiiVue Viewer/i }))
 
     // Click NiiVue 3D Multi-Planar tab
-    fireEvent.click(screen.getByRole('button', { name: /NiiVue 3D Multi-Planar/i }))
+    fireEvent.click(await screen.findByRole('button', { name: /NiiVue 3D Multi-Planar/i }))
 
     expect(screen.getByText('Multi-Planar')).toBeDefined()
     expect(screen.getByText('3D Raycast Render')).toBeDefined()

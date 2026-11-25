@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { motion as Motion, AnimatePresence } from 'framer-motion'
 import {
   ChevronLeft, ChevronRight, BookOpen, Maximize2, X,
@@ -534,43 +535,64 @@ export function CognitiveStep({ cognData, setCognData }) {
 
   const currentDomain = DOMAIN_CONFIG[currentQ.domain] || { label: 'Cognitive' }
 
+  useEffect(() => {
+    if (!patientModalText) return
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') setPatientModalText(null)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [patientModalText])
+
   return (
     <div className="space-y-5 select-none">
       {/* ── FULLSCREEN PATIENT PRESENTATION MODAL ───────────────────────── */}
-      <AnimatePresence>
-        {patientModalText && (
-          <Motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center"
-          >
-            <button
-              type="button"
-              onClick={() => setPatientModalText(null)}
-              className="absolute top-6 right-6 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+      {typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {patientModalText && (
+            <Motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Patient Presentation Mode"
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
+              transition={{ duration: 0.16 }}
+              onClick={(e) => {
+                if (e.target === e.currentTarget) setPatientModalText(null)
+              }}
+              className="fixed inset-0 z-[9999] bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center"
             >
-              <X size={28} />
-            </button>
+              <button
+                type="button"
+                aria-label="Close presentation mode"
+                onClick={() => setPatientModalText(null)}
+                className="fixed top-6 right-6 z-10 inline-flex items-center gap-2 px-3.5 py-2.5 rounded-full bg-white/15 hover:bg-white/25 text-white border border-white/25 transition-colors cursor-pointer"
+              >
+                <X size={20} aria-hidden="true" />
+                <span className="text-xs font-semibold">Close</span>
+              </button>
 
-            <div className="space-y-6 max-w-2xl">
-              <span className="text-sm font-mono text-cyan-400 uppercase tracking-widest block font-bold">
-                Patient Presentation Mode
-              </span>
+              <div className="space-y-6 max-w-2xl pointer-events-auto">
+                <span className="text-sm font-mono text-sky-400 uppercase tracking-widest block font-bold">
+                  Patient Presentation Mode
+                </span>
 
-              <div className="p-12 sm:p-16 rounded-3xl bg-white/5 border border-white/20 shadow-2xl">
-                <h1 className="text-4xl sm:text-6xl font-extrabold text-white tracking-wide leading-tight">
-                  {patientModalText}
-                </h1>
+                <div className="p-12 sm:p-16 rounded-3xl bg-white/5 border border-white/20 shadow-2xl">
+                  <h1 className="text-4xl sm:text-6xl font-extrabold text-white tracking-wide leading-tight">
+                    {patientModalText}
+                  </h1>
+                </div>
+
+                <p className="text-sm text-slate-300 font-medium">
+                  Present this prompt to the patient. Click Close, click outside, or press Escape to exit.
+                </p>
               </div>
-
-              <p className="text-sm text-slate-400 font-medium">
-                Present this prompt to the patient. Click X or press Escape to close.
-              </p>
-            </div>
-          </Motion.div>
-        )}
-      </AnimatePresence>
+            </Motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
 
       {/* ── TOP HEADER ──────────────────────────────────────────────────── */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-sky-50/80 via-blue-50/50 to-indigo-50/40 dark:from-slate-900/90 dark:via-slate-900 dark:to-slate-800/80 border border-sky-200/60 dark:border-slate-800 p-5 sm:p-6 shadow-xs">

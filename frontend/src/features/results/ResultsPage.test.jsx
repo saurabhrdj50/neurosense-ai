@@ -1,6 +1,6 @@
 import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import ResultsPage from './ResultsPage'
 import * as ResultsStore from '../../context/ResultsStore'
@@ -31,7 +31,7 @@ describe('ResultsPage Component', () => {
     })
   })
 
-  it('renders ResultsPage detail view without crashing or ReferenceError', () => {
+  it('renders ResultsPage detail view without crashing or ReferenceError', async () => {
     const { container } = render(
       <MemoryRouter initialEntries={[{ pathname: '/results', state: { fromAssessment: true } }]}>
         <ResultsPage />
@@ -40,5 +40,6 @@ describe('ResultsPage Component', () => {
     expect(container).toBeDefined()
     expect(screen.getByText('What We Evaluated')).toBeDefined()
     expect(screen.getByText('Memory & Recall Exercises')).toBeDefined()
+    await waitFor(() => expect(analysisApi.getPastAnalyses).toHaveBeenCalled())
   })
 })

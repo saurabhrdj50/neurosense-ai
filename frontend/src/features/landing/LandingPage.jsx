@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { motion, useScroll, useSpring, useTransform, useMotionValue } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import {
-  Brain, ShieldCheck, Activity, Sparkles, LogIn, ArrowRight, Mic, ClipboardList,
+  Brain, ShieldCheck, Activity, LogIn, ArrowRight, Mic, ClipboardList,
   Stethoscope, ScanLine, ScanEye, UserRound, Building2, FlaskConical, Cpu, KeyRound,
   DatabaseZap, UserCog, ScrollText, CheckCircle2, Menu, X,
   FileCheck, UserPlus, Gauge
@@ -221,10 +221,8 @@ export default function LandingPage() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
 
-  const { scrollYProgress, scrollY } = useScroll()
+  const { scrollYProgress } = useScroll()
   const progressBar = useSpring(scrollYProgress, { stiffness: 120, damping: 28, restDelta: 0.001 })
-  /* Aurora field drifts down at ~15% of scroll speed for a depth effect. */
-  const auroraY = useTransform(scrollY, [0, 800], [0, 120])
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8)
@@ -308,26 +306,16 @@ export default function LandingPage() {
 
       {/* ── SECTION 1: HERO ──────────────────────────────────────────────── */}
       <section className="relative pt-24 pb-28 overflow-hidden">
-        {/* animated aurora field — parallax-drifts on scroll */}
-        <motion.div
-          style={{ y: auroraY }}
-          className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[560px] pointer-events-none"
-          aria-hidden="true"
-        >
-          <div className="absolute left-[15%] top-[10%] w-[420px] h-[420px] bg-indigo-500/20 rounded-full blur-[130px] animate-aurora" />
-          <div className="absolute right-[8%] top-[30%] w-[340px] h-[340px] bg-purple-500/15 rounded-full blur-[120px] animate-aurora" style={{ animationDelay: '-6s' }} />
-          <div className="absolute left-[35%] top-[45%] w-[300px] h-[300px] bg-emerald-500/12 rounded-full blur-[110px] animate-aurora" style={{ animationDelay: '-12s' }} />
-        </motion.div>
-        <div className="absolute inset-0 grid-pattern pointer-events-none" aria-hidden="true" />
+        <div className="absolute inset-0 grid-pattern opacity-70 pointer-events-none" aria-hidden="true" />
 
         <div className="max-w-7xl mx-auto px-6 relative z-10 text-center">
           <motion.div
-            initial={{ opacity: 0, y: 16 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-600 dark:text-indigo-300 text-xs font-semibold uppercase tracking-wider mb-6"
+            transition={{ duration: 0.25 }}
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/25 text-primary text-xs font-semibold uppercase tracking-wider mb-6"
           >
-            <Sparkles size={14} className="text-indigo-500 dark:text-indigo-400" /> Enterprise Healthcare AI Platform
+            <ShieldCheck size={14} className="text-primary" /> Clinical Decision Support Platform
           </motion.div>
 
           <motion.h1
@@ -553,15 +541,14 @@ export default function LandingPage() {
       <section className="py-20 relative border-t border-border bg-surface">
         <div className="max-w-4xl mx-auto px-6 text-center">
           <Reveal>
-            <div className="gradient-border relative rounded-3xl border border-border bg-card p-10 sm:p-14 overflow-hidden">
-              <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[420px] h-[240px] bg-indigo-500/15 blur-[90px] rounded-full pointer-events-none" aria-hidden="true" />
-              <Gauge size={30} className="mx-auto text-primary dark:text-indigo-300 mb-4" aria-hidden="true" />
+            <div className="relative rounded-2xl border border-border-strong bg-card p-10 sm:p-14 shadow-sm overflow-hidden">
+              <Gauge size={30} className="mx-auto text-primary mb-4" aria-hidden="true" />
               <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground mb-4 tracking-tight font-heading">
-                Ready to Experience AI-Assisted Assessment?
+                Ready to Start a Clinical Assessment?
               </h2>
-              <p className="text-muted text-sm mb-8">Access the enterprise clinical workspace for unified multi-modal AI diagnostics.</p>
+              <p className="text-muted text-sm mb-8">Access the clinical workspace for unified multimodal neuroimaging and cognitive screening.</p>
               <Magnetic>
-                <Button size="lg" variant="primary" icon={LogIn} onClick={() => navigate('/login')} className="px-8 btn-sheen shadow-lg shadow-primary/25">
+                <Button size="lg" variant="primary" icon={LogIn} onClick={() => navigate('/login')} className="px-8">
                   Access Login Portal
                 </Button>
               </Magnetic>

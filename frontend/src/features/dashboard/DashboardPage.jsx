@@ -135,7 +135,7 @@ export default function DashboardPage() {
       const recent = analyses.slice(0, 6).map(toRow);
 
       const priority = analyses
-        .filter((a) => getRiskLevel(getAnalysisStage(a)) === 'High')
+        .filter((a) => ['High', 'Medium'].includes(getRiskLevel(getAnalysisStage(a))))
         .slice(0, 5)
         .map(toRow);
 

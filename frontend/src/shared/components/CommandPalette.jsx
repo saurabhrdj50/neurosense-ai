@@ -5,6 +5,7 @@ import {
   ArrowRight, Star, Plus, CheckCircle, FileUp
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../../providers/AuthProvider'
 import { patientsApi } from '../../features/patients/api/patientsApi'
 
 // Simple fuzzy matching function using character subsequence matching
@@ -25,6 +26,7 @@ function fuzzyMatch(text, query) {
 
 export default function CommandPalette({ isOpen, onClose }) {
   const navigate = useNavigate()
+  const { isAdmin } = useAuth()
   const [query, setQuery] = useState('')
   const [patients, setPatients] = useState([])
   const [selectedIndex, setSelectedIndex] = useState(0)
@@ -92,7 +94,7 @@ export default function CommandPalette({ isOpen, onClose }) {
     { id: 'analysis', label: 'Start New Diagnostic Analysis', category: 'Actions', icon: Zap, path: '/analysis' },
     { id: 'results', label: 'Diagnostic Results & Reports', category: 'Navigation', icon: FileText, path: '/results' },
     { id: 'history', label: 'Patient Assessment History', category: 'Navigation', icon: Clock, path: '/patients' },
-    { id: 'admin', label: 'System Admin Workstation', category: 'Admin', icon: Shield, path: '/admin/dashboard' },
+    ...(isAdmin ? [{ id: 'admin', label: 'System Admin Workstation', category: 'Admin', icon: Shield, path: '/admin/dashboard' }] : []),
     { id: 'new-patient', label: 'Register New Patient', category: 'Patient actions', icon: Plus, action: 'new-patient' },
     { id: 'high-risk', label: 'Show Priority Follow-Up Patients', category: 'Patient actions', icon: Users, action: 'high-risk' },
     { id: 'resume-analysis', label: 'Resume Analysis', category: 'Analysis actions', icon: FileUp, path: '/analysis' },

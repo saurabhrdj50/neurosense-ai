@@ -13,7 +13,6 @@ export default function App() {
       <ThemeProvider>
         <AuthProvider>
           <AnimatedBg />
-          <div className="noise-overlay" />
           <AppRoutes />
           <PwaUpdater />
           <Toaster

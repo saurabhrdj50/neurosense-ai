@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { motion as Motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
 import {
@@ -631,21 +632,38 @@ export function SpeechStep({ speechText, setSpeechText, audioFile, setAudioFile 
     })
   }
 
+  useEffect(() => {
+    if (!patientModalText) return
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') setPatientModalText(null)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [patientModalText])
+
   return (
     <div className="space-y-5">
       {/* ── ENHANCED FULLSCREEN PATIENT DISPLAY MODAL ──────────────────────── */}
-      <AnimatePresence>
-        {patientModalText && (
-          <Motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className={`fixed inset-0 z-50 flex flex-col justify-between p-6 sm:p-10 select-none overflow-y-auto ${
-              isHighContrast
-                ? 'bg-black text-yellow-300 border-4 border-yellow-400'
-                : 'bg-slate-950/95 backdrop-blur-xl text-white'
-            }`}
-          >
+      {typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {patientModalText && (
+            <Motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Patient Display Mode"
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
+              transition={{ duration: 0.16 }}
+              onClick={(e) => {
+                if (e.target === e.currentTarget) setPatientModalText(null)
+              }}
+              className={`fixed inset-0 z-[9999] flex flex-col justify-between p-6 sm:p-10 select-none overflow-y-auto ${
+                isHighContrast
+                  ? 'bg-black text-yellow-300 border-4 border-yellow-400'
+                  : 'bg-slate-950/95 backdrop-blur-xl text-white'
+              }`}
+            >
             {/* Top Toolbar (Controls & Navigation) */}
             <div className="flex items-center justify-between gap-4 border-b border-white/15 pb-4 shrink-0">
               <div className="flex items-center gap-3">
@@ -701,11 +719,13 @@ export function SpeechStep({ speechText, setSpeechText, audioFile, setAudioFile 
 
                 <button
                   type="button"
+                  aria-label="Close presentation mode"
                   onClick={() => setPatientModalText(null)}
-                  className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer ml-2"
-                  title="Exit Patient Mode"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-white/15 hover:bg-white/25 text-white border border-white/25 transition-colors cursor-pointer ml-2"
+                  title="Exit Patient Mode (Esc)"
                 >
-                  <X size={24} />
+                  <X size={20} aria-hidden="true" />
+                  <span className="text-xs font-semibold">Close</span>
                 </button>
               </div>
             </div>
@@ -839,7 +859,9 @@ export function SpeechStep({ speechText, setSpeechText, audioFile, setAudioFile 
             </div>
           </Motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+      document.body
+      )}
 
       {/* ── TOP HEADER BANNER ────────────────────────────────────────────── */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-sky-50/80 via-blue-50/50 to-indigo-50/40 dark:from-slate-900/90 dark:via-slate-900 dark:to-slate-800/80 border border-sky-200/60 dark:border-slate-800 p-5 sm:p-6 shadow-xs">

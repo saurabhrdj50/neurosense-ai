@@ -1,12 +1,14 @@
-# NeuroSense AI - Full-Stack Production Container Stack
+# NeuroSense AI - Unified Container Stack (Local + Production)
 # Usage:
-#   docker compose up -d --build
+#   Local dev/build: docker compose up -d --build
+#   Production:      docker compose --profile prod pull && docker compose --profile prod up -d --remove-orphans
 #
 # Services:
 #   - web:   Nginx serving optimized SPA bundle & reverse proxying /api (Port 3000)
 #   - api:   FastAPI backend with PyTorch CPU ML models (Port 10000)
 #   - db:    PostgreSQL 16 relational store with automatic Alembic migrations
 #   - redis: Redis 7 in-memory cache and background job state mirror
+#   - caddy: Automatic HTTPS reverse proxy (enabled only with `--profile prod`)
 #
 # Web UI:     http://localhost:3000
 # API Direct: http://localhost:10000 (/docs for OpenAPI specifications)
@@ -32,7 +34,7 @@ services:
     image: redis:7-alpine
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - neuro_redis:/data
     healthcheck:
@@ -42,6 +44,7 @@ services:
       retries: 5
 
   api:
+    image: ghcr.io/saurabhrdj50/neurosense-ai-api:latest
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -49,12 +52,18 @@ services:
     stop_grace_period: 30s
     ports:
       - "10000:10000"
+    env_file:
+      - path: .env
+        required: false
     environment:
       PORT: 10000
+      APP_ENV: ${APP_ENV:-development}
       SECRET_KEY: ${SECRET_KEY:-ONvL8EaMlvWXgo0aa42XJYVQXVl6vioa5i0buFdr09r54nX5l9mNS5B62JeooOr7}
       DATABASE_URL: postgresql://${POSTGRES_USER:-neuro}:${POSTGRES_PASSWORD:-neuro}@db:5432/${POSTGRES_DB:-neurosense}
       ENABLE_EAGER_WARMUP: ${ENABLE_EAGER_WARMUP:-true}
       ML_JOB_WORKERS: ${ML_JOB_WORKERS:-4}
+      OMP_NUM_THREADS: ${OMP_NUM_THREADS:-2}
+      MKL_NUM_THREADS: ${MKL_NUM_THREADS:-2}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       GROQ_WHISPER_MODEL: ${GROQ_WHISPER_MODEL:-whisper-large-v3-turbo}
       REDIS_URL: redis://redis:6379/0
@@ -63,7 +72,7 @@ services:
       USE_CELERY: ${USE_CELERY:-false}
       STORAGE_BACKEND: local
       TRUST_PROXY: "true"
-      CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000,https://neurosense.duckdns.org,https://neurosense-ai.duckdns.org}
     volumes:
       - ./backend/app/models:/app/app/models:ro
       - neuro_uploads:/app/app/uploads
@@ -83,6 +92,7 @@ services:
       start_period: 45s
 
   web:
+    image: ghcr.io/saurabhrdj50/neurosense-ai-web:latest
     build:
       context: ./frontend
       dockerfile: Dockerfile
@@ -100,9 +110,25 @@ services:
       timeout: 5s
       retries: 3
 
+  caddy:
+    profiles: ["prod"]
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+
 volumes:
   neuro_pg:
   neuro_redis:
   neuro_uploads:
   neuro_whisper:
   neuro_hf:
+  caddy_data:
+  caddy_config:

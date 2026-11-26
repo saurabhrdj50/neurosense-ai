@@ -12,7 +12,7 @@ export default defineConfig({
     // runtime caching for hashed assets. API traffic is NEVER cached — PHI
     // must not outlive the session in a CacheStorage.
     VitePWA({
-      registerType: 'prompt',
+      registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'favicon-32.png'],
       manifest: {
         name: 'NeuroSense Advanced — AI Alzheimer\'s Detection',
@@ -31,6 +31,8 @@ export default defineConfig({
         ],
       },
       workbox: {
+        skipWaiting: true,
+        clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [

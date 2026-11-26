@@ -84,12 +84,8 @@ function ConsoleMock() {
           <span className="w-2.5 h-2.5 rounded-full bg-amber-400/80" />
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-400/80" />
           <span className="ml-3 text-[11px] font-mono font-semibold text-muted">NeuroSense AI · Multi-Modal Assessment</span>
-          <span className="ml-auto inline-flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-            <span className="relative flex h-1.5 w-1.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
-            </span>
-            LIVE
+          <span className="ml-auto inline-flex items-center gap-1.5 text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
+            SAMPLE
           </span>
         </div>
 

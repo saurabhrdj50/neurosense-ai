@@ -805,7 +805,11 @@ export function SpeechStep({ speechText, setSpeechText, audioFile, setAudioFile 
                     </button>
                   </div>
                 ) : (
-                  <span className="text-xs font-semibold text-slate-400">Microphone Ready</span>
+                  <span className="text-xs font-semibold text-slate-400">
+                    {typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia
+                      ? 'Microphone Ready'
+                      : 'Microphone Unavailable — Type or Upload'}
+                  </span>
                 )}
               </div>
             </div>

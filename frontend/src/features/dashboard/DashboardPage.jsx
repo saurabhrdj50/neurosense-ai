@@ -556,7 +556,7 @@ export default function DashboardPage() {
 
           {riskDistribution.length > 0 ? (
             <div className="flex items-center justify-between gap-3">
-              <div className="w-1/2 h-[140px]">
+              <div className="w-[120px] h-[130px] shrink-0">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -580,14 +580,14 @@ export default function DashboardPage() {
                 </ResponsiveContainer>
               </div>
 
-              <div className="w-1/2 space-y-2.5 text-sm">
+              <div className="flex-1 min-w-0 space-y-2 text-xs">
                 {riskDistribution.map((d) => (
-                  <div key={d.name} className="flex items-center justify-between text-sm">
+                  <div key={d.name} className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5 min-w-0">
                       <span className="w-2.5 h-2.5 rounded-xs shrink-0" style={{ background: d.color }} />
                       <span className="text-foreground-muted font-medium truncate">{d.name}</span>
                     </div>
-                    <span className="font-mono font-bold text-foreground">{d.value}% ({d.count})</span>
+                    <span className="font-mono font-bold text-foreground shrink-0 whitespace-nowrap">{d.value}% ({d.count})</span>
                   </div>
                 ))}
               </div>

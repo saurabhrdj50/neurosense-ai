@@ -299,9 +299,10 @@ export default function PatientsPage() {
 
   /* Currently Selected Patient Object */
   const activePatient = useMemo(() => {
-    if (!selectedPatientId) return filteredPatients[0] || null
-    return enrichedPatients.find((p) => p.patient_id === selectedPatientId) || filteredPatients[0] || null
-  }, [enrichedPatients, filteredPatients, selectedPatientId])
+    if (filteredPatients.length === 0) return null
+    if (!selectedPatientId) return filteredPatients[0]
+    return filteredPatients.find((p) => p.patient_id === selectedPatientId) || filteredPatients[0]
+  }, [filteredPatients, selectedPatientId])
 
   /* Add Patient Handler (real form submit with client-side validation) */
   const handleAddPatient = async (e) => {

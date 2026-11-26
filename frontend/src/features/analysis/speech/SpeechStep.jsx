@@ -336,6 +336,10 @@ export function SpeechStep({ speechText, setSpeechText, audioFile, setAudioFile 
     } catch (err) {
       console.error('Microphone Access Error:', err)
       setIsRecording(false)
+      toast.error(
+        err?.message || 'Microphone is unavailable or permission was denied. Please type a response or upload audio instead.',
+        { id: 'mic-error', duration: 5000 }
+      )
     }
   }
 

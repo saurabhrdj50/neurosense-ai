@@ -16,6 +16,7 @@ import Modal from '../../shared/components/ui/Modal';
 import { ResultsPageSkeleton } from '../../shared/components/ui/Skeleton';
 import { useReducedMotionPref } from '../../shared/motion';
 import { analysisApi } from '../analysis/api/analysisApi';
+import { historyApi } from '../history/api/historyApi';
 import ErrorBoundary from '../../shared/components/common/ErrorBoundary';
 import { STAGE_CONFIG, getRiskLevel, SIMPLE_STAGE_INFO, getSimpleStageKey, SIMPLE_MODALITY_NAMES, formatSex } from '../../shared/utils/clinicalMappers';
 
@@ -355,10 +356,27 @@ export default function ResultsPage() {
     loadHistory();
   }, [location.state, loadHistory]);
 
-  const handleSelectHistoryReport = (item) => {
-    if (!item?.results) return;
-    setAnalysisResults(item.results);
-    setResultsState(item.results);
+  const handleSelectHistoryReport = async (item) => {
+    if (!item) return;
+    let resolvedResults = item.results || item.full_results || null;
+    if (!resolvedResults && item.session_id) {
+      const tid = toast.loading('Loading diagnostic report…');
+      try {
+        const detail = await historyApi.getSessionDetail(item.session_id);
+        resolvedResults = detail?.results || detail?.full_results || null;
+      } catch (err) {
+        toast.dismiss(tid);
+        toast.error(err?.message || 'Failed to load full diagnostic report.');
+        return;
+      }
+      toast.dismiss(tid);
+    }
+    if (!resolvedResults) {
+      toast.error('Detailed report payload is unavailable for this session.');
+      return;
+    }
+    setAnalysisResults(resolvedResults);
+    setResultsState(resolvedResults);
     setActiveHistorySessionId(item.session_id);
     setHistoryModalOpen(false);
     setViewMode('detail');

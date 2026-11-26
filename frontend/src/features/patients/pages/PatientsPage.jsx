@@ -533,7 +533,7 @@ export default function PatientsPage() {
             </div>
 
             {/* Quick Filter Chips */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 text-xs select-none">
+            <div className="flex flex-wrap items-center gap-1.5 pb-0.5 text-xs select-none">
               {[
                 { id: 'all', label: 'All' },
                 { id: 'normal', label: 'Typical' },
@@ -604,20 +604,20 @@ export default function PatientsPage() {
                       <span className="absolute left-0 top-0 bottom-0 w-1.5 bg-primary rounded-l-2xl" />
                     )}
 
-                    <div className="flex items-center justify-between gap-2 pl-1">
-                      <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="flex flex-wrap items-start justify-between gap-2 pl-1">
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
                         <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-extrabold shrink-0 ${
                           isSelected ? 'bg-primary text-primary-foreground shadow-xs' : 'bg-primary/10 border border-primary/20 text-primary'
                         }`}>
                           {(pat.name || '?')[0].toUpperCase()}
                         </div>
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                           <h4 className="font-extrabold text-foreground text-sm truncate leading-tight">{pat.name}</h4>
-                          <span className="text-xs font-mono font-semibold text-foreground-muted block mt-0.5">{pat.patient_id}</span>
+                          <span className="text-xs font-mono font-semibold text-foreground-muted block mt-0.5 truncate">{pat.patient_id}</span>
                         </div>
                       </div>
 
-                      <Badge variant={isEvaluated ? stageInfo.variant : 'neutral'}>
+                      <Badge variant={isEvaluated ? stageInfo.variant : 'neutral'} className="shrink-0 max-w-full">
                         {isEvaluated ? stageInfo.label : 'Awaiting Assessment'}
                       </Badge>
                     </div>

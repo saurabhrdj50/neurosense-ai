@@ -43,10 +43,12 @@ export default function CommandPalette({ isOpen, onClose }) {
       setSelectedIndex(0)
       
       const storedFavorites = JSON.parse(localStorage.getItem('ns_favorite_commands') || '[]')
-      setFavorites(storedFavorites)
+      setFavorites(isAdmin ? storedFavorites : storedFavorites.filter(id => id !== 'admin'))
 
       const storedRecents = JSON.parse(localStorage.getItem('ns_recent_searches') || '[]')
-      setRecentSearches(storedRecents)
+      setRecentSearches(
+        isAdmin ? storedRecents : storedRecents.filter(s => s !== 'System Admin Workstation')
+      )
 
       // Fetch patients using unified service layer
       patientsApi.getAll()
@@ -57,7 +59,7 @@ export default function CommandPalette({ isOpen, onClose }) {
           setPatients([])
         })
     }
-  }, [isOpen])
+  }, [isOpen, isAdmin])
 
   // Save/manage favorites
   const toggleFavorite = (cmdId, e) => {

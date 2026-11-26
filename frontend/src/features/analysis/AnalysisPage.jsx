@@ -19,6 +19,7 @@ import { RiskStep } from './risk/RiskStep';
 import { ReviewStep } from './review/ReviewStep';
 import { analysisApi, runAnalysisWithProgress } from './api/analysisApi';
 import { patientsApi } from '../patients/api/patientsApi';
+import { useAuth } from '../../providers/AuthProvider';
 import { AnalysisLoader, useAnalysisProgress } from './AnalysisLoader';
 import {
   SAMPLE_PATIENT, SAMPLE_PATIENT_TEXT, SAMPLE_SPEECH_TEXT,
@@ -40,6 +41,7 @@ const perPatientDraftKey = (patientId) => `${DRAFT_STORAGE_KEY}_${patientId}`;
 export default function AnalysisPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
   const [step, setStep] = useState(0);
   // Final verification checkbox on the Review step — gates submission.
   const [confirmChecked, setConfirmChecked] = useState(false);
@@ -311,8 +313,11 @@ export default function AnalysisPage() {
       // Bundled illustrative MRI so the demo showcases the full pipeline,
       // including Grad-CAM, without any real patient material.
       const mri = await loadSampleMriFile();
+      const samplePatientId = user?.id
+        ? `DEMO-${String(user.id).padStart(3, '0')}`
+        : SAMPLE_PATIENT.patient_id;
       setMriFile(mri);
-      setPatient({ ...SAMPLE_PATIENT, handedness: 'Right' });
+      setPatient({ ...SAMPLE_PATIENT, patient_id: samplePatientId, handedness: 'Right' });
       setPatientText(SAMPLE_PATIENT_TEXT);
       // Fully derived cognitive profile — fields mirror CognitiveStep's own
       // computation so the report is consistent even if the step is skipped.

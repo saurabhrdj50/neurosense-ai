@@ -7,6 +7,10 @@ export const historyApi = {
     return apiClient.get(`/api/patients/history/${patientId}?limit=${limit}`)
   },
 
+  getSessionDetail: async (sessionId) => {
+    return apiClient.get(`/api/analyses/${sessionId}`)
+  },
+
   /**
    * All-sessions feed, walked page-by-page (200/page) so the client keeps a
    * "whole list" contract without ever issuing the unbounded request that

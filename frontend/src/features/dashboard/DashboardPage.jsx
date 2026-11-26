@@ -170,7 +170,7 @@ export default function DashboardPage() {
         stats: {
           totalPatients: patientsTotal,
           totalAnalyses: analysesTotal,
-          highRiskCount: riskCounts.AD,
+          highRiskCount: priority.length,
           recentActivity: analyses.filter((a) => {
             const created = new Date(a.created_at);
             const dayAgo = new Date(nowTs - 24 * 60 * 60 * 1000);

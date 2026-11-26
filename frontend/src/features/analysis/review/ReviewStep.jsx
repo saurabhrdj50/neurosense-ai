@@ -319,7 +319,7 @@ export function ReviewStep({
               <span className={`px-3 py-1 rounded-full text-xs font-extrabold ${
                 isSpeechComplete ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-surface-secondary text-foreground-muted border border-border'
               }`}>
-                {isSpeechComplete ? 'Voice Recorded' : 'Not Recorded'}
+                {audioFile ? 'Voice Recorded' : speechText?.trim() ? 'Transcript Entered' : 'Not Recorded'}
               </span>
               <ChevronRight size={18} className="text-foreground-muted group-hover:text-amber-400 transition-colors" />
             </div>

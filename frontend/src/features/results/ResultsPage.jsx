@@ -529,8 +529,8 @@ export default function ResultsPage() {
                 <h1 className="text-2xl font-extrabold text-foreground tracking-tight">
                   Diagnostic Results & History
                 </h1>
-                <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                  {pastAnalyses.length} Sessions
+                <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                  {pastAnalyses.length} {pastAnalyses.length === 1 ? 'Session' : 'Sessions'}
                 </span>
               </div>
               <p className="text-sm font-medium text-foreground-muted mt-0.5">

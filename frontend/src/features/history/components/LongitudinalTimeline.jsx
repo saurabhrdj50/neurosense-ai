@@ -126,9 +126,16 @@ export default function LongitudinalTimeline({ history }) {
             const speech = session.results?.speech || session.results?.sentiment || {}
             const risk = session.results?.risk_profile || {}
 
-            const rawStage = session.results?.final_stage?.stage || mri.stage || 'Unknown'
+            const rawStage = session.results?.final_stage?.stage || mri.stage || session.final_stage || session.mri_stage || 'Unknown'
             const stageInfo = STAGE_CONFIG[rawStage] || STAGE_CONFIG['Unknown']
-            const confidence = session.results?.final_stage?.confidence || mri.confidence || 0
+            const confidence = Number(
+              session.results?.final_stage?.confidence ?? mri.confidence ?? session.final_confidence ?? session.mri_confidence ?? 0
+            )
+            const cogScore = cog.composite_score ?? session.cognitive_score
+            const riskScore = risk.overall_risk_score ?? session.risk_score
+            const mriLabel = mri.hippocampalVolume
+              ? `${mri.hippocampalVolume} cm³`
+              : (mri.stage || session.mri_stage || 'Scan Completed')
 
             const isExpanded = !!expandedSessions[session.id]
 
@@ -192,7 +199,7 @@ export default function LongitudinalTimeline({ history }) {
                       <Brain size={13} className="text-indigo-500" /> Brain Scan (MRI)
                     </span>
                     <p className="font-extrabold text-foreground text-sm">
-                      {mri.hippocampalVolume ? `${mri.hippocampalVolume} cm³` : (mri.stage || 'Scan Completed')}
+                      {mriLabel}
                     </p>
                   </div>
 
@@ -201,7 +208,7 @@ export default function LongitudinalTimeline({ history }) {
                       <Sparkles size={13} className="text-amber-500" /> Memory Score
                     </span>
                     <p className="font-extrabold text-foreground text-sm">
-                      {cog.composite_score != null ? `${cog.composite_score}/100` : 'Not assessed'}
+                      {cogScore != null ? `${cogScore}/100` : 'Not assessed'}
                     </p>
                   </div>
 
@@ -210,7 +217,7 @@ export default function LongitudinalTimeline({ history }) {
                       <MessageSquare size={13} className="text-cyan-500" /> Speech Pattern
                     </span>
                     <p className="font-extrabold text-foreground text-sm">
-                      {speech.pause_frequency && speech.pause_frequency !== 'Not available' ? `Pauses: ${speech.pause_frequency}` : (speech.clinical_summary ? 'Transcript available' : 'Not assessed')}
+                      {speech.pause_frequency && speech.pause_frequency !== 'Not available' ? `Pauses: ${speech.pause_frequency}` : (speech.clinical_summary ? 'Transcript available' : (session.sentiment_risk != null ? 'Assessed' : 'Not assessed'))}
                     </p>
                   </div>
 
@@ -219,7 +226,7 @@ export default function LongitudinalTimeline({ history }) {
                       <HeartPulse size={13} className="text-rose-500" /> Health Risk
                     </span>
                     <p className="font-extrabold text-foreground text-sm">
-                      {risk.risk_category || (risk.overall_risk_score != null ? (risk.overall_risk_score > 60 ? 'Moderate' : 'Low Risk') : 'Not Assessed')}
+                      {risk.risk_category || (riskScore != null ? `${Math.round(riskScore)}/100` : 'Not Assessed')}
                     </p>
                   </div>
                 </div>

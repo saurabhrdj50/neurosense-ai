@@ -56,7 +56,7 @@ export default function StatCard({
           </div>
         )}
         <div className="min-w-0">
-          <p className="text-[15px] font-bold uppercase tracking-wider text-foreground-muted truncate">{label}</p>
+          <p className="text-[14px] font-bold uppercase tracking-wider text-foreground-muted leading-snug">{label}</p>
           <p className="text-3xl font-extrabold font-mono text-foreground tracking-tight leading-tight mt-1">{value}</p>
           {subtext && <p className="text-sm font-medium text-foreground-muted mt-1.5">{subtext}</p>}
         </div>

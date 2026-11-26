@@ -314,7 +314,7 @@ export default function AnalysisPage() {
       // including Grad-CAM, without any real patient material.
       const mri = await loadSampleMriFile();
       const samplePatientId = user?.id
-        ? `DEMO-${String(user.id).padStart(3, '0')}`
+        ? `SAMPLE-${String(user.id).padStart(3, '0')}`
         : SAMPLE_PATIENT.patient_id;
       setMriFile(mri);
       setPatient({ ...SAMPLE_PATIENT, patient_id: samplePatientId, handedness: 'Right' });

@@ -363,7 +363,8 @@ export default function ResultsPage() {
       const tid = toast.loading('Loading diagnostic report…');
       try {
         const detail = await historyApi.getSessionDetail(item.session_id);
-        resolvedResults = detail?.results || detail?.full_results || null;
+        const sessionObj = detail?.analysis || detail;
+        resolvedResults = sessionObj?.results || sessionObj?.full_results || null;
       } catch (err) {
         toast.dismiss(tid);
         toast.error(err?.message || 'Failed to load full diagnostic report.');

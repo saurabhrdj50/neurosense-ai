@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useRef } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import { X, RefreshCw } from 'lucide-react'
 
@@ -7,6 +7,7 @@ import { X, RefreshCw } from 'lucide-react'
  * "Update available" toast when a new build is deployed.
  */
 export default function PwaUpdater() {
+  const dismissedRef = useRef(false)
   const {
     needRefresh: [needRefresh],
     updateServiceWorker,
@@ -34,7 +35,7 @@ export default function PwaUpdater() {
   }, [])
 
   useEffect(() => {
-    if (!needRefresh) return
+    if (!needRefresh || dismissedRef.current) return
     import('react-hot-toast').then(({ default: toast }) => {
       toast(
         (t) => (
@@ -45,6 +46,7 @@ export default function PwaUpdater() {
             <button
               type="button"
               onClick={() => {
+                dismissedRef.current = true
                 toast.dismiss(t.id)
                 updateServiceWorker(true)
               }}
@@ -56,7 +58,10 @@ export default function PwaUpdater() {
             <button
               type="button"
               aria-label="Dismiss update notification"
-              onClick={() => toast.dismiss(t.id)}
+              onClick={() => {
+                dismissedRef.current = true
+                toast.dismiss(t.id)
+              }}
               className="p-1 rounded-md text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors shrink-0 cursor-pointer"
             >
               <X size={14} aria-hidden="true" />

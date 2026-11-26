@@ -790,32 +790,32 @@ export default function PatientsPage() {
                             {/* Key Pillar Badges with Soft Color-Coded Background Tints */}
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                               <div className="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20">
-                                <span className="inline-flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400 text-[11px] font-extrabold block">
+                                <div className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400 text-[11px] font-extrabold mb-1">
                                   <Brain size={13} aria-hidden="true" />
                                   <span>Brain Scan (MRI)</span>
-                                </span>
-                                <strong className="text-foreground font-extrabold text-xs">
-                                  {itemMri.stage || 'Not available'}
+                                </div>
+                                <strong className="text-foreground font-extrabold text-xs block">
+                                  {itemMri.stage || item.mri_stage || 'Not available'}
                                 </strong>
                               </div>
 
                               <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20">
-                                <span className="inline-flex items-center gap-1.5 text-amber-600 dark:text-amber-400 text-[11px] font-extrabold block">
+                                <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 text-[11px] font-extrabold mb-1">
                                   <FileText size={13} aria-hidden="true" />
                                   <span>Memory Test</span>
-                                </span>
-                                <strong className="text-foreground font-extrabold text-xs">
-                                  {itemCog.composite_score != null ? `${itemCog.composite_score}/100` : 'Not available'}
+                                </div>
+                                <strong className="text-foreground font-extrabold text-xs block">
+                                  {(itemCog.composite_score ?? item.cognitive_score) != null ? `${itemCog.composite_score ?? item.cognitive_score}/100` : 'Not available'}
                                 </strong>
                               </div>
 
                               <div className="p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20">
-                                <span className="inline-flex items-center gap-1.5 text-cyan-600 dark:text-cyan-400 text-[11px] font-extrabold block">
+                                <div className="flex items-center gap-1.5 text-cyan-600 dark:text-cyan-400 text-[11px] font-extrabold mb-1">
                                   <Mic size={13} aria-hidden="true" />
                                   <span>Speech Check</span>
-                                </span>
-                                <strong className="text-foreground font-extrabold text-xs">
-                                  {itemSp.pause_frequency || itemSp.pitch_variation || (res.audio_transcription?.text ? 'Transcript available (not fused)' : 'Not available')}
+                                </div>
+                                <strong className="text-foreground font-extrabold text-xs block">
+                                  {itemSp.pause_frequency || itemSp.pitch_variation || (res.audio_transcription?.text ? 'Transcript available (not fused)' : (item.sentiment_risk != null ? 'Assessed' : 'Not available'))}
                                 </strong>
                               </div>
 
@@ -824,14 +824,14 @@ export default function PatientsPage() {
                                   ? 'bg-rose-500/10 border-rose-500/20'
                                   : 'bg-emerald-500/10 border-emerald-500/20'
                               }`}>
-                                <span className={`inline-flex items-center gap-1.5 text-[11px] font-extrabold block ${
+                                <div className={`flex items-center gap-1.5 text-[11px] font-extrabold mb-1 ${
                                   itemRisk.risk_category === 'High Risk' ? 'text-rose-600 dark:text-rose-400' : 'text-foreground-muted'
                                 }`}>
                                   <HeartPulse size={13} aria-hidden="true" />
                                   <span>Health Factors</span>
-                                </span>
-                                <strong className="text-foreground font-extrabold text-xs">
-                                  {itemRisk.risk_category || (itemRisk.overall_risk_score != null ? `${itemRisk.overall_risk_score}/100 (rule-based)` : 'Not assessed')}
+                                </div>
+                                <strong className="text-foreground font-extrabold text-xs block">
+                                  {itemRisk.risk_category || ((itemRisk.overall_risk_score ?? item.risk_score) != null ? `${Math.round(itemRisk.overall_risk_score ?? item.risk_score)}/100 (rule-based)` : 'Not assessed')}
                                 </strong>
                               </div>
                             </div>

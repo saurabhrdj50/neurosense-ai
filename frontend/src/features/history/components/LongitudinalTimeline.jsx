@@ -1,5 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import toast from 'react-hot-toast'
+import { historyApi } from '../api/historyApi'
 import {
   Brain, FileText, Clock, User, ChevronDown, ChevronUp,
   Search, Calendar, Download, Sparkles, Activity, MessageSquare, HeartPulse
@@ -173,7 +175,24 @@ export default function LongitudinalTimeline({ history }) {
                       size="sm"
                       variant="outline"
                       icon={FileText}
-                      onClick={() => navigate('/results', { state: { results: session.results } })}
+                      onClick={async () => {
+                        let resolved = session.results || session.full_results || null
+                        const sid = session.session_id || session.id
+                        if (!resolved && sid) {
+                          const tid = toast.loading('Loading report…')
+                          try {
+                            const detail = await historyApi.getSessionDetail(sid)
+                            const obj = detail?.analysis || detail
+                            resolved = obj?.results || obj?.full_results || null
+                          } catch {
+                            toast.dismiss(tid)
+                            toast.error('Failed to load report details.')
+                            return
+                          }
+                          toast.dismiss(tid)
+                        }
+                        navigate('/results', { state: { results: resolved } })
+                      }}
                       className="min-h-[40px] text-xs font-bold px-3"
                     >
                       View Report

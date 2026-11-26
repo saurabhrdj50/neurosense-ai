@@ -316,7 +316,7 @@ export default function LoginPage() {
 
         {/* Clean Brand Header */}
         <div className="relative z-10 flex items-center gap-3 mt-12 cursor-pointer" onClick={() => navigate('/')}>
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-md bg-gradient-to-br from-indigo-500 to-indigo-700 text-white">
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-xs bg-primary text-primary-foreground">
             <Brain className="w-7 h-7" />
           </div>
           <div>
@@ -324,7 +324,7 @@ export default function LoginPage() {
               NeuroSense AI
             </h1>
             <p className="text-xs font-medium text-muted">
-              Medical Imaging Intelligence
+              Clinical Neuroimaging Workstation
             </p>
           </div>
         </div>
@@ -333,10 +333,10 @@ export default function LoginPage() {
         <div className="relative z-10 max-w-md my-auto space-y-4">
           <div className="absolute -inset-x-10 -inset-y-8 -z-10 bg-gradient-to-r from-background/85 via-background/60 to-transparent blur-md rounded-3xl" aria-hidden="true" />
           <h2 className="text-4xl font-extrabold tracking-tight text-foreground leading-tight font-heading">
-            Smart AI for Brain Imaging &amp; Diagnostics
+            Clinical Brain Imaging &amp; Cognitive Screening
           </h2>
           <p className="text-base text-muted leading-relaxed">
-            Fast, accurate, and easy-to-use AI assistance for doctors and healthcare teams.
+            Structured multimodal assessment across brain MRI, cognitive testing, and clinical risk factors.
           </p>
         </div>
 
@@ -354,22 +354,22 @@ export default function LoginPage() {
 
           {/* Mobile Logo */}
           <div className="lg:hidden text-center mb-4 cursor-pointer" onClick={() => navigate('/')}>
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto shadow-md mb-2 bg-gradient-to-br from-indigo-500 to-indigo-700 text-white">
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto shadow-xs mb-2 bg-primary text-primary-foreground">
               <Brain className="w-7 h-7" />
             </div>
             <h1 className="text-2xl font-bold text-foreground font-heading">NeuroSense AI</h1>
-            <p className="text-xs text-muted">Medical Imaging Intelligence</p>
+            <p className="text-xs text-muted">Clinical Neuroimaging Workstation</p>
           </div>
 
           {/* Auth Form Card */}
           <motion.div
-            initial={{ opacity: 0, y: 14 }}
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-            className="rounded-3xl border border-border bg-card/95 backdrop-blur-xl shadow-lg overflow-hidden"
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="rounded-2xl border border-border bg-card shadow-md overflow-hidden"
           >
             {/* Top Accent Bar */}
-            <div className="h-1.5 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-500" />
+            <div className="h-1 w-full bg-primary" />
 
             <div className="p-8 space-y-6">
 

@@ -69,14 +69,11 @@ function ConsoleMock() {
       className="relative max-w-3xl mx-auto mt-16"
       style={{ perspective: 1000 }}
     >
-      {/* glow under the console */}
-      <div className="absolute -inset-6 bg-gradient-to-r from-indigo-500/20 via-purple-500/15 to-emerald-500/20 blur-3xl rounded-full pointer-events-none" aria-hidden="true" />
-
       <motion.div
         onMouseMove={handleTilt}
         onMouseLeave={resetTilt}
         style={{ rotateX, rotateY, transformStyle: 'preserve-3d' }}
-        className="relative rounded-2xl border border-border bg-card/90 backdrop-blur-xl shadow-lg overflow-hidden text-left"
+        className="relative rounded-2xl border border-border-strong bg-card shadow-md overflow-hidden text-left"
       >
         {/* window chrome */}
         <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border bg-surface-secondary/70">
@@ -231,7 +228,7 @@ export default function LandingPage() {
     <div className="min-h-screen text-foreground font-sans bg-background scroll-smooth overflow-x-hidden">
       {/* ── Scroll progress hairline ─────────────────────────────────────── */}
       <motion.div
-        className="fixed top-0 left-0 right-0 h-0.5 origin-left bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-500 z-[60]"
+        className="fixed top-0 left-0 right-0 h-0.5 origin-left bg-primary z-[60]"
         style={{ scaleX: progressBar }}
         aria-hidden="true"
       />
@@ -242,12 +239,12 @@ export default function LandingPage() {
       }`}>
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/25 border border-indigo-400/30">
-              <Brain className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shadow-xs">
+              <Brain className="w-6 h-6" />
             </div>
             <div>
               <span className="text-xl font-bold tracking-tight text-foreground">NeuroSense AI</span>
-              <span className="block text-[10px] uppercase tracking-widest text-indigo-500 dark:text-indigo-400 font-mono font-semibold">
+              <span className="block text-[10px] uppercase tracking-widest text-primary font-mono font-semibold">
                 Clinical Decision Support
               </span>
             </div>
@@ -321,8 +318,8 @@ export default function LandingPage() {
             className="text-fluid-hero font-extrabold tracking-tight text-foreground max-w-5xl mx-auto"
           >
             NeuroSense AI <br />
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-500">
-              AI-Powered Clinical Decision Support
+            <span className="text-primary">
+              Clinical Decision Support System
             </span>
           </motion.h1>
 

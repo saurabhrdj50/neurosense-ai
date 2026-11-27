@@ -120,6 +120,8 @@ patient_data.db-wal
 *.onnx
 *.nii
 *.nii.gz
+!frontend/public/sample/*.nii
+!frontend/public/sample/*.nii.gz
 *.dcm
 *.pth
 *.pt

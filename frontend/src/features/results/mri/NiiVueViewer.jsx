@@ -130,10 +130,10 @@ export function NiiVueViewer({ mri }) {
         nv.setSliceType(SLICE_TYPES.MULTIPLANAR)
         try {
           setNvLoadError(null)
-          // Load reference MNI152 template volume
+          // Load local ADNI sample NIfTI volume (falls back to MNI152 template if absent)
           await nv.loadVolumes([
             {
-              url: 'https://niivue.github.io/niivue/images/mni152.nii.gz',
+              url: '/sample/sample_mri.nii.gz',
               colormap: colormap,
               opacity: 1,
             },

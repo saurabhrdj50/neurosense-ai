@@ -76,10 +76,53 @@ export function buildSampleCognitive() {
   }
 }
 
-/** Fetch the bundled illustrative MRI image as a File the wizard can submit. */
+/**
+ * Fetch the real sample MRI (.nii.gz) if placed in `public/sample/sample_mri.nii.gz`,
+ * falling back to the bundled illustrative PNG if not present yet.
+ */
 export async function loadSampleMriFile() {
+  try {
+    const niiRes = await fetch('/sample/sample_mri.nii.gz')
+    const contentType = niiRes.headers.get('content-type') || ''
+    if (niiRes.ok && !contentType.includes('text/html')) {
+      const blob = await niiRes.blob()
+      if (blob.size > 0) {
+        return new File([blob], 'sample_mri.nii.gz', { type: 'application/gzip' })
+      }
+    }
+  } catch {
+    // Fall back to bundled PNG below
+  }
+
   const res = await fetch('/images/mri_3d_brain_scan.png')
   if (!res.ok) throw new Error('Sample MRI image unavailable')
   const blob = await res.blob()
   return new File([blob], 'sample_mri_scan.png', { type: 'image/png' })
+}
+
+/**
+ * Fetch the real sample speech recording if placed in `public/sample/`
+ * (`sample_speech.wav`, `.mp3`, or `.webm`). Returns null if not present yet.
+ */
+export async function loadSampleAudioFile() {
+  const candidates = [
+    { url: '/sample/sample_speech.wav', name: 'sample_speech.wav', type: 'audio/wav' },
+    { url: '/sample/sample_speech.mp3', name: 'sample_speech.mp3', type: 'audio/mpeg' },
+    { url: '/sample/sample_speech.webm', name: 'sample_speech.webm', type: 'audio/webm' },
+  ]
+  for (const item of candidates) {
+    try {
+      const res = await fetch(item.url)
+      const contentType = res.headers.get('content-type') || ''
+      if (res.ok && !contentType.includes('text/html')) {
+        const blob = await res.blob()
+        if (blob.size > 0) {
+          return new File([blob], item.name, { type: item.type })
+        }
+      }
+    } catch {
+      // Try next format
+    }
+  }
+  return null
 }

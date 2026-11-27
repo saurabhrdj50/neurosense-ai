@@ -23,7 +23,7 @@ import { useAuth } from '../../providers/AuthProvider';
 import { AnalysisLoader, useAnalysisProgress } from './AnalysisLoader';
 import {
   SAMPLE_PATIENT, SAMPLE_PATIENT_TEXT, SAMPLE_SPEECH_TEXT,
-  buildSampleCognitive, loadSampleMriFile,
+  buildSampleCognitive, loadSampleMriFile, loadSampleAudioFile,
 } from './sampleData';
 
 const STEPS = [
@@ -312,19 +312,22 @@ export default function AnalysisPage() {
     try {
       // Bundled illustrative MRI so the demo showcases the full pipeline,
       // including Grad-CAM, without any real patient material.
-      const mri = await loadSampleMriFile();
+      const [mri, audio] = await Promise.all([
+        loadSampleMriFile(),
+        loadSampleAudioFile().catch(() => null),
+      ]);
       const samplePatientId = user?.id
         ? `SAMPLE-${String(user.id).padStart(3, '0')}`
         : SAMPLE_PATIENT.patient_id;
       setMriFile(mri);
+      setAudioFile(audio);
       setPatient({ ...SAMPLE_PATIENT, patient_id: samplePatientId, handedness: 'Right' });
       setPatientText(SAMPLE_PATIENT_TEXT);
       // Fully derived cognitive profile — fields mirror CognitiveStep's own
       // computation so the report is consistent even if the step is skipped.
       setCognData(buildSampleCognitive());
-      // Text-only speech sample: fillers/pauses/preserved content give the
-      // annotated transcript and linguistic biomarkers something to show.
-      setSpeechText(SAMPLE_SPEECH_TEXT);
+      // Keep transcript as fallback when no real sample audio file is present.
+      setSpeechText(audio ? '' : SAMPLE_SPEECH_TEXT);
       // Risk values must be booleans matching RiskStep's toggle ids — the
       // step UI cannot produce strings or numbers (a stale/foreign sample
       // used 'moderate' / 6 here once).

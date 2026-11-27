@@ -59,6 +59,7 @@ export function NiiVueViewer({ mri }) {
   const [nvCrosshair, setNvCrosshair] = useState(true)
   const [nvColorbar, setNvColorbar] = useState(true)
   const [webglError, setWebglError] = useState(null)
+  const [nvLoadError, setNvLoadError] = useState(null)
   const [isNvLoading, setIsNvLoading] = useState(false)
   const [nvLocation, setNvLocation] = useState({ vox: [0, 0, 0], mm: [0, 0, 0], val: 0 })
 
@@ -128,6 +129,7 @@ export function NiiVueViewer({ mri }) {
         if (isDisposed) return
         nv.setSliceType(SLICE_TYPES.MULTIPLANAR)
         try {
+          setNvLoadError(null)
           // Load reference MNI152 template volume
           await nv.loadVolumes([
             {
@@ -137,7 +139,9 @@ export function NiiVueViewer({ mri }) {
             },
           ])
         } catch {
-          // Fallback if network/offline
+          if (!isDisposed) {
+            setNvLoadError('Unable to stream the 3D reference volume in this network. Upload a local .nii / .nii.gz scan or use the Grad-CAM Inspector tab.')
+          }
         } finally {
           if (!isDisposed) setIsNvLoading(false)
         }
@@ -212,6 +216,7 @@ export function NiiVueViewer({ mri }) {
   const handleCustomFileUpload = (e) => {
     const file = e.target.files?.[0]
     if (!file) return
+    setNvLoadError(null)
     const nv = nvInstanceRef.current
     if (!nv) return
     setIsNvLoading(true)
@@ -589,18 +594,18 @@ export function NiiVueViewer({ mri }) {
 
           {/* Canvas Viewport */}
           <div className="relative rounded-xl overflow-hidden border border-indigo-500/30 bg-black min-h-[380px] h-[520px]">
-            {webglError ? (
-              <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center text-xs text-foreground-muted space-y-2 bg-surface/80 backdrop-blur-xs">
+            {webglError || nvLoadError ? (
+              <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center text-xs text-foreground-muted space-y-2 bg-surface/90 backdrop-blur-xs">
                 <Brain size={32} className="text-amber-500/70" />
-                <p className="font-semibold text-foreground">{webglError}</p>
+                <p className="font-semibold text-foreground">{webglError || nvLoadError}</p>
                 <p className="max-w-md">
-                  WebGL 2.0 hardware context is unavailable in this browser session. You can continue using the
-                  Patient Grad-CAM Inspector tab for full high-resolution layer exploration.
+                  You can load a local NIfTI (.nii / .nii.gz) scan using the button above or switch to the
+                  Patient Grad-CAM Inspector tab for full slice &amp; heatmap exploration.
                 </p>
                 <button
                   type="button"
                   onClick={() => setActiveTab('gradcam')}
-                  className="mt-2 px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-medium"
+                  className="mt-2 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground font-medium cursor-pointer"
                 >
                   Switch to Grad-CAM Inspector
                 </button>

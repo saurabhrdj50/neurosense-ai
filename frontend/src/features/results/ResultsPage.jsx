@@ -209,6 +209,7 @@ export default function ResultsPage() {
 
   /* Past Analyses History State */
   const [pastAnalyses, setPastAnalyses] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
   const [historyError, setHistoryError] = useState(null);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [historySearch, setHistorySearch] = useState('');
@@ -328,6 +329,7 @@ export default function ResultsPage() {
      errors — failures surface as a visible error state with retry instead of
      a silently empty list. */
   const loadHistory = useCallback(async () => {
+    setHistoryLoading(true);
     setHistoryError(null);
     try {
       const history = await analysisApi.getPastAnalyses();
@@ -335,6 +337,8 @@ export default function ResultsPage() {
     } catch (e) {
       console.warn('Failed to load past analyses history:', e);
       setHistoryError(e.message || 'Failed to load past analyses');
+    } finally {
+      setHistoryLoading(false);
     }
   }, []);
 
@@ -531,7 +535,9 @@ export default function ResultsPage() {
                   Diagnostic Results & History
                 </h1>
                 <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
-                  {pastAnalyses.length} {pastAnalyses.length === 1 ? 'Session' : 'Sessions'}
+                  {historyLoading && pastAnalyses.length === 0
+                    ? 'Loading…'
+                    : `${pastAnalyses.length} ${pastAnalyses.length === 1 ? 'Session' : 'Sessions'}`}
                 </span>
               </div>
               <p className="text-sm font-medium text-foreground-muted mt-0.5">
@@ -620,7 +626,11 @@ export default function ResultsPage() {
         )}
 
         {/* History Grid of Past Analyses */}
-        {filteredHistory.length === 0 ? (
+        {historyLoading && pastAnalyses.length === 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <ResultsPageSkeleton />
+          </div>
+        ) : filteredHistory.length === 0 ? (
           <div className="py-16 text-center text-xs text-foreground-muted space-y-3 border border-dashed border-border rounded-2xl bg-surface/50 font-sans">
             <FileText size={32} className="mx-auto text-foreground-muted opacity-40" />
             <p className="font-semibold text-foreground text-sm">No matching diagnostic analysis records found.</p>

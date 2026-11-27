@@ -363,7 +363,7 @@ export default function DashboardPage() {
             <table className="w-full text-left text-sm border-collapse">
               <thead className="bg-surface-secondary/80 border-b border-border text-foreground-muted text-[15px] font-bold uppercase tracking-wider select-none">
                 <tr>
-                  <th scope="col" className="py-3.5 px-4 w-32">
+                  <th scope="col" className="py-3.5 px-4 min-w-[150px] whitespace-nowrap">
                     <button 
                       type="button"
                       onClick={() => handleSortToggle('priority', 'patientId')} 
@@ -427,7 +427,7 @@ export default function DashboardPage() {
                     className="hover:bg-rose-500/5 dark:hover:bg-rose-500/10 cursor-pointer transition-colors focus:outline-none focus:bg-rose-500/10"
                     aria-label={`Open history dossier for patient ${item.name}`}
                   >
-                    <td className="py-3.5 px-4 font-mono text-sm font-bold text-foreground-muted">
+                    <td className="py-3.5 px-4 font-mono text-sm font-bold text-foreground-muted whitespace-nowrap">
                       {item.patientId}
                     </td>
                     <td className="py-3.5 px-4 font-bold text-foreground">
@@ -625,7 +625,7 @@ export default function DashboardPage() {
             <table className="w-full text-left text-sm border-collapse">
               <thead className="bg-surface-secondary/80 border-b border-border text-foreground-muted text-[15px] font-bold uppercase tracking-wider select-none">
                 <tr>
-                  <th scope="col" className="py-3.5 px-4 w-32">
+                  <th scope="col" className="py-3.5 px-4 min-w-[150px] whitespace-nowrap">
                     <button 
                       onClick={() => handleSortToggle('recent', 'patientId')} 
                       className="flex items-center gap-1.5 hover:text-foreground font-bold uppercase"
@@ -691,7 +691,7 @@ export default function DashboardPage() {
                     className="hover:bg-surface-hover/80 cursor-pointer transition-colors focus:outline-none focus:bg-surface-hover"
                     aria-label={`Open history dossier for patient ${item.name}`}
                   >
-                    <td className="py-3.5 px-4 font-mono text-sm font-bold text-foreground-muted">
+                    <td className="py-3.5 px-4 font-mono text-sm font-bold text-foreground-muted whitespace-nowrap">
                       {item.patientId}
                     </td>
                     <td className="py-3.5 px-4 font-bold text-foreground">

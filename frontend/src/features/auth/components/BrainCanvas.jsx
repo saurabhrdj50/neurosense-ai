@@ -48,7 +48,7 @@ export default function BrainCanvas({ isDark = true }) {
 
     // Load High-Res Neon Wireframe Brain Image Asset
     const rawImg = new Image();
-    rawImg.src = '/images/glowing_brain_3d_isolated.png';
+    rawImg.src = '/images/clinical_mri_axial.jpg';
     let processedCanvas = null;
     let imgLoaded = false;
 

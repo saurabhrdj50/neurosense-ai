@@ -91,25 +91,23 @@ function ConsoleMock() {
           <div className="relative rounded-xl overflow-hidden border border-border bg-slate-950 aspect-square max-h-[190px]">
             {/* neon brain render (same asset as the login hero) */}
             <img
-              src="/images/glowing_brain_3d_isolated.png"
+              src="/images/clinical_mri_axial.jpg"
               alt=""
               aria-hidden="true"
               draggable={false}
-              className={`absolute inset-0 m-auto h-[82%] w-auto object-contain opacity-90 ${reduced ? '' : 'animate-float'}`}
+              className="absolute inset-0 m-auto h-[84%] w-auto object-contain opacity-95"
             />
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_65%_40%,rgba(168,85,247,0.35),transparent_55%)]" aria-hidden="true" />
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_70%,rgba(56,189,248,0.25),transparent_50%)]" aria-hidden="true" />
             {/* scan sweep */}
             {!reduced && (
               <motion.div
-                className="absolute left-0 right-0 h-10 bg-gradient-to-b from-transparent via-cyan-400/25 to-transparent"
+                className="absolute left-0 right-0 h-8 bg-gradient-to-b from-transparent via-sky-400/20 to-transparent"
                 animate={{ top: ['-15%', '100%'] }}
-                transition={{ duration: 2.6, repeat: Infinity, ease: 'linear', repeatDelay: 1.2 }}
+                transition={{ duration: 3.0, repeat: Infinity, ease: 'linear', repeatDelay: 1.5 }}
                 aria-hidden="true"
               />
             )}
-            <div className="absolute top-2 left-2 text-[9px] font-mono font-bold text-cyan-300/80">MRI · T1w</div>
-            <div className="absolute bottom-2 left-2 text-[9px] font-mono font-bold text-purple-300/90">Grad-CAM</div>
+            <div className="absolute top-2 left-2 text-[9px] font-mono font-bold text-sky-300/90">MRI · T1w</div>
+            <div className="absolute bottom-2 left-2 text-[9px] font-mono font-bold text-slate-300/90">Hippocampal ROI</div>
           </div>
 
           {/* modality bars */}
@@ -139,18 +137,18 @@ function ConsoleMock() {
               </div>
             ))}
 
-            {/* fused verdict chip — rotating gradient ring marks it as the payload */}
+            {/* fused verdict chip */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.92 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 2, type: 'spring', damping: 18, stiffness: 260 }}
-              className="gradient-border mt-1 flex items-center justify-between gap-3 rounded-xl border border-indigo-500/30 bg-indigo-500/10 px-3.5 py-2.5"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1.2, duration: 0.25 }}
+              className="mt-1 flex items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/10 px-3.5 py-2.5"
             >
               <div className="flex items-center gap-2 min-w-0">
-                <Brain size={15} className="text-primary dark:text-indigo-300 shrink-0 animate-pulse" />
+                <Brain size={15} className="text-primary shrink-0" />
                 <span className="text-[11px] font-bold text-foreground truncate">Fused Assessment · for clinician review</span>
               </div>
-              <span className="text-[10px] font-mono font-bold text-primary dark:text-indigo-300 shrink-0">FN 0.31</span>
+              <span className="text-[10px] font-mono font-bold text-primary shrink-0">FN 0.31</span>
             </motion.div>
           </div>
         </div>
@@ -430,10 +428,10 @@ export default function LandingPage() {
                   variant="interactive"
                   className="p-6 h-full group hover:shadow-md transition-all duration-300 hover:-translate-y-1"
                 >
-                  <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${f.tile} flex items-center justify-center shadow-sm ${f.glow} hover:shadow-lg transition-shadow duration-300 mb-4`}>
-                    <f.icon size={21} className="text-white" aria-hidden="true" />
+                  <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary border border-primary/20 flex items-center justify-center mb-4">
+                    <f.icon size={21} aria-hidden="true" />
                   </div>
-                  <h3 className="text-base font-bold text-foreground mb-1.5 group-hover:text-primary dark:group-hover:text-indigo-300 transition-colors">{f.title}</h3>
+                  <h3 className="text-base font-bold text-foreground mb-1.5 group-hover:text-primary transition-colors">{f.title}</h3>
                   <p className="text-xs text-muted leading-relaxed">{f.desc}</p>
                 </GlassCard>
               </Reveal>
@@ -449,11 +447,11 @@ export default function LandingPage() {
 
           <div className="relative grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* connector line (desktop) */}
-            <div className="hidden md:block absolute top-[52px] left-[12%] right-[12%] h-px bg-gradient-to-r from-indigo-500/40 via-emerald-500/40 to-indigo-500/40" aria-hidden="true" />
+            <div className="hidden md:block absolute top-[52px] left-[12%] right-[12%] h-px bg-border" aria-hidden="true" />
             {WORKFLOW.map((w, i) => (
-              <Reveal key={w.step} delay={0.1 * i}>
-                <div className="p-5 rounded-2xl bg-card border border-border hover:border-primary/40 hover:-translate-y-1 hover:shadow-sm transition-all duration-200 relative group text-center">
-                  <div className="relative z-10 w-12 h-12 mx-auto mb-3 rounded-2xl bg-primary-soft border border-primary/25 text-primary dark:text-indigo-300 flex items-center justify-center group-hover:scale-110 group-hover:animate-pulse-ring transition-transform duration-200">
+              <Reveal key={w.step} delay={0.08 * i}>
+                <div className="p-5 rounded-2xl bg-card border border-border hover:border-primary/40 hover:shadow-xs transition-all duration-150 relative group text-center">
+                  <div className="relative z-10 w-12 h-12 mx-auto mb-3 rounded-2xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center transition-colors duration-150">
                     <w.icon size={21} aria-hidden="true" />
                   </div>
                   <span className="absolute top-3 right-4 text-2xl font-mono font-bold text-foreground/10 group-hover:text-primary/25 transition-colors">{w.step}</span>

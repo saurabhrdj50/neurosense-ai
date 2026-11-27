@@ -476,7 +476,7 @@ export default function DashboardPage() {
               </span>
             </div>
             <div className="flex items-baseline justify-between gap-2">
-              <span className={`text-3xl sm:text-4xl font-extrabold font-mono tracking-tight ${idx === 2 && stats.highRiskCount > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-foreground'}`}>
+              <span className={`text-3xl sm:text-4xl font-extrabold font-mono tabular-nums tracking-tight ${idx === 2 && stats.highRiskCount > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-foreground'}`}>
                 {ready ? <CountUp value={kpi.value} /> : <Skeleton width={64} height={34} rounded={8} />}
               </span>
               <span className="text-xs font-semibold text-muted shrink-0">{kpi.sub}</span>

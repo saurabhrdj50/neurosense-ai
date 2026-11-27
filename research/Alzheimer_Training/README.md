@@ -80,7 +80,7 @@ The pipeline is implemented across `notebooks/Model_Training_02.ipynb` and `note
    - Resizes slices to $224 \times 224$ pixels, replicating channels to 3-channel RGB format `(32, 224, 224, 3)`.
 3. **Data Partitioning & Leakage Prevention**:
    - Partitions are strictly **subject-grouped and stratified**. All scans from a given participant reside exclusively in either Train, Validation, or Test to prevent optimistic data leakage.
-   - 5-fold cross-validation fold assignments are cataloged in `5fold_subject_grouped_metadata.csv`.
+   - 5-fold cross-validation fold assignments are cataloged in `metadata/5fold_subject_grouped_metadata.csv`.
 
 ---
 
@@ -92,7 +92,16 @@ The pipeline is implemented across `notebooks/Model_Training_02.ipynb` and `note
 | `notebooks/finetuning_restart.ipynb` | Classifier head fine-tuning, focal loss balancing, and checkpoint export (produces production weights). |
 | `checkpoints/production/best_mri_resnet18_finetuned.pth` | Production lineage checkpoint (single backbone ResNet-18, 43 MB). |
 | `metadata/5fold_subject_grouped_metadata.csv` | Subject-level fold split metadata for 5-fold cross-validation. |
-| `Alzheimer_Dataset/` | Local directory for raw ADNI NPZ volumes (~20 GB). Excluded from git. |
+| `Alzheimer_Dataset/` | Local ADNI `.nii` volumes (~20 GB), split into `train/`, `val/`, `test/` × `{CN, MCI, AD}` with `Metadata/ADNI_labels.csv` and `Metadata/dataset_manifest.csv`. Excluded from git. |
+
+### Dataset Split Summary (630 Scans, Zero Subject Overlap)
+
+| Split | CN | MCI | AD | Total |
+|---|---|---|---|---|
+| `train/` | 122 | 215 | 106 | **443** |
+| `val/` | 26 | 47 | 22 | **95** |
+| `test/` | 26 | 45 | 21 | **92** |
+| **Total** | **174** | **307** | **149** | **630** |
 
 ---
 
@@ -107,7 +116,7 @@ The pipeline is implemented across `notebooks/Model_Training_02.ipynb` and `note
 ### 2. Running the Training Notebooks Locally
 - The notebooks contain Google Colab paths by default (`/content/drive/...`).
 - To run locally:
-  1. Open `Model_Training_02.ipynb` in VS Code or JupyterLab.
+  1. Open `notebooks/Model_Training_02.ipynb` in VS Code or JupyterLab.
   2. Update the `DATA_DIR` constant to point to your local dataset path:
      ```python
      DATA_DIR = Path("./Alzheimer_Dataset")

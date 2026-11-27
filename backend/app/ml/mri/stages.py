@@ -8,7 +8,7 @@ from app.ml.stages import STAGE_ORDER, STAGE_INDEX, normalize_stage_name
 # the ADNI CN/MCI/AD lineage (finetuning_restart.ipynb MRIResNet18_32Slice,
 # 5fold_subject_grouped_metadata.csv): index 0 = CN, 1 = MCI, 2 = AD.
 # Byte-identity verified 2026-10-05: backend/app/models/alzheimer_model.pth
-# == Alzheimer_Training/best_mri_resnet18_finetuned.pth (MD5 f36aa42f...),
+# == research/Alzheimer_Training/checkpoints/production/best_mri_resnet18_finetuned.pth (MD5 f36aa42f...),
 # i.e. the classifier-only fine-tune of the SSL-pretrained ResNet18
 # (validation n=95: accuracy 0.5895, macro-F1 0.5725, balanced 0.5660).
 # The display names below are the frozen frontend-contract labels and mirror

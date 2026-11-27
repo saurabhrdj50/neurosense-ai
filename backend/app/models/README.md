@@ -12,8 +12,8 @@ Model checkpoints are intentionally excluded from git tracking (`*.pth`, `*.pt`,
 
 | File | Modality | Architecture / Pipeline | Output / Classes | Size | Source Lineage |
 |---|---|---|---|---|---|
-| `alzheimer_model.pth` | **Brain MRI** | ResNet-18 (single backbone) + fine-tuned linear classification head | 3 classes: `CN` (Cognitively Normal), `MCI` (Mild Cognitive Impairment), `AD` (Alzheimer's Disease) | ~43 MB | `Alzheimer_Training/best_mri_resnet18_finetuned.pth` |
-| `speech/distilbert_only_model.joblib` | **Speech Language (NLP)** | DistilBERT 768-dim mean-pooled embeddings → StandardScaler → balanced LogisticRegression | 2 classes: `Control` (0), `Dementia` (1) → $P(\text{dementia})$ | ~26 KB | `Speech/NeuroSense_Final/NLP/model/distilbert_only_model.joblib` |
+| `alzheimer_model.pth` | **Brain MRI** | ResNet-18 (single backbone) + fine-tuned linear classification head | 3 classes: `CN` (Cognitively Normal), `MCI` (Mild Cognitive Impairment), `AD` (Alzheimer's Disease) | ~43 MB | `research/Alzheimer_Training/checkpoints/production/best_mri_resnet18_finetuned.pth` |
+| `speech/distilbert_only_model.joblib` | **Speech Language (NLP)** | DistilBERT 768-dim mean-pooled embeddings → StandardScaler → balanced LogisticRegression | 2 classes: `Control` (0), `Dementia` (1) → $P(\text{dementia})$ | ~26 KB | `research/Speech/NeuroSense_Final/NLP/model/distilbert_only_model.joblib` |
 | *Whisper Cache* | **Speech ASR** | Local `faster-whisper` CTranslate2 (`base` / `turbo`) | Automated transcript + timestamped hesitation tokens | Auto-cached | HuggingFace / OpenAI Whisper |
 | *In-Process DSP* | **Acoustic Voice** | Librosa / OpenSMILE / SciPy DSP extraction pipeline | Pitch $F_0$, Jitter %, Shimmer %, HNR dB, Formants, Pauses, Vocal Risk Index | Code (0 MB) | `backend/app/ml/speech/acoustic_biomarkers.py` |
 
@@ -25,7 +25,7 @@ Model checkpoints are intentionally excluded from git tracking (`*.pth`, `*.pt`,
 - **Backbone**: Standard PyTorch TorchVision ResNet-18 feature extractor.
 - **Classifier Head**: Linear layer `(in_features=512, out_features=3)`.
 - **Checkpoint Structure**: PyTorch `state_dict` loaded securely via `torch.load(..., weights_only=True)`.
-- **Integrity MD5**: `f36aa42f5e864d705bfe3250380cbb5e` (verified byte-identical to `Alzheimer_Training/best_mri_resnet18_finetuned.pth`).
+- **Integrity MD5**: `f36aa42f5e864d705bfe3250380cbb5e` (verified byte-identical to `research/Alzheimer_Training/checkpoints/production/best_mri_resnet18_finetuned.pth`).
 
 ### 2. Class Mapping (ADNI 3-Class)
 ```python
@@ -111,8 +111,8 @@ If you or your collaborators want to use the pre-trained checkpoints:
    ```
 
 2. **Copy checkpoints**:
-   - Copy `best_mri_resnet18_finetuned.pth` from `Alzheimer_Training/` to `backend/app/models/alzheimer_model.pth`.
-   - Copy `distilbert_only_model.joblib` from `Speech/NeuroSense_Final/NLP/model/` to `backend/app/models/speech/distilbert_only_model.joblib`.
+   - Copy `best_mri_resnet18_finetuned.pth` from `research/Alzheimer_Training/checkpoints/production/` to `backend/app/models/alzheimer_model.pth`.
+   - Copy `distilbert_only_model.joblib` from `research/Speech/NeuroSense_Final/NLP/model/` to `backend/app/models/speech/distilbert_only_model.joblib`.
 
 3. **Verify Checkpoint Placement**:
    ```bash

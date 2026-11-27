@@ -11,7 +11,7 @@ This directory contains the training pipelines, experiment checkpoints, cross-va
 The production MRI model checkpoint running in the backend (`backend/app/models/alzheimer_model.pth`) is **byte-for-byte identical** (MD5 checksum `f36aa42f5e864d705bfe3250380cbb5e`) to the fine-tuned checkpoint generated in this workspace:
 
 ```
-Alzheimer_Training/best_mri_resnet18_finetuned.pth 
+research/Alzheimer_Training/checkpoints/production/best_mri_resnet18_finetuned.pth
                      │
                      ▼ (Identical Copy)
 backend/app/models/alzheimer_model.pth
@@ -34,7 +34,7 @@ backend/app/models/alzheimer_model.pth
 
 ## 🔬 End-to-End Data Preprocessing & Training Pipeline
 
-The pipeline is implemented across `Model_Training_02.ipynb` and `finetuning_restart.ipynb`:
+The pipeline is implemented across `notebooks/Model_Training_02.ipynb` and `notebooks/finetuning_restart.ipynb`:
 
 ```
 ┌────────────────────────────────┐
@@ -88,12 +88,10 @@ The pipeline is implemented across `Model_Training_02.ipynb` and `finetuning_res
 
 | Path / File | Purpose & Description |
 |---|---|
-| `Model_Training_02.ipynb` | Comprehensive training notebook: dataset ingestion, SynthStrip, NPZ generation, ResNet baseline training, and augmentation pipelines. |
-| `finetuning_restart.ipynb` | Classifier head fine-tuning, focal loss balancing, and checkpoint export (produces production weights). |
-| `best_mri_resnet18_finetuned.pth` | Production lineage checkpoint (single backbone ResNet-18, 43 MB). |
-| `best_mri_resnet18*.pth` | Experimental checkpoints (spatial attention, mean-max pooling, partial layer freezing). |
-| `best_brain_mri_ssl_resnet50*.pth` | Experimental Self-Supervised Learning (SSL) ResNet-50 models. |
-| `5fold_subject_grouped_metadata.csv` | Subject-level fold split metadata for 5-fold cross-validation. |
+| `notebooks/Model_Training_02.ipynb` | Comprehensive training notebook: dataset ingestion, SynthStrip, NPZ generation, ResNet baseline training, and augmentation pipelines. |
+| `notebooks/finetuning_restart.ipynb` | Classifier head fine-tuning, focal loss balancing, and checkpoint export (produces production weights). |
+| `checkpoints/production/best_mri_resnet18_finetuned.pth` | Production lineage checkpoint (single backbone ResNet-18, 43 MB). |
+| `metadata/5fold_subject_grouped_metadata.csv` | Subject-level fold split metadata for 5-fold cross-validation. |
 | `Alzheimer_Dataset/` | Local directory for raw ADNI NPZ volumes (~20 GB). Excluded from git. |
 
 ---
@@ -103,7 +101,7 @@ The pipeline is implemented across `Model_Training_02.ipynb` and `finetuning_res
 ### 1. Handling Large Weights & Datasets
 - Checkpoint weights (`*.pth`, `*.pt`) and the `Alzheimer_Dataset/` directory are excluded by `.gitignore` to prevent bloating the git repository.
 - If transferring to a new machine or sharing with a colleague:
-  - Copy `best_mri_resnet18_finetuned.pth` directly into `backend/app/models/alzheimer_model.pth`.
+  - Copy `checkpoints/production/best_mri_resnet18_finetuned.pth` directly into `backend/app/models/alzheimer_model.pth`.
   - Alternatively, the backend runs seamlessly with automatic synthetic fallback for development if weights are omitted.
 
 ### 2. Running the Training Notebooks Locally

@@ -130,10 +130,7 @@ patient_data.db-wal
 *.ckpt
 
 # Datasets
-Alzheimer_Training/Alzheimer_Dataset/
-Alzheimer_Training/CV_ResNet50/*.pth
-Alzheimer_Training/CV_ResNet18_Layer4/*.pth
-Alzheimer_Training/FineTuning/*.pth
+research/Alzheimer_Training/Alzheimer_Dataset/
 
 # Test & PDF outputs
 *.pdf
